@@ -133,26 +133,7 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Stats strip */}
-        <div style={{
-          display: "flex",
-          gap: 40,
-          justifyContent: "center",
-          marginTop: 64,
-          flexWrap: "wrap",
-        }}>
-          {[
-            { value: "2,847", label: "Active Climbers" },
-            { value: "$12,400", label: "Paid Out Today" },
-            { value: "Floor 847", label: "Today's Record" },
-            { value: "Daily", label: "Reset Cycle" },
-          ].map(({ value, label }) => (
-            <div key={label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "var(--gold)" }}>{value}</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</div>
-            </div>
-          ))}
-        </div>
+        {/* Stats strip - live data only, no mock values */}
       </section>
 
       {/* Characters */}

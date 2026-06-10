@@ -68,7 +68,7 @@ export default function ShopPage() {
           </h1>
         </div>
         <p style={{ color: "var(--text-muted)", marginBottom: 32, fontSize: 15 }}>
-          Spend native tokens on power-ups, revives, and cosmetics.
+          Spend $TOWER on power-ups, revives, and cosmetics. $TOWER is an <strong style={{ color: "var(--gold)" }}>in-game currency only</strong> — not redeemable for real money.
         </p>
 
         {/* Token balance */}
