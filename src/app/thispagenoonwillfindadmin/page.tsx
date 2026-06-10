@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [players, setPlayers] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string|null>(null);
   const [tab, setTab] = useState<"overview"|"players"|"leaderboard">("overview");
   const [search, setSearch] = useState("");
 
@@ -46,10 +47,12 @@ export default function AdminDashboard() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("dt_players")
-      .select("*")
+      .select("id,username,character,total_score,games_played,is_verified,sol_wallet,wallet_address,created_at")
       .order("total_score", { ascending: false });
+    if (error) { console.error("[Admin] dt_players fetch error:", error); setFetchError(error.message); }
+    else setFetchError(null);
     const p = data || [];
     setPlayers(p);
     const today = new Date().toDateString();
@@ -122,6 +125,11 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {fetchError && (
+        <div style={{ background:"rgba(255,51,85,0.08)", border:"1px solid rgba(255,51,85,0.25)", color:"#ff3355", padding:"10px 24px", fontSize:13 }}>
+          ⚠️ DB Error: {fetchError}
+        </div>
+      )}
       <div style={{ padding:"20px 24px", maxWidth:1300, margin:"0 auto" }}>
 
         {/* ── OVERVIEW ── */}
