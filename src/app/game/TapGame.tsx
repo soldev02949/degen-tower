@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank } from "@/lib/progression";
+import { useAuth } from "@/lib/auth";
 
 // ─── Characters ───────────────────────────────────────────────────────────────
 export const CHARACTERS = [
@@ -69,8 +70,161 @@ function useCountdown(){
   return t;
 }
 
+// ─── Top Bar ─────────────────────────────────────────────────────────────────
+function TopBar({username,avatar,onSettings,onLogout}:{username:string;avatar:string;onSettings:()=>void;onLogout:()=>void}){
+  return(
+    <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(6,0,14,0.96)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"8px 14px",display:"flex",alignItems:"center",gap:8}}>
+      <img src="/logo.png" alt="" onError={e=>{(e.target as HTMLImageElement).style.display="none";}} style={{width:22,height:22,objectFit:"contain",filter:"drop-shadow(0 0 6px rgba(168,85,247,0.6))"}}/>
+      <span style={{color:"#fff",fontWeight:900,fontSize:13,letterSpacing:"-0.02em",flex:1}}>DEGEN CLICKER</span>
+      <span style={{fontSize:18,lineHeight:1}}>{avatar||"🐸"}</span>
+      <span style={{color:"#888",fontSize:12,fontWeight:700,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
+      <button onClick={onSettings} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,color:"#888",fontSize:13,padding:"5px 9px",cursor:"pointer"}}>⚙️</button>
+      <button onClick={onLogout} style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,color:"#ef4444",fontSize:11,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>Log out</button>
+    </div>
+  );
+}
+
+// ─── Settings Tab ─────────────────────────────────────────────────────────────
+const AVATARS=["🐸","💪","🎩","🧌","🐕","💀","🦊","🐉","🤖","👾","🦁","🐺","🦂","🎭","🔥","💎"];
+function getAvatar(){ try{return localStorage.getItem("degen_avatar")||"";}catch{return "";} }
+function setAvatarStore(a:string){ try{localStorage.setItem("degen_avatar",a);}catch{} }
+
+function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:string;onSave:(u:string,w:string,av:string)=>void}){
+  const {user,signOut}=useAuth();
+  const [name,setName]=useState(username);
+  const [wallet,setWallet]=useState(solWallet);
+  const [avatar,setAvatar]=useState(()=>getAvatar()||"🐸");
+  const [pwMode,setPwMode]=useState(false);
+  const [pwMsg,setPwMsg]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [delConfirm,setDelConfirm]=useState(false);
+  const [delText,setDelText]=useState("");
+
+  async function handleSave(){
+    setSaving(true);
+    setAvatarStore(avatar);
+    onSave(name.trim()||username, wallet.trim(), avatar);
+    setTimeout(()=>{setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),2000);},600);
+  }
+
+  async function handleResetPw(){
+    if(!user?.email){setPwMsg("No email linked to account.");return;}
+    try{
+      const{supabase}=await import("@/lib/supabase");
+      await supabase.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+"/login"});
+      setPwMsg("✅ Password reset email sent to "+user.email);
+    }catch{setPwMsg("Failed to send reset email.");}
+  }
+
+  async function handleDeleteAccount(){
+    if(delText.toLowerCase()!=="delete"){return;}
+    try{
+      const{supabase}=await import("@/lib/supabase");
+      const pid=getPlayerId();
+      await supabase.from("dt_players").delete().eq("wallet_address",pid);
+      await supabase.auth.admin?.deleteUser?.(user?.id||"").catch(()=>{});
+      await signOut();
+    }catch{
+      await signOut();
+    }
+  }
+
+  return(
+    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:58,paddingBottom:100,overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(120,40,200,0.18) 0%,transparent 55%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:440,margin:"0 auto",padding:"0 14px"}}>
+
+        {/* Profile Header */}
+        <div style={{textAlign:"center",padding:"24px 0 20px"}}>
+          <div style={{fontSize:64,lineHeight:1,marginBottom:8}}>{avatar}</div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:18,marginBottom:2}}>{name||"Degen"}</div>
+          {user?.email&&<div style={{color:"#443355",fontSize:11}}>{user.email}</div>}
+        </div>
+
+        {/* Avatar picker */}
+        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
+          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Avatar</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:6}}>
+            {AVATARS.map(a=>(
+              <button key={a} onClick={()=>setAvatar(a)} style={{
+                fontSize:24,background:avatar===a?"rgba(168,85,247,0.2)":"rgba(255,255,255,0.03)",
+                border:avatar===a?"2px solid rgba(168,85,247,0.6)":"2px solid transparent",
+                borderRadius:10,padding:4,cursor:"pointer",lineHeight:1,
+              }}>{a}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Username */}
+        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
+          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Username</div>
+          <input value={name} onChange={e=>setName(e.target.value)} maxLength={24} placeholder="Your display name"
+            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+
+        {/* Wallet */}
+        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
+          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Solana Wallet Address</div>
+          <div style={{color:"#443355",fontSize:10,marginBottom:8}}>Required for prize payouts</div>
+          <input value={wallet} onChange={e=>setWallet(e.target.value)} placeholder="Your Solana wallet address"
+            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#22d67a",fontSize:11,fontWeight:700,fontFamily:"monospace",padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+
+        {/* Save */}
+        <button onClick={handleSave} disabled={saving} style={{
+          width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",
+          color:"#fff",fontWeight:900,fontSize:15,border:"none",borderRadius:14,
+          padding:"14px",cursor:"pointer",marginBottom:10,
+          boxShadow:"0 0 30px rgba(168,85,247,0.3)",
+        }}>{saving?"Saving…":saved?"✅ Saved!":"Save Changes"}</button>
+
+        {/* Divider */}
+        <div style={{borderTop:"1px solid rgba(255,255,255,0.05)",margin:"12px 0"}}/>
+
+        {/* Change password */}
+        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
+          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Password</div>
+          {!pwMode
+            ?<button onClick={()=>setPwMode(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#ccc",fontSize:13,fontWeight:700,padding:"10px 16px",cursor:"pointer",width:"100%"}}>Change Password</button>
+            :<div>
+              <p style={{color:"#553366",fontSize:12,marginBottom:10}}>We'll send a password reset link to your email: <strong style={{color:"#888"}}>{user?.email||"—"}</strong></p>
+              <button onClick={handleResetPw} style={{background:"rgba(168,85,247,0.15)",border:"1px solid rgba(168,85,247,0.3)",borderRadius:10,color:"#c084fc",fontSize:13,fontWeight:700,padding:"10px 16px",cursor:"pointer",width:"100%"}}>Send Reset Email</button>
+              {pwMsg&&<div style={{color:pwMsg.startsWith("✅")?"#22d67a":"#ef4444",fontSize:12,marginTop:8,textAlign:"center"}}>{pwMsg}</div>}
+            </div>
+          }
+        </div>
+
+        {/* Log out */}
+        <button onClick={signOut} style={{
+          width:"100%",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",
+          color:"#888",fontWeight:700,fontSize:14,borderRadius:14,padding:"13px",cursor:"pointer",marginBottom:10,
+        }}>Log Out</button>
+
+        {/* Delete account */}
+        <div style={{background:"rgba(239,68,68,0.04)",border:"1px solid rgba(239,68,68,0.15)",borderRadius:18,padding:16,marginBottom:10}}>
+          <div style={{color:"#ef4444",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Danger Zone</div>
+          {!delConfirm
+            ?<button onClick={()=>setDelConfirm(true)} style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,color:"#ef4444",fontSize:13,fontWeight:700,padding:"10px 16px",cursor:"pointer",width:"100%"}}>Delete Account</button>
+            :<div>
+              <p style={{color:"#7a3333",fontSize:12,marginBottom:8}}>This will permanently delete your account and all game data. Type <strong>delete</strong> to confirm.</p>
+              <input value={delText} onChange={e=>setDelText(e.target.value)} placeholder="Type delete to confirm"
+                style={{width:"100%",background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,color:"#ef4444",fontSize:13,padding:"9px 12px",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>{setDelConfirm(false);setDelText("");}} style={{flex:1,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#888",fontSize:13,fontWeight:700,padding:"10px",cursor:"pointer"}}>Cancel</button>
+                <button onClick={handleDeleteAccount} disabled={delText.toLowerCase()!=="delete"} style={{flex:1,background:delText.toLowerCase()==="delete"?"rgba(239,68,68,0.8)":"rgba(239,68,68,0.15)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,padding:"10px",cursor:delText.toLowerCase()==="delete"?"pointer":"not-allowed"}}>Delete Forever</button>
+              </div>
+            </div>
+          }
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ─── Bottom Tab Bar ───────────────────────────────────────────────────────────
-const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"}];
+const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
 
 function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
   return(
@@ -176,7 +330,7 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 function HomeTab({onPlay}:{onPlay:()=>void}){
   return(
-    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingBottom:80,overflowY:"auto"}}>
+    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:46,paddingBottom:80,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -5%,rgba(120,40,200,0.35) 0%,transparent 55%)",pointerEvents:"none",zIndex:0}}/>
       <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"28px 20px 16px"}}>
         <img src="/logo.png" alt="Degen Clicker" onError={e=>{(e.target as HTMLImageElement).style.display="none";}} style={{width:150,height:150,objectFit:"contain",marginBottom:4,filter:"drop-shadow(0 0 40px rgba(168,85,247,0.6))"}}/>
@@ -385,7 +539,8 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 
 // ─── MAIN GAME ────────────────────────────────────────────────────────────────
 export default function TapGame() {
-  const [activeTab,setActiveTab]=useState<"home"|"play"|"shop"|"ranks">("home");
+  const {signOut}=useAuth();
+  const [activeTab,setActiveTab]=useState<"home"|"play"|"shop"|"ranks"|"settings">("home");
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
   const [showModal,setShowModal]=useState(false);
@@ -393,6 +548,7 @@ export default function TapGame() {
   const [playerId,setPlayerId]=useState("");
   const [username,setUsername]=useState("");
   const [solWallet,setSolWallet]=useState("");
+  const [avatar,setAvatar]=useState(()=>getAvatar()||"🐸");
 
   const [coins,setCoins]=useState(0);
   const [energy,setEnergy]=useState(1000);
@@ -566,17 +722,26 @@ export default function TapGame() {
   // suppress unused warning from comboTimer
   void comboTimer;
 
+  function handleSettingsSave(u:string,w:string,av:string){
+    setUsername(u); setPlayerName(u);
+    setSolWallet(w); setPlayerWallet(w);
+    setAvatar(av); setAvatarStore(av);
+    syncDB(playerId,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
+  }
+
   return(
     <div style={{background:"#080010",minHeight:"100vh",position:"relative"}}>
+      <TopBar username={username} avatar={avatar} onSettings={()=>setActiveTab("settings")} onLogout={signOut}/>
+
       {showModal&&<UsernameModal onConfirm={onUsername}/>}
 
       {newAchiev&&(
-        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:200,background:"linear-gradient(135deg,#7c3aed,#a855f7)",borderRadius:14,padding:"9px 18px",color:"#fff",fontWeight:900,fontSize:13,boxShadow:"0 0 40px rgba(168,85,247,0.6)",whiteSpace:"nowrap",animation:"slideDown 0.3s ease-out"}}>
+        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:300,background:"linear-gradient(135deg,#7c3aed,#a855f7)",borderRadius:14,padding:"9px 18px",color:"#fff",fontWeight:900,fontSize:13,boxShadow:"0 0 40px rgba(168,85,247,0.6)",whiteSpace:"nowrap",animation:"slideDown 0.3s ease-out"}}>
           🏅 {newAchiev}
         </div>
       )}
       {toast&&(
-        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:199,background:"rgba(34,214,122,0.15)",border:"1px solid rgba(34,214,122,0.3)",borderRadius:14,padding:"7px 16px",color:"#22d67a",fontWeight:800,fontSize:12,whiteSpace:"nowrap",animation:"slideDown 0.2s ease-out"}}>
+        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:299,background:"rgba(34,214,122,0.15)",border:"1px solid rgba(34,214,122,0.3)",borderRadius:14,padding:"7px 16px",color:"#22d67a",fontWeight:800,fontSize:12,whiteSpace:"nowrap",animation:"slideDown 0.2s ease-out"}}>
           {toast}
         </div>
       )}
@@ -585,6 +750,7 @@ export default function TapGame() {
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade}/>}
+      {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} onSave={handleSettingsSave}/>}
 
       {activeTab==="play"&&(
         <>
