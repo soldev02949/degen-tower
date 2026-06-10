@@ -83,7 +83,10 @@ export default function Leaderboard() {
 
       {/* Navbar */}
       <nav style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(10,0,15,0.95)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 20px", display: "flex", alignItems: "center", gap: 16 }}>
-        <Link href="/" style={{ color: "#fff", fontWeight: 900, fontSize: 18, textDecoration: "none" }}>🗼 Degen Tower</Link>
+        <Link href="/" style={{ color: "#fff", fontWeight: 900, fontSize: 18, textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/logo.png" alt="Degen Clicker" style={{ width: 32, height: 32, objectFit: "contain" }} />
+          Degen Clicker
+        </Link>
         <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
           <Link href="/" style={{ color: "#888", fontSize: 13, textDecoration: "none" }}>Home</Link>
           <Link href="/game" style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", borderRadius: 8, padding: "6px 14px" }}>Play Now</Link>

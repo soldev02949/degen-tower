@@ -119,8 +119,8 @@ export default function AdminDashboard() {
     <div style={{ minHeight: "100vh", background: BG, color: "#e8e8f0", fontFamily: "system-ui, sans-serif" }}>
       {/* Header */}
       <div style={{ background: "rgba(10,0,20,0.95)", borderBottom: `1px solid ${BORDER}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontSize: 22 }}>🗼</span>
-        <h1 style={{ fontWeight: 900, fontSize: 18, color: "#fff", margin: 0 }}>Degen Tower Admin</h1>
+        <img src="/logo.png" alt="Degen Clicker" style={{ width: 32, height: 32, objectFit: "contain" }} />
+        <h1 style={{ fontWeight: 900, fontSize: 18, color: "#fff", margin: 0 }}>Degen Clicker Admin</h1>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
           <button onClick={fetchData} style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${BORDER}`, color: "#aaa", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12 }}>
             {loading ? "⏳" : "🔄 Refresh"}

@@ -162,7 +162,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "20px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#443355", fontSize: 12, position: "relative", zIndex: 1 }}>
-        <span>🗼 Degen Tower · Solana P2E</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><img src="/logo.png" alt="" style={{ width: 20, height: 20, objectFit: "contain" }} /> Degen Clicker · Solana P2E</span>
         <div style={{ display: "flex", gap: 20 }}>
           <Link href="/game" style={{ color: "#443355", textDecoration: "none" }}>Play</Link>
           <Link href="/leaderboard" style={{ color: "#443355", textDecoration: "none" }}>Leaderboard</Link>

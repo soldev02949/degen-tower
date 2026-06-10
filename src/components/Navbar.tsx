@@ -34,17 +34,13 @@ export default function Navbar() {
       }}>
         {/* Logo */}
         <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 32, height: 32,
-            background: "linear-gradient(135deg, #f5c842 0%, #e0a820 100%)",
-            borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-          }}>🗼</div>
+          <img src="/logo.png" alt="Degen Clicker" style={{ width: 36, height: 36, objectFit: "contain" }} />
           <span style={{
             fontWeight: 800, fontSize: 18,
-            background: "linear-gradient(135deg, #f5c842 0%, #e0a820 100%)",
+            background: "linear-gradient(135deg, #a855f7 0%, #f5c842 100%)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
             letterSpacing: "-0.02em",
-          }}>DEGEN TOWER</span>
+          }}>DEGEN CLICKER</span>
         </Link>
 
         {/* Desktop nav */}
