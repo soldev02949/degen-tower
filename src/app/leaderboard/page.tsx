@@ -1,44 +1,38 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import StarField from "@/components/StarField";
-import { Trophy, Clock, Zap, ArrowLeft } from "lucide-react";
-
-const MOCK_PLAYERS = [
-  { rank: 1, name: "DegenApe420", char: "🐸", floor: 847, score: 94200, wallet: "8xKp...4rQn", reward: "20%", time: "2h ago" },
-  { rank: 2, name: "SolKing999", char: "💪", floor: 801, score: 87400, wallet: "3mFz...9pLk", reward: "15%", time: "4h ago" },
-  { rank: 3, name: "MemeLord", char: "🎩", floor: 756, score: 82100, wallet: "7yRt...2wXc", reward: "10%", time: "1h ago" },
-  { rank: 4, name: "PepeMaxi", char: "🐸", floor: 712, score: 74300, wallet: "1nWq...8mSd", reward: "Equal Split", time: "30m ago" },
-  { rank: 5, name: "GigaClimber", char: "💪", floor: 689, score: 71200, wallet: "5cBh...6tFv", reward: "Equal Split", time: "5h ago" },
-  { rank: 6, name: "TrollBridge", char: "🧌", floor: 654, score: 68900, wallet: "9pAj...1vNe", reward: "Equal Split", time: "3h ago" },
-  { rank: 7, name: "SatoshiDegen", char: "🐸", floor: 612, score: 64100, wallet: "4kMl...7gPq", reward: "Equal Split", time: "6h ago" },
-  { rank: 8, name: "RektRecovery", char: "🎩", floor: 589, score: 61700, wallet: "2rUo...0hBw", reward: "Equal Split", time: "8h ago" },
-  { rank: 9, name: "FloorChaser", char: "💪", floor: 543, score: 57300, wallet: "6wEi...3zKx", reward: "Equal Split", time: "2h ago" },
-  { rank: 10, name: "MoonAscender", char: "🧌", floor: 521, score: 54800, wallet: "0tYc...5jRa", reward: "Equal Split", time: "7h ago" },
-  { rank: 11, name: "ViralPepe", char: "🐸", floor: 498, score: 51200, wallet: "3nHv...8bLd", reward: "Equal Split", time: "1h ago" },
-  { rank: 12, name: "SolanaSlayer", char: "💪", floor: 476, score: 49600, wallet: "7dXm...2fWz", reward: "Equal Split", time: "4h ago" },
-  { rank: 13, name: "DegenLord69", char: "🎩", floor: 453, score: 46900, wallet: "1qTs...9kCe", reward: "Equal Split", time: "5h ago" },
-  { rank: 14, name: "PlatformKing", char: "🧌", floor: 431, score: 44200, wallet: "5oJp...4yAb", reward: "Equal Split", time: "3h ago" },
-  { rank: 15, name: "CryptoClimber", char: "🐸", floor: 412, score: 42800, wallet: "8gZu...6rMs", reward: "Equal Split", time: "9h ago" },
-  { rank: 16, name: "TokenHolder", char: "💪", floor: 398, score: 41100, wallet: "2vFn...1xPc", reward: "Equal Split", time: "2h ago" },
-  { rank: 17, name: "WenMoon", char: "🎩", floor: 376, score: 38700, wallet: "6bRy...7tGq", reward: "Equal Split", time: "6h ago" },
-  { rank: 18, name: "NFA_Dev", char: "🧌", floor: 354, score: 36200, wallet: "0kNe...3wLo", reward: "Equal Split", time: "4h ago" },
-  { rank: 19, name: "GasFeeKing", char: "🐸", floor: 332, score: 34100, wallet: "4pWs...9hQi", reward: "Equal Split", time: "11h ago" },
-  { rank: 20, name: "LastChance", char: "💪", floor: 311, score: 31800, wallet: "8cBj...5mTv", reward: "Equal Split", time: "3h ago" },
-];
-
-const REWARD_POOL = 4820; // Mock USDC pool
+import { Trophy, Clock, Zap, ArrowLeft, Loader2 } from "lucide-react";
+import { supabase, charEmoji, rewardLabel, shortWallet } from "@/lib/supabase";
+import type { LeaderboardEntry, RewardPool } from "@/lib/supabase";
 
 function Countdown() {
-  // Mock time remaining
-  const h = 8, m = 34, s = 12;
+  const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0 });
+
+  useEffect(() => {
+    const calc = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setUTCHours(24, 0, 0, 0);
+      const diff = Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / 1000));
+      setTimeLeft({
+        h: Math.floor(diff / 3600),
+        m: Math.floor((diff % 3600) / 60),
+        s: diff % 60,
+      });
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
       {[
-        { val: h, label: "H" },
-        { val: m, label: "M" },
-        { val: s, label: "S" },
+        { val: timeLeft.h, label: "H" },
+        { val: timeLeft.m, label: "M" },
+        { val: timeLeft.s, label: "S" },
       ].map(({ val, label }) => (
         <div key={label} style={{ textAlign: "center" }}>
           <div style={{
@@ -62,6 +56,65 @@ function Countdown() {
 
 export default function LeaderboardPage() {
   const [tab, setTab] = useState<"daily" | "alltime">("daily");
+  const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
+  const [pool, setPool] = useState<RewardPool | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDaily = useCallback(async () => {
+    setLoading(true);
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase
+      .from("dt_leaderboard_daily")
+      .select("*, dt_players(username, character, wallet_address)")
+      .eq("leaderboard_date", today)
+      .order("score", { ascending: false })
+      .limit(20);
+    setPlayers((data as LeaderboardEntry[]) ?? []);
+
+    const { data: poolData } = await supabase
+      .from("dt_reward_pool")
+      .select("pool_date, total_usdc, distributed")
+      .eq("pool_date", today)
+      .single();
+    setPool(poolData as RewardPool | null);
+    setLoading(false);
+  }, []);
+
+  const fetchAllTime = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("dt_players")
+      .select("id, total_score, highest_floor, username, character, wallet_address")
+      .order("total_score", { ascending: false })
+      .limit(20);
+
+    const mapped: LeaderboardEntry[] = (data ?? []).map((p: {
+      id: string; total_score: number; highest_floor: number;
+      username: string; character: string; wallet_address: string;
+    }, i: number) => ({
+      id: p.id,
+      player_id: p.id,
+      score: p.total_score,
+      floor_reached: p.highest_floor,
+      leaderboard_date: "",
+      rank: i + 1,
+      reward_percentage: null,
+      dt_players: { username: p.username, character: p.character, wallet_address: p.wallet_address },
+    }));
+    setPlayers(mapped);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (tab === "daily") fetchDaily();
+    else fetchAllTime();
+  }, [tab, fetchDaily, fetchAllTime]);
+
+  const rewardPoolAmount = pool?.total_usdc ?? 0;
+
+  const top3 = players.length >= 3
+    ? [players[1], players[0], players[2]]
+    : players;
 
   return (
     <div style={{ minHeight: "100vh", position: "relative" }}>
@@ -98,7 +151,7 @@ export default function LeaderboardPage() {
           <div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Today&apos;s Reward Pool</div>
             <div style={{ fontSize: 36, fontWeight: 900, color: "var(--gold)" }}>
-              ${REWARD_POOL.toLocaleString()} <span style={{ fontSize: 16, fontWeight: 600 }}>USDC</span>
+              ${Number(rewardPoolAmount).toLocaleString()} <span style={{ fontSize: 16, fontWeight: 600 }}>USDC</span>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -132,98 +185,128 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
-        {/* Top 3 podium */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.15fr 1fr", gap: 12, marginBottom: 20 }}>
-          {[MOCK_PLAYERS[1], MOCK_PLAYERS[0], MOCK_PLAYERS[2]].map((p, i) => {
-            const pos = [2, 1, 3][i];
-            const heights = ["80px", "100px", "70px"];
-            const colors = ["#94a3b8", "#f5c842", "#cd7f32"];
-            return (
-              <div key={p.name} className="card" style={{
-                textAlign: "center",
-                padding: "16px 12px",
-                marginTop: i === 1 ? 0 : 20,
-                borderColor: pos === 1 ? "rgba(245,200,66,0.4)" : "var(--border)",
-                background: pos === 1 ? "rgba(245,200,66,0.06)" : "var(--surface)",
-                position: "relative",
-              }}>
-                {pos === 1 && (
-                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", fontSize: 22 }}>👑</div>
-                )}
-                <div style={{ fontSize: 28, marginBottom: 4 }}>{p.char}</div>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Floor {p.floor}</div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: colors[i] }}>#{pos}</div>
-                <div style={{ fontSize: 11, color: colors[i], marginTop: 4, fontWeight: 600 }}>{p.reward}</div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Full leaderboard table */}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "40px 1fr 80px 80px 100px",
-            padding: "12px 20px",
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "var(--text-muted)",
-            borderBottom: "1px solid var(--border)",
-          }}>
-            <div>#</div>
-            <div>Player</div>
-            <div style={{ textAlign: "center" }}>Floor</div>
-            <div style={{ textAlign: "center" }}>Score</div>
-            <div style={{ textAlign: "right" }}>Reward</div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-muted)" }}>
+            <Loader2 size={32} style={{ animation: "spin-slow 1s linear infinite", margin: "0 auto 12px" }} />
+            <div>Loading leaderboard...</div>
           </div>
+        ) : players.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🏗️</div>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>No players yet</div>
+            <div style={{ color: "var(--text-muted)", fontSize: 14 }}>Be the first to climb the tower and claim the top spot!</div>
+            <Link href="/game" style={{ textDecoration: "none" }}>
+              <button className="btn-primary" style={{ marginTop: 24, fontSize: 15, padding: "12px 32px" }}>
+                <Zap size={14} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
+                Start Climbing
+              </button>
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Top 3 podium */}
+            {top3.length >= 3 && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1.15fr 1fr", gap: 12, marginBottom: 20 }}>
+                {top3.map((p, i) => {
+                  const pos = [2, 1, 3][i];
+                  const colors = ["#94a3b8", "#f5c842", "#cd7f32"];
+                  const name = p.dt_players?.username ?? "Unknown";
+                  const char = charEmoji(p.dt_players?.character ?? "pepe");
+                  return (
+                    <div key={p.id} className="card" style={{
+                      textAlign: "center",
+                      padding: "16px 12px",
+                      marginTop: i === 1 ? 0 : 20,
+                      borderColor: pos === 1 ? "rgba(245,200,66,0.4)" : "var(--border)",
+                      background: pos === 1 ? "rgba(245,200,66,0.06)" : "var(--surface)",
+                      position: "relative",
+                    }}>
+                      {pos === 1 && (
+                        <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", fontSize: 22 }}>👑</div>
+                      )}
+                      <div style={{ fontSize: 28, marginBottom: 4 }}>{char}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Floor {p.floor_reached}</div>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: colors[i] }}>#{pos}</div>
+                      <div style={{ fontSize: 11, color: colors[i], marginTop: 4, fontWeight: 600 }}>{rewardLabel(pos)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-          {MOCK_PLAYERS.map((p, i) => (
-            <div
-              key={p.name}
-              style={{
+            {/* Full leaderboard table */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{
                 display: "grid",
                 gridTemplateColumns: "40px 1fr 80px 80px 100px",
-                padding: "14px 20px",
-                borderBottom: i < MOCK_PLAYERS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                alignItems: "center",
-                background: p.rank <= 3 ? "rgba(245,200,66,0.03)" : "transparent",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)"}
-              onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = p.rank <= 3 ? "rgba(245,200,66,0.03)" : "transparent"}
-            >
-              <div style={{
-                fontWeight: 800,
-                color: p.rank === 1 ? "#f5c842" : p.rank === 2 ? "#94a3b8" : p.rank === 3 ? "#cd7f32" : "var(--text-muted)",
-                fontSize: p.rank <= 3 ? 16 : 13,
+                padding: "12px 20px",
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                borderBottom: "1px solid var(--border)",
               }}>
-                {p.rank <= 3 ? ["🥇", "🥈", "🥉"][p.rank - 1] : p.rank}
+                <div>#</div>
+                <div>Player</div>
+                <div style={{ textAlign: "center" }}>Floor</div>
+                <div style={{ textAlign: "center" }}>Score</div>
+                <div style={{ textAlign: "right" }}>Reward</div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <span style={{ fontSize: 18 }}>{p.char}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{p.wallet}</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "center", fontWeight: 700, color: "var(--gold)", fontSize: 14 }}>{p.floor}</div>
-              <div style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>{p.score.toLocaleString()}</div>
-              <div style={{ textAlign: "right", fontSize: 12, fontWeight: 600, color: p.rank <= 3 ? "var(--gold)" : "var(--green)" }}>{p.reward}</div>
-            </div>
-          ))}
-        </div>
 
-        <div style={{ textAlign: "center", marginTop: 24 }}>
-          <Link href="/game">
-            <button className="btn-primary" style={{ fontSize: 15, padding: "12px 32px" }}>
-              <Zap size={14} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
-              Climb Now
-            </button>
-          </Link>
-        </div>
+              {players.map((p, i) => {
+                const rank = i + 1;
+                const name = p.dt_players?.username ?? "Unknown";
+                const char = charEmoji(p.dt_players?.character ?? "pepe");
+                const wallet = shortWallet(p.dt_players?.wallet_address ?? "");
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "40px 1fr 80px 80px 100px",
+                      padding: "14px 20px",
+                      borderBottom: i < players.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                      alignItems: "center",
+                      background: rank <= 3 ? "rgba(245,200,66,0.03)" : "transparent",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = rank <= 3 ? "rgba(245,200,66,0.03)" : "transparent"}
+                  >
+                    <div style={{
+                      fontWeight: 800,
+                      color: rank === 1 ? "#f5c842" : rank === 2 ? "#94a3b8" : rank === 3 ? "#cd7f32" : "var(--text-muted)",
+                      fontSize: rank <= 3 ? 16 : 13,
+                    }}>
+                      {rank <= 3 ? ["🥇", "🥈", "🥉"][rank - 1] : rank}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: 18 }}>{char}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{wallet}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center", fontWeight: 700, color: "var(--gold)", fontSize: 14 }}>{p.floor_reached}</div>
+                    <div style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>{p.score.toLocaleString()}</div>
+                    <div style={{ textAlign: "right", fontSize: 12, fontWeight: 600, color: rank <= 3 ? "var(--gold)" : "var(--green)" }}>{rewardLabel(rank)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ textAlign: "center", marginTop: 24 }}>
+              <Link href="/game">
+                <button className="btn-primary" style={{ fontSize: 15, padding: "12px 32px" }}>
+                  <Zap size={14} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
+                  Climb Now
+                </button>
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

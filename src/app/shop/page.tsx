@@ -1,119 +1,44 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import StarField from "@/components/StarField";
-import { ShoppingBag, Zap, Shield, Star, ArrowLeft, Check } from "lucide-react";
-
-const SHOP_ITEMS = [
-  {
-    id: "revive_1",
-    category: "gameplay",
-    emoji: "💊",
-    name: "Single Revive",
-    desc: "Get back up once per run. Don't let a bad jump end your session.",
-    price: 50,
-    tag: "Most Popular",
-    tagColor: "var(--green)",
-  },
-  {
-    id: "revive_3",
-    category: "gameplay",
-    emoji: "💊💊💊",
-    name: "3x Revive Pack",
-    desc: "Three revives for the price of two. Stack them for long sessions.",
-    price: 120,
-    tag: "Best Value",
-    tagColor: "var(--gold)",
-  },
-  {
-    id: "speed_boost",
-    category: "powerups",
-    emoji: "⚡",
-    name: "Speed Boost",
-    desc: "50% faster movement for one full run. Outrun enemies and reach higher floors.",
-    price: 80,
-    tag: null,
-    tagColor: "",
-  },
-  {
-    id: "jump_boost",
-    category: "powerups",
-    emoji: "🚀",
-    name: "Super Jump",
-    desc: "Double your jump height for one run. Skip entire floor sections.",
-    price: 100,
-    tag: null,
-    tagColor: "",
-  },
-  {
-    id: "shield",
-    category: "powerups",
-    emoji: "🛡️",
-    name: "Damage Shield",
-    desc: "Block the next 2 enemy hits. Crucial for high-floor enemy swarms.",
-    price: 90,
-    tag: null,
-    tagColor: "",
-  },
-  {
-    id: "skin_gold",
-    category: "cosmetics",
-    emoji: "✨",
-    name: "Golden Aura",
-    desc: "Surround your character with a golden glow. Show the leaderboard who's boss.",
-    price: 300,
-    tag: "Exclusive",
-    tagColor: "var(--gold)",
-  },
-  {
-    id: "skin_fire",
-    category: "cosmetics",
-    emoji: "🔥",
-    name: "Flame Trail",
-    desc: "Leave a fire trail behind your character as you climb.",
-    price: 250,
-    tag: null,
-    tagColor: "",
-  },
-  {
-    id: "char_unlock",
-    category: "cosmetics",
-    emoji: "🃏",
-    name: "Rare Character Slot",
-    desc: "Unlock a secret meme character. Identity revealed after purchase.",
-    price: 500,
-    tag: "Limited",
-    tagColor: "var(--purple)",
-  },
-  {
-    id: "event_pass",
-    category: "events",
-    emoji: "🎫",
-    name: "Tournament Pass",
-    desc: "Access the weekly $10,000 USDC tournament. Top 5 earn massive rewards.",
-    price: 200,
-    tag: "Weekly",
-    tagColor: "var(--blue)",
-  },
-];
+import { ShoppingBag, Zap, Shield, Star, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import type { ShopItem } from "@/lib/supabase";
 
 const CATEGORIES = [
   { id: "all", label: "All Items", icon: <ShoppingBag size={14} /> },
   { id: "gameplay", label: "Gameplay", icon: <Zap size={14} /> },
   { id: "powerups", label: "Power-Ups", icon: <Shield size={14} /> },
   { id: "cosmetics", label: "Cosmetics", icon: <Star size={14} /> },
-  { id: "events", label: "Events", icon: <Star size={14} /> },
+  { id: "boosters", label: "Boosters", icon: <Star size={14} /> },
 ];
 
 export default function ShopPage() {
   const [category, setCategory] = useState("all");
   const [cart, setCart] = useState<string[]>([]);
   const [purchased, setPurchased] = useState<string[]>([]);
+  const [items, setItems] = useState<ShopItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = SHOP_ITEMS.filter(i => category === "all" || i.category === category);
+  useEffect(() => {
+    async function fetchItems() {
+      setLoading(true);
+      const { data } = await supabase
+        .from("dt_shop_items")
+        .select("*")
+        .eq("is_active", true)
+        .order("price", { ascending: true });
+      setItems((data as ShopItem[]) ?? []);
+      setLoading(false);
+    }
+    fetchItems();
+  }, []);
+
+  const filtered = items.filter(i => category === "all" || i.category === category);
   const cartTotal = cart.reduce((sum, id) => {
-    const item = SHOP_ITEMS.find(i => i.id === id);
+    const item = items.find(i => i.id === id);
     return sum + (item?.price || 0);
   }, 0);
 
@@ -146,7 +71,7 @@ export default function ShopPage() {
           Spend native tokens on power-ups, revives, and cosmetics.
         </p>
 
-        {/* Token balance mock */}
+        {/* Token balance */}
         <div style={{
           background: "rgba(245,200,66,0.06)",
           border: "1px solid rgba(245,200,66,0.2)",
@@ -163,11 +88,11 @@ export default function ShopPage() {
             <span style={{ fontSize: 22 }}>💰</span>
             <div>
               <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Your Balance</div>
-              <div style={{ fontWeight: 800, fontSize: 20, color: "var(--gold)" }}>1,250 $TOWER</div>
+              <div style={{ fontWeight: 800, fontSize: 20, color: "var(--gold)" }}>— $TOWER</div>
             </div>
           </div>
           <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-            ≈ $62.50 USD · <span style={{ color: "var(--green)" }}>▲ 8.4%</span>
+            Connect wallet to see balance
           </div>
         </div>
 
@@ -201,65 +126,72 @@ export default function ShopPage() {
             </div>
 
             {/* Items grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
-              {filtered.map(item => {
-                const inCart = cart.includes(item.id);
-                const isPurchased = purchased.includes(item.id);
-                return (
-                  <div
-                    key={item.id}
-                    className="card"
-                    style={{
-                      cursor: isPurchased ? "default" : "pointer",
-                      transition: "all 0.2s",
-                      borderColor: inCart ? "var(--gold)" : isPurchased ? "var(--green)" : "var(--border)",
-                      background: inCart ? "rgba(245,200,66,0.05)" : isPurchased ? "rgba(34,214,122,0.05)" : "var(--surface)",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                    onClick={() => toggleCart(item.id)}
-                    onMouseEnter={e => { if (!isPurchased) (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"}
-                  >
-                    {item.tag && (
-                      <div style={{
-                        position: "absolute",
-                        top: 12,
-                        right: 12,
-                        background: item.tagColor,
-                        color: "#0a0a0f",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: 20,
-                        letterSpacing: "0.04em",
-                      }}>
-                        {item.tag}
-                      </div>
-                    )}
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>{item.emoji}</div>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{item.name}</div>
-                    <div style={{ color: "var(--text-muted)", fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>{item.desc}</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontWeight: 800, color: "var(--gold)", fontSize: 16 }}>{item.price} <span style={{ fontSize: 12, fontWeight: 600 }}>$TOWER</span></span>
-                      {isPurchased ? (
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--green)", fontSize: 13, fontWeight: 600 }}>
-                          <Check size={14} /> Owned
-                        </span>
-                      ) : (
-                        <span style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: inCart ? "var(--gold)" : "var(--text-muted)",
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-muted)" }}>
+                <Loader2 size={28} style={{ animation: "spin-slow 1s linear infinite", margin: "0 auto 12px" }} />
+                <div>Loading items...</div>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
+                No items in this category yet.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
+                {filtered.map(item => {
+                  const inCart = cart.includes(item.id);
+                  const isPurchased = purchased.includes(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className="card"
+                      style={{
+                        cursor: isPurchased ? "default" : "pointer",
+                        transition: "all 0.2s",
+                        borderColor: inCart ? "var(--gold)" : isPurchased ? "var(--green)" : "var(--border)",
+                        background: inCart ? "rgba(245,200,66,0.05)" : isPurchased ? "rgba(34,214,122,0.05)" : "var(--surface)",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                      onClick={() => toggleCart(item.id)}
+                      onMouseEnter={e => { if (!isPurchased) (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"}
+                    >
+                      {item.tag && (
+                        <div style={{
+                          position: "absolute",
+                          top: 12,
+                          right: 12,
+                          background: item.tag_color ?? "var(--gold)",
+                          color: "#0a0a0f",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 20,
+                          letterSpacing: "0.04em",
                         }}>
-                          {inCart ? "✓ In Cart" : "+ Add"}
-                        </span>
+                          {item.tag}
+                        </div>
                       )}
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>{item.emoji}</div>
+                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{item.name}</div>
+                      <div style={{ color: "var(--text-muted)", fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>{item.description}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontWeight: 800, color: "var(--gold)", fontSize: 16 }}>{item.price} <span style={{ fontSize: 12, fontWeight: 600 }}>$TOWER</span></span>
+                        {isPurchased ? (
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--green)", fontSize: 13, fontWeight: 600 }}>
+                            <Check size={14} /> Owned
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 12, fontWeight: 600, color: inCart ? "var(--gold)" : "var(--text-muted)" }}>
+                            {inCart ? "✓ In Cart" : "+ Add"}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Right: cart */}
@@ -276,7 +208,7 @@ export default function ShopPage() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                   {cart.map(id => {
-                    const item = SHOP_ITEMS.find(i => i.id === id)!;
+                    const item = items.find(i => i.id === id)!;
                     return (
                       <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                         <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
