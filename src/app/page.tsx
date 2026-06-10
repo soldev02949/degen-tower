@@ -1,25 +1,16 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-
-const CHARS = [
-  { id:"pepe",     name:"Pepe",      emoji:"🐸", color:"#4caf50", glow:"76,175,80",   ability:"Lucky Tap",   desc:"15% chance to 3× coins" },
-  { id:"gigachad", name:"Gigachad",  emoji:"💪", color:"#e0b87a", glow:"224,184,122", ability:"Sigma Grind", desc:"20× max combo beast" },
-  { id:"trump",    name:"Trump",     emoji:"🎩", color:"#3b82f6", glow:"59,130,246",  ability:"Deal Maker",  desc:"Every 50 taps = 10× burst" },
-  { id:"troll",    name:"Trollface", emoji:"🧌", color:"#a855f7", glow:"168,85,247",  ability:"Chaos Agent", desc:"0.5–8× random per tap" },
-  { id:"bonk",     name:"Bonk",      emoji:"🐕", color:"#e8853a", glow:"232,133,58",  ability:"BONK Speed",  desc:"3× energy regen rate" },
-];
+import { useEffect, useState } from "react";
 
 const FEATURES = [
-  { emoji:"🐸", title:"5 Degen Characters", desc:"Pepe, Gigachad, Trump, Trollface, Bonk — each with passive powers & specials" },
   { emoji:"🔥", title:"Combo Multiplier",   desc:"Tap fast to stack up to 20× multiplier. Drop it and start over" },
   { emoji:"🤖", title:"Auto-Tappers",       desc:"Hire Bot Armies, Whale Wallets & Hedge Funds to earn while you sleep" },
+  { emoji:"⚡", title:"Upgrades",            desc:"Power up tap strength, energy, crit chance and more" },
   { emoji:"👑", title:"Rank Ladder",        desc:"Earn $TOWER → gain XP → level up → unlock Gigachad, Sigma, God Tier ranks" },
   { emoji:"🏆", title:"48hr Seasons",       desc:"Leaderboard resets every 48 hours. Top players win USDC" },
-  { emoji:"👕", title:"Drip System",        desc:"Dress your 3D character — hats, shades, chains, diamonds & more" },
+  { emoji:"🎮", title:"5 Characters",       desc:"Pepe, Gigachad, Trump, Trollface, Bonk — each with unique specials" },
 ];
 
-// Floating coin particle
 function Coins() {
   const coins = ["💰","🪙","💎","⚡","🔥","🚀","👑","💸","🎯","✨"];
   const [items] = useState(() =>
@@ -46,17 +37,13 @@ function Coins() {
 }
 
 export default function SplashPage() {
-  const [activeChar, setActiveChar] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout|null>(null);
-
+  const [glow, setGlow] = useState("168,85,247");
+  const glows = ["76,175,80","224,184,122","59,130,246","168,85,247","232,133,58"];
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setActiveChar(c => (c+1) % CHARS.length);
-    }, 2200);
-    return () => { if(intervalRef.current) clearInterval(intervalRef.current); };
+    let i = 0;
+    const id = setInterval(() => { i=(i+1)%glows.length; setGlow(glows[i]); }, 2200);
+    return () => clearInterval(id);
   }, []);
-
-  const char = CHARS[activeChar];
 
   return (
     <div style={{
@@ -65,14 +52,13 @@ export default function SplashPage() {
     }}>
       <Coins/>
 
-      {/* Ambient glow that follows active character */}
       <div style={{
         position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
-        background:`radial-gradient(ellipse at 50% 30%, rgba(${char.glow},0.18) 0%, transparent 60%)`,
+        background:`radial-gradient(ellipse at 50% 30%, rgba(${glow},0.18) 0%, transparent 60%)`,
         transition:"background 1.2s ease",
       }}/>
 
-      {/* ── NAV ──────────────────────────────────────────────────── */}
+      {/* NAV */}
       <nav style={{
         position:"sticky", top:0, zIndex:40,
         background:"rgba(8,0,16,0.92)", backdropFilter:"blur(20px)",
@@ -104,39 +90,36 @@ export default function SplashPage() {
         </div>
       </nav>
 
-      {/* ── HERO ──────────────────────────────────────────────────── */}
+      {/* HERO */}
       <section style={{
         position:"relative",zIndex:1,
-        textAlign:"center",padding:"60px 20px 40px",
+        textAlign:"center",padding:"70px 20px 50px",
         maxWidth:680,margin:"0 auto",
       }}>
-        {/* Badge */}
         <div style={{
           display:"inline-flex",alignItems:"center",gap:6,
           background:"rgba(168,85,247,0.08)",border:"1px solid rgba(168,85,247,0.25)",
           borderRadius:20,padding:"5px 14px",fontSize:11,color:"#a855f7",
-          fontWeight:700,marginBottom:24,textTransform:"uppercase",letterSpacing:"0.1em",
+          fontWeight:700,marginBottom:28,textTransform:"uppercase",letterSpacing:"0.1em",
         }}>
           <span style={{width:6,height:6,borderRadius:"50%",background:"#22d67a",display:"inline-block",boxShadow:"0 0 6px #22d67a",animation:"pulseDot 1s infinite"}}/>
           Free to Play · Tap to Earn · Win USDC
         </div>
 
-        {/* Headline */}
         <h1 style={{
-          fontSize:"clamp(38px,9vw,78px)",fontWeight:900,lineHeight:1.0,
-          letterSpacing:"-0.04em",margin:"0 0 18px",
+          fontSize:"clamp(40px,9vw,78px)",fontWeight:900,lineHeight:1.0,
+          letterSpacing:"-0.04em",margin:"0 0 20px",
           background:"linear-gradient(135deg,#ffffff 0%,#c4b5fd 50%,#a855f7 100%)",
           WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
         }}>
           TAP YOUR WAY<br/>TO THE TOP
         </h1>
-        <p style={{color:"#6644aa",fontSize:"clamp(14px,3.5vw,18px)",lineHeight:1.6,marginBottom:32,maxWidth:500,margin:"0 auto 32px"}}>
-          Pick your degen character. Tap to earn $TOWER. Build auto-tappers.
-          Dress your 3D character with drip. Compete every 48 hours for USDC prizes.
+        <p style={{color:"#6644aa",fontSize:"clamp(14px,3.5vw,18px)",lineHeight:1.6,marginBottom:36,maxWidth:500,margin:"0 auto 36px"}}>
+          Pick your legend. Tap to earn $TOWER. Build auto-tappers.<br/>
+          Compete every 48 hours for real USDC prizes.
         </p>
 
-        {/* CTAs */}
-        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginBottom:48}}>
+        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginBottom:52}}>
           <Link href="/signup" style={{
             background:"linear-gradient(135deg,#7c3aed,#a855f7)",
             color:"#fff",fontWeight:900,fontSize:16,
@@ -156,9 +139,8 @@ export default function SplashPage() {
           </Link>
         </div>
 
-        {/* Social proof */}
         <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
-          {[["🎮","Free to Play"],["⏱","48hr Seasons"],["💰","Real USDC Prizes"],["👕","3D Drip"]].map(([e,l])=>(
+          {[["🎮","Free to Play"],["⏱","48hr Seasons"],["💰","Real USDC Prizes"],["🤖","Auto-Tappers"]].map(([e,l])=>(
             <div key={l} style={{textAlign:"center"}}>
               <div style={{fontSize:20,marginBottom:2}}>{e}</div>
               <div style={{color:"#444",fontSize:11,fontWeight:700}}>{l}</div>
@@ -167,53 +149,7 @@ export default function SplashPage() {
         </div>
       </section>
 
-      {/* ── CHARACTER SHOWCASE ────────────────────────────────────── */}
-      <section style={{position:"relative",zIndex:1,padding:"20px 16px 32px",maxWidth:600,margin:"0 auto"}}>
-        {/* Active character big display */}
-        <div style={{
-          textAlign:"center",marginBottom:20,
-          background:`rgba(${char.glow},0.04)`,
-          border:`1px solid rgba(${char.glow},0.18)`,
-          borderRadius:24,padding:"24px 20px",
-          boxShadow:`0 0 60px rgba(${char.glow},0.1)`,
-          transition:"all 0.5s",
-        }}>
-          <div style={{
-            fontSize:80,marginBottom:8,
-            filter:`drop-shadow(0 0 30px rgba(${char.glow},0.7))`,
-            display:"inline-block",
-            animation:"bounceChar 0.4s ease-out",
-          }}>{char.emoji}</div>
-          <div style={{color:"#fff",fontWeight:900,fontSize:22,marginBottom:4}}>{char.name}</div>
-          <div style={{
-            display:"inline-block",
-            background:`rgba(${char.glow},0.12)`,
-            border:`1px solid rgba(${char.glow},0.3)`,
-            borderRadius:8,padding:"3px 12px",fontSize:12,
-            color:`rgb(${char.glow})`,fontWeight:700,marginBottom:8,
-          }}>{char.ability}</div>
-          <div style={{color:"#554466",fontSize:13}}>{char.desc}</div>
-        </div>
-
-        {/* Character picker pills */}
-        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-          {CHARS.map((c,i)=>(
-            <button key={c.id} onClick={()=>{setActiveChar(i);if(intervalRef.current)clearInterval(intervalRef.current);}}
-              style={{
-                background:i===activeChar?`rgba(${c.glow},0.15)`:"rgba(255,255,255,0.03)",
-                border:`2px solid ${i===activeChar?`rgb(${c.glow})`:"rgba(255,255,255,0.06)"}`,
-                borderRadius:14,padding:"9px 14px",cursor:"pointer",
-                display:"flex",flexDirection:"column",alignItems:"center",gap:3,
-                transition:"all 0.2s",flexShrink:0,
-              }}>
-              <span style={{fontSize:28}}>{c.emoji}</span>
-              <span style={{color:i===activeChar?`rgb(${c.glow})`:"#444",fontWeight:700,fontSize:10}}>{c.name}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FEATURES ──────────────────────────────────────────────── */}
+      {/* FEATURES */}
       <section style={{position:"relative",zIndex:1,padding:"0 14px 40px",maxWidth:560,margin:"0 auto"}}>
         <div style={{
           fontSize:10,color:"#332244",fontWeight:700,
@@ -235,11 +171,8 @@ export default function SplashPage() {
         </div>
       </section>
 
-      {/* ── BOTTOM CTA ────────────────────────────────────────────── */}
-      <section style={{
-        position:"relative",zIndex:1,textAlign:"center",
-        padding:"32px 20px 60px",
-      }}>
+      {/* BOTTOM CTA */}
+      <section style={{position:"relative",zIndex:1,textAlign:"center",padding:"32px 20px 60px"}}>
         <div style={{
           maxWidth:420,margin:"0 auto",
           background:"linear-gradient(135deg,rgba(124,58,237,0.12),rgba(168,85,247,0.06))",
@@ -270,7 +203,6 @@ export default function SplashPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ────────────────────────────────────────────────── */}
       <footer style={{
         position:"relative",zIndex:1,
         borderTop:"1px solid rgba(255,255,255,0.05)",
@@ -283,7 +215,6 @@ export default function SplashPage() {
       <style>{`
         @keyframes floatCoin { 0%{transform:translateY(0) rotate(0deg);opacity:0.12} 50%{opacity:0.18} 100%{transform:translateY(-110vh) rotate(360deg);opacity:0} }
         @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes bounceChar { 0%{transform:scale(0.85)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
       `}</style>
     </div>
   );
