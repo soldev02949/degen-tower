@@ -1,16 +1,14 @@
 "use client";
-import { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank, RANKS } from "@/lib/progression";
-
-const CharacterModel3D = lazy(() => import("./CharacterModel3D"));
 
 // ─── Characters ──────────────────────────────────────────────────────────────
 export const CHARACTERS = [
-  { id:"pepe",     name:"Pepe",      emoji:"🐸", color:"#4caf50", glow:"76,175,80",   baseCoins:1, ability:"Lucky Tap",   abilityDesc:"15% chance to triple coins",       specialName:"Comfy Mode",   specialDesc:"2× all earnings for 30s", specialDuration:30, passive:(c:number)=>Math.random()<0.15?c*3:c, specialMultiplier:2, energyRegen:1,   comboMax:10 },
-  { id:"gigachad", name:"Gigachad",  emoji:"💪", color:"#e0b87a", glow:"224,184,122", baseCoins:1, ability:"Sigma Grind", abilityDesc:"Combo builds 2× faster, 20× max",  specialName:"Max Mode",     specialDesc:"20× combo instantly for 20s", specialDuration:20, passive:(c:number)=>c, specialMultiplier:5, energyRegen:1,   comboMax:20 },
-  { id:"trump",    name:"Trump",     emoji:"🎩", color:"#3b82f6", glow:"59,130,246",  baseCoins:2, ability:"Deal Maker",  abilityDesc:"Every 50 taps = 10× burst",        specialName:"MAGA Mode",    specialDesc:"Helpers 5× + tap 3× for 40s", specialDuration:40, passive:(c:number)=>c, specialMultiplier:3, energyRegen:0.8, comboMax:12 },
-  { id:"troll",    name:"Trollface", emoji:"🧌", color:"#a855f7", glow:"168,85,247",  baseCoins:1, ability:"Chaos Agent", abilityDesc:"Random 0.5–8× per tap",            specialName:"CHAOS MODE",   specialDesc:"10s of 1–15× random", specialDuration:10, passive:(c:number)=>c*(0.5+Math.random()*7.5), specialMultiplier:1, energyRegen:1.2, comboMax:10 },
-  { id:"bonk",     name:"Bonk",      emoji:"🐕", color:"#e8853a", glow:"232,133,58",  baseCoins:1, ability:"BONK Speed",  abilityDesc:"3× energy regen",                  specialName:"BONK Frenzy",  specialDesc:"Infinite energy + 3× for 15s", specialDuration:15, passive:(c:number)=>c, specialMultiplier:3, energyRegen:3,   comboMax:10 },
+  { id:"pepe",     name:"Pepe",      emoji:"🐸", image:"/characters/pepe.png",     color:"#4caf50", glow:"76,175,80",   baseCoins:1, ability:"Lucky Tap",   abilityDesc:"15% chance to triple coins",       specialName:"Comfy Mode",   specialDesc:"2× all earnings for 30s", specialDuration:30, passive:(c:number)=>Math.random()<0.15?c*3:c, specialMultiplier:2, energyRegen:1,   comboMax:10 },
+  { id:"gigachad", name:"Gigachad",  emoji:"💪", image:"/characters/gigachad.png", color:"#e0b87a", glow:"224,184,122", baseCoins:1, ability:"Sigma Grind", abilityDesc:"Combo builds 2× faster, 20× max",  specialName:"Max Mode",     specialDesc:"20× combo instantly for 20s", specialDuration:20, passive:(c:number)=>c, specialMultiplier:5, energyRegen:1,   comboMax:20 },
+  { id:"trump",    name:"Trump",     emoji:"🎩", image:"/characters/trump.png",    color:"#3b82f6", glow:"59,130,246",  baseCoins:2, ability:"Deal Maker",  abilityDesc:"Every 50 taps = 10× burst",        specialName:"MAGA Mode",    specialDesc:"Helpers 5× + tap 3× for 40s", specialDuration:40, passive:(c:number)=>c, specialMultiplier:3, energyRegen:0.8, comboMax:12 },
+  { id:"troll",    name:"Trollface", emoji:"🧌", image:"/characters/troll.png",    color:"#a855f7", glow:"168,85,247",  baseCoins:1, ability:"Chaos Agent", abilityDesc:"Random 0.5–8× per tap",            specialName:"CHAOS MODE",   specialDesc:"10s of 1–15× random", specialDuration:10, passive:(c:number)=>c*(0.5+Math.random()*7.5), specialMultiplier:1, energyRegen:1.2, comboMax:10 },
+  { id:"bonk",     name:"Bonk",      emoji:"🐕", image:"/characters/bonk.png",     color:"#e8853a", glow:"232,133,58",  baseCoins:1, ability:"BONK Speed",  abilityDesc:"3× energy regen",                  specialName:"BONK Frenzy",  specialDesc:"Infinite energy + 3× for 15s", specialDuration:15, passive:(c:number)=>c, specialMultiplier:3, energyRegen:3,   comboMax:10 },
 ];
 
 // ─── Upgrades ─────────────────────────────────────────────────────────────────
@@ -30,30 +28,35 @@ const UPGRADES = [
 ];
 
 // ─── Cosmetics ────────────────────────────────────────────────────────────────
-// slot: hat | glasses | mouth | neck | hand
-// These render as 2D overlays on top of the 3D canvas, positioned in screen space
-// using a percentage-based grid that maps to where each body part is on the model
+// Positions are % of the 240×240 character circle container.
+// Characters are square images (1920×1920) displayed object-fit:cover in the circle.
+// Face occupies roughly top 5–30% of the image.
+// Hat: sits on top of head ~5-8% from top, centered (~47% left)
+// Glasses: eye level ~19-22% from top, centered
+// Mouth/cigar: ~29-33% from top, slightly right
+// Neck/chain: ~37-44% from top, centered
+// Hand: side of body ~55-65%
 export const COSMETICS = [
-  // Hats — sit above/on top of head (top of model)
-  { id:"top_hat",   name:"Top Hat",        emoji:"🎩", slot:"hat",     cost:500,  rarity:"rare",      top:"4%",  left:"44%",  size:38 },
-  { id:"crown",     name:"Crown",          emoji:"👑", slot:"hat",     cost:2000, rarity:"epic",      top:"2%",  left:"44%",  size:36 },
-  { id:"cowboy",    name:"Cowboy Hat",     emoji:"🤠", slot:"hat",     cost:800,  rarity:"rare",      top:"4%",  left:"43%",  size:40 },
-  { id:"santa",     name:"Santa Hat",      emoji:"🎅", slot:"hat",     cost:350,  rarity:"common",    top:"3%",  left:"46%",  size:34 },
-  { id:"party_hat", name:"Party Hat",      emoji:"🎉", slot:"hat",     cost:250,  rarity:"common",    top:"4%",  left:"50%",  size:30 },
-  // Glasses — across the eye area (upper-mid of model)
-  { id:"shades",    name:"Chad Shades",    emoji:"😎", slot:"glasses", cost:300,  rarity:"common",    top:"28%", left:"35%",  size:44 },
-  { id:"monocle",   name:"Monocle",        emoji:"🧐", slot:"glasses", cost:600,  rarity:"rare",      top:"28%", left:"40%",  size:36 },
-  { id:"vr",        name:"VR Headset",     emoji:"🥽", slot:"glasses", cost:1200, rarity:"epic",      top:"26%", left:"33%",  size:48 },
-  { id:"nerd",      name:"Nerd Glasses",   emoji:"🤓", slot:"glasses", cost:400,  rarity:"common",    top:"28%", left:"34%",  size:44 },
-  // Mouth / face
-  { id:"cigar",     name:"Degen Cigar",    emoji:"🚬", slot:"mouth",   cost:400,  rarity:"common",    top:"52%", left:"58%",  size:28 },
-  // Neck / chain
-  { id:"chain",     name:"Diamond Chain",  emoji:"📿", slot:"neck",    cost:1000, rarity:"epic",      top:"60%", left:"36%",  size:36 },
-  { id:"watch",     name:"Gold Watch",     emoji:"⌚", slot:"neck",    cost:800,  rarity:"rare",      top:"64%", left:"64%",  size:26 },
-  // Hand-held
-  { id:"bag",       name:"Money Bag",      emoji:"💰", slot:"hand",    cost:600,  rarity:"rare",      top:"62%", left:"16%",  size:32 },
-  { id:"diamond",   name:"Diamond Ring",   emoji:"💍", slot:"hand",    cost:2500, rarity:"legendary", top:"72%", left:"68%",  size:22 },
-  { id:"sword",     name:"Based Sword",    emoji:"⚔️",  slot:"hand",    cost:1800, rarity:"epic",      top:"58%", left:"12%",  size:34 },
+  // ── Hats ──────────────────────────────────────────────────────────────────
+  { id:"top_hat",   name:"Top Hat",        emoji:"🎩", slot:"hat",     cost:500,  rarity:"rare",      top:"3%",  left:"50%", transform:"translateX(-50%)", size:30 },
+  { id:"crown",     name:"Crown",          emoji:"👑", slot:"hat",     cost:2000, rarity:"epic",      top:"1%",  left:"50%", transform:"translateX(-50%)", size:28 },
+  { id:"cowboy",    name:"Cowboy Hat",     emoji:"🤠", slot:"hat",     cost:800,  rarity:"rare",      top:"3%",  left:"50%", transform:"translateX(-50%)", size:32 },
+  { id:"santa",     name:"Santa Hat",      emoji:"🎅", slot:"hat",     cost:350,  rarity:"common",    top:"2%",  left:"50%", transform:"translateX(-50%)", size:28 },
+  { id:"party_hat", name:"Party Hat",      emoji:"🎉", slot:"hat",     cost:250,  rarity:"common",    top:"3%",  left:"50%", transform:"translateX(-50%)", size:26 },
+  // ── Glasses ───────────────────────────────────────────────────────────────
+  { id:"shades",    name:"Chad Shades",    emoji:"😎", slot:"glasses", cost:300,  rarity:"common",    top:"20%", left:"50%", transform:"translateX(-50%)", size:28 },
+  { id:"monocle",   name:"Monocle",        emoji:"🧐", slot:"glasses", cost:600,  rarity:"rare",      top:"20%", left:"54%", transform:"translateX(-50%)", size:22 },
+  { id:"vr",        name:"VR Headset",     emoji:"🥽", slot:"glasses", cost:1200, rarity:"epic",      top:"19%", left:"50%", transform:"translateX(-50%)", size:30 },
+  { id:"nerd",      name:"Nerd Glasses",   emoji:"🤓", slot:"glasses", cost:400,  rarity:"common",    top:"20%", left:"50%", transform:"translateX(-50%)", size:28 },
+  // ── Mouth ─────────────────────────────────────────────────────────────────
+  { id:"cigar",     name:"Degen Cigar",    emoji:"🚬", slot:"mouth",   cost:400,  rarity:"common",    top:"29%", left:"57%", transform:"translateX(-50%)", size:18 },
+  // ── Neck / chain ──────────────────────────────────────────────────────────
+  { id:"chain",     name:"Diamond Chain",  emoji:"📿", slot:"neck",    cost:1000, rarity:"epic",      top:"37%", left:"50%", transform:"translateX(-50%)", size:26 },
+  { id:"watch",     name:"Gold Watch",     emoji:"⌚", slot:"neck",    cost:800,  rarity:"rare",      top:"55%", left:"68%", transform:"translateX(-50%)", size:20 },
+  // ── Hand-held ─────────────────────────────────────────────────────────────
+  { id:"bag",       name:"Money Bag",      emoji:"💰", slot:"hand",    cost:600,  rarity:"rare",      top:"58%", left:"14%", transform:"none",             size:24 },
+  { id:"diamond",   name:"Diamond Ring",   emoji:"💍", slot:"hand",    cost:2500, rarity:"legendary", top:"62%", left:"72%", transform:"none",             size:18 },
+  { id:"sword",     name:"Based Sword",    emoji:"⚔️",  slot:"hand",    cost:1800, rarity:"epic",      top:"50%", left:"8%",  transform:"none",             size:28 },
 ];
 
 const RARITY_COLOR:Record<string,string> = { common:"#6b6b8a", rare:"#3b82f6", epic:"#a855f7", legendary:"#f5c842" };
@@ -171,51 +174,91 @@ function UsernameModal({onConfirm}:{onConfirm:(name:string,wallet:string)=>void}
   );
 }
 
-// ─── 3D Model Stage with cosmetic overlays ────────────────────────────────────
+// ─── Character Stage with real PNG images + cosmetic overlays ─────────────────
 function ModelStage({ char, equippedCosmetics, specialActive, charPulse, onTap, firstPlay }:{
   char:typeof CHARACTERS[0]; equippedCosmetics:Record<string,string>; specialActive:boolean; charPulse:boolean; onTap:(e:React.MouseEvent|React.TouchEvent)=>void; firstPlay:boolean;
 }){
-  const equipped=Object.values(equippedCosmetics);
-  const equippedItems=equipped.map(id=>COSMETICS.find(c=>c.id===id)).filter(Boolean) as typeof COSMETICS[0][];
+  const equippedItems = Object.values(equippedCosmetics)
+    .map(id => COSMETICS.find(c => c.id === id))
+    .filter(Boolean) as typeof COSMETICS[0][];
 
-  return(
-    <div style={{position:"relative",width:"100%",maxWidth:300,height:300,margin:"0 auto"}}>
-      {/* Glow backdrop */}
-      <div style={{position:"absolute",inset:0,borderRadius:"50%",background:`radial-gradient(ellipse at 50% 60%,rgba(${char.glow},${specialActive?0.35:0.15}) 0%,transparent 70%)`,pointerEvents:"none",transition:"background 0.5s"}}/>
-      {/* 3D Canvas */}
-      <div style={{position:"absolute",inset:0,borderRadius:16,overflow:"hidden",
-        boxShadow:specialActive?`0 0 60px rgba(${char.glow},0.6),0 0 120px rgba(${char.glow},0.2)`:`0 0 24px rgba(${char.glow},0.2)`,
-        border:specialActive?`2px solid rgba(${char.glow},0.8)`:`1px solid rgba(${char.glow},0.2)`,
-        transition:"box-shadow 0.4s,border 0.4s",
-        transform:charPulse?"scale(0.96)":"scale(1)"}}>
-        <Suspense fallback={
-          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",background:"#0a0016",fontSize:72}}>
-            {char.emoji}
-          </div>
-        }>
-          <CharacterModel3D charId={char.id} color={char.color} glow={char.glow} specialActive={specialActive} onTap={onTap}/>
-        </Suspense>
+  const SIZE = 240;
+
+  return (
+    <div style={{position:"relative", width:SIZE, height:SIZE, margin:"0 auto", flexShrink:0}}>
+      {/* Outer glow ring */}
+      <div style={{
+        position:"absolute", inset:-12, borderRadius:"50%",
+        background:`radial-gradient(ellipse at 50% 80%, rgba(${char.glow},${specialActive?0.45:0.18}) 0%, transparent 65%)`,
+        pointerEvents:"none", transition:"background 0.5s",
+      }}/>
+      {/* Orbit rings when special active */}
+      {specialActive && <>
+        <div style={{position:"absolute",inset:-8,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.5)`,animation:"orbit1 3s linear infinite",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",inset:-16,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.25)`,animation:"orbit2 6s linear infinite reverse",pointerEvents:"none"}}/>
+      </>}
+
+      {/* Circle clip + character image */}
+      <div
+        onMouseDown={onTap} onTouchStart={onTap}
+        style={{
+          position:"absolute", inset:0,
+          borderRadius:"50%", overflow:"hidden",
+          cursor:"pointer", userSelect:"none", WebkitUserSelect:"none",
+          border:specialActive?`2px solid rgba(${char.glow},0.9)`:`2px solid rgba(${char.glow},0.3)`,
+          boxShadow:specialActive
+            ?`0 0 50px rgba(${char.glow},0.7), 0 0 100px rgba(${char.glow},0.3), inset 0 0 30px rgba(${char.glow},0.1)`
+            :`0 0 20px rgba(${char.glow},0.25)`,
+          transition:"box-shadow 0.4s, border 0.4s, transform 0.1s",
+          transform:charPulse?"scale(0.94)":"scale(1)",
+          background:`radial-gradient(ellipse at 50% 30%, rgba(${char.glow},0.08) 0%, #0a0016 100%)`,
+        }}
+      >
+        <img
+          src={char.image}
+          alt={char.name}
+          draggable={false}
+          style={{
+            width:"100%", height:"100%",
+            objectFit:"cover", objectPosition:"center top",
+            display:"block", pointerEvents:"none",
+            filter:specialActive?`brightness(1.15) saturate(1.3) drop-shadow(0 0 12px rgba(${char.glow},0.5))`:"none",
+            transition:"filter 0.4s",
+          }}
+          onError={e=>{
+            const el = e.target as HTMLImageElement;
+            el.style.display = "none";
+            if(el.parentElement) el.parentElement.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:100px">${char.emoji}</div>`;
+          }}
+        />
       </div>
-      {/* Cosmetic overlays - positioned relative to the stage box */}
-      {equippedItems.map(cos=>(
+
+      {/* Cosmetic overlays — positioned relative to the 240×240 container */}
+      {equippedItems.map(cos => (
         <div key={cos.id} style={{
           position:"absolute",
-          top:cos.top, left:cos.left,
-          fontSize:cos.size,
-          lineHeight:1,
-          pointerEvents:"none",
-          zIndex:10,
-          filter:"drop-shadow(0 2px 6px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(0,0,0,0.8))",
-          textShadow:"none",
-          userSelect:"none",
-          WebkitUserSelect:"none",
+          top: cos.top,
+          left: cos.left,
+          transform: cos.transform,
+          fontSize: cos.size,
+          lineHeight: 1,
+          pointerEvents: "none",
+          zIndex: 20,
+          filter: "drop-shadow(0 1px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.9))",
+          userSelect: "none",
+          WebkitUserSelect: "none",
         }}>
           {cos.emoji}
         </div>
       ))}
-      {/* First play hint */}
-      {firstPlay&&(
-        <div style={{position:"absolute",bottom:-28,left:"50%",transform:"translateX(-50%)",fontSize:11,color:"#6644aa",fontWeight:600,whiteSpace:"nowrap",animation:"floatHint 1.5s ease-in-out infinite"}}>
+
+      {/* First-play hint */}
+      {firstPlay && (
+        <div style={{
+          position:"absolute", bottom:-26, left:"50%", transform:"translateX(-50%)",
+          fontSize:11, color:"#6644aa", fontWeight:600, whiteSpace:"nowrap",
+          animation:"floatHint 1.5s ease-in-out infinite",
+        }}>
           TAP TO EARN 👆
         </div>
       )}
@@ -261,7 +304,7 @@ function HomeTab({onPlay}:{onPlay:()=>void}){
       {/* Feature grid */}
       <div style={{position:"relative",zIndex:1,padding:"0 14px 20px"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          {[["🔥","Combo System","Tap fast for up to 20× multiplier"],["👕","Drip Shop","Hats, glasses, chains on your 3D char"],["🤖","Auto-Tappers","Hire helpers to earn while AFK"],["🏆","Live Rankings","48hr season resets, USDC prizes"]].map(([e,t,d])=>(
+          {[["🔥","Combo System","Tap fast for up to 20× multiplier"],["👕","Drip Shop","Hats, glasses, chains on your character"],["🤖","Auto-Tappers","Hire helpers to earn while AFK"],["🏆","Live Rankings","48hr season resets, USDC prizes"]].map(([e,t,d])=>(
             <div key={t} style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"14px 12px"}}>
               <div style={{fontSize:22,marginBottom:6}}>{e}</div>
               <div style={{color:"#ddd",fontWeight:800,fontSize:12,marginBottom:3}}>{t}</div>
@@ -469,18 +512,28 @@ function ShopTab({coins,charId,upgrades,ownedCosmetics,equippedCosmetics,onBuyUp
       ):(
         <div style={{padding:10}}>
           {/* Preview of character with current drip */}
-          <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"10px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:28}}>{CHARACTERS.find(c=>c.id===charId)?.emoji}</div>
-            <div>
-              <div style={{color:"#fff",fontWeight:700,fontSize:12}}>Current Drip</div>
-              {Object.keys(equippedCosmetics).length===0
-                ?<div style={{color:"#333",fontSize:11}}>Nothing equipped yet</div>
-                :<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:3}}>
-                  {Object.values(equippedCosmetics).map(id=>{const c=COSMETICS.find(x=>x.id===id);return c?<span key={id} style={{fontSize:18}}>{c.emoji}</span>:null;})}
+          {(()=>{
+            const previewChar = CHARACTERS.find(c=>c.id===charId);
+            if(!previewChar) return null;
+            const previewItems = Object.values(equippedCosmetics).map(id=>COSMETICS.find(c=>c.id===id)).filter(Boolean) as typeof COSMETICS[0][];
+            return (
+              <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+                <div style={{position:"relative",width:140,height:140,flexShrink:0}}>
+                  <div style={{position:"absolute",inset:0,borderRadius:"50%",overflow:"hidden",border:`2px solid rgba(${previewChar.glow},0.4)`,background:`radial-gradient(ellipse at 50% 30%,rgba(${previewChar.glow},0.08) 0%,#0a0016 100%)`}}>
+                    <img src={previewChar.image} alt={previewChar.name} draggable={false}
+                      style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",display:"block"}}
+                      onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px">${previewChar.emoji}</div>`;}}
+                    />
+                  </div>
+                  {previewItems.map(cos=>(
+                    <div key={cos.id} style={{position:"absolute",top:cos.top,left:cos.left,transform:cos.transform,fontSize:Math.round(cos.size*140/240),lineHeight:1,pointerEvents:"none",zIndex:20,filter:"drop-shadow(0 1px 4px rgba(0,0,0,1))",userSelect:"none"}}>
+                      {cos.emoji}
+                    </div>
+                  ))}
                 </div>
-              }
-            </div>
-          </div>
+              </div>
+            );
+          })()}
           {/* Group by slot */}
           {(["hat","glasses","mouth","neck","hand"] as const).map(slot=>{
             const items=COSMETICS.filter(c=>c.slot===slot);
@@ -860,7 +913,7 @@ export default function TapGame() {
               )}
 
               {/* 3D Model Stage */}
-              <div style={{position:"relative",zIndex:10,width:"100%",maxWidth:300,height:300,marginBottom:8}}>
+              <div style={{position:"relative",zIndex:10,width:"100%",maxWidth:260,height:260,marginBottom:8,margin:"0 auto 8px"}}>
                 <ModelStage char={char} equippedCosmetics={equippedCosmetics} specialActive={specialActive} charPulse={charPulse} onTap={handleTap} firstPlay={totalTaps<3}/>
               </div>
 
