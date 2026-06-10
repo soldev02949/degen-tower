@@ -328,7 +328,119 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
 }
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
-function HomeTab({onPlay}:{onPlay:()=>void}){
+function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId}:{
+  onPlay:()=>void;username:string;avatar:string;totalEarned:number;totalTaps:number;
+  level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
+  nextRank:ReturnType<typeof getNextRank>;charId:string|null;
+}){
+  const cd=useCountdown();
+  const char=CHARACTERS.find(c=>c.id===charId);
+  const [pulse,setPulse]=useState(false);
+  useEffect(()=>{const id=setInterval(()=>{setPulse(p=>!p);},2000);return()=>clearInterval(id);},[]);
+
+  return(
+    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:46,paddingBottom:90,overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,background:`radial-gradient(ellipse at 50% 20%,rgba(${char?char.glow:"120,40,200"},0.22) 0%,transparent 60%)`,pointerEvents:"none",zIndex:0,transition:"background 1s"}}/>
+
+      {/* Hero greeting */}
+      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"22px 16px 12px"}}>
+        <div style={{fontSize:56,lineHeight:1,marginBottom:6,filter:`drop-shadow(0 0 20px rgba(${char?char.glow:"168,85,247"},0.5))`,transform:pulse?"scale(1.06)":"scale(1)",transition:"transform 0.4s ease"}}>{avatar||"🐸"}</div>
+        <div style={{color:"#443355",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:2}}>Welcome back</div>
+        <h2 style={{color:"#fff",fontWeight:900,fontSize:22,marginBottom:6,letterSpacing:"-0.02em"}}>{username||"Degen"}</h2>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(168,85,247,0.1)",border:`1px solid ${rank.color}44`,borderRadius:20,padding:"5px 14px"}}>
+          <span style={{fontSize:14}}>{rank.emoji}</span>
+          <span style={{color:rank.color,fontWeight:800,fontSize:12}}>{rank.name}</span>
+          <span style={{color:"#443355",fontSize:11,marginLeft:2}}>Lv.{level}</span>
+        </div>
+      </div>
+
+      {/* XP progress */}
+      <div style={{position:"relative",zIndex:1,padding:"10px 14px 12px"}}>
+        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"12px 14px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+            <span style={{color:"#555",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>XP Progress</span>
+            {nextRank&&<span style={{color:nextRank.color,fontSize:10,fontWeight:700}}>{nextRank.emoji} {nextRank.name} →</span>}
+          </div>
+          <div style={{height:7,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}88,${rank.color})`,borderRadius:4,transition:"width 0.6s ease",boxShadow:`0 0 8px ${rank.color}88`}}/>
+          </div>
+          <div style={{color:"#333",fontSize:10,marginTop:4,textAlign:"right"}}>{fmt(xpProgress.current)} / {fmt(xpProgress.needed)} XP</div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{position:"relative",zIndex:1,padding:"0 14px 12px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          {[
+            {emoji:"💰",label:"Earned",value:fmt(totalEarned),color:"#f5c842"},
+            {emoji:"👆",label:"Taps",value:fmt(totalTaps),color:"#a855f7"},
+            {emoji:"⏱",label:"Reset In",value:cd,color:"#22d67a"},
+          ].map(s=>(
+            <div key={s.label} style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"12px 8px",textAlign:"center"}}>
+              <div style={{fontSize:20,marginBottom:4}}>{s.emoji}</div>
+              <div style={{color:s.color,fontWeight:900,fontSize:13,fontVariantNumeric:"tabular-nums"}}>{s.value}</div>
+              <div style={{color:"#333",fontSize:9,marginTop:2,textTransform:"uppercase",letterSpacing:"0.06em"}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Current character card */}
+      {char?(
+        <div style={{position:"relative",zIndex:1,padding:"0 14px 12px"}}>
+          <div style={{background:`rgba(${char.glow},0.05)`,border:`1px solid rgba(${char.glow},0.2)`,borderRadius:16,padding:"14px 14px",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{fontSize:42,filter:`drop-shadow(0 0 14px rgba(${char.glow},0.5))`}}>{char.emoji}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{color:"#555",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Active Legend</div>
+              <div style={{color:"#fff",fontWeight:900,fontSize:15,marginBottom:2}}>{char.name}</div>
+              <div style={{color:`rgb(${char.glow})`,fontSize:10}}>⚡ {char.ability}</div>
+            </div>
+            <button onClick={onPlay} style={{background:`rgba(${char.glow},0.18)`,border:`1px solid rgba(${char.glow},0.4)`,borderRadius:10,color:`rgb(${char.glow})`,fontWeight:800,fontSize:11,padding:"8px 12px",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Change</button>
+          </div>
+        </div>
+      ):(
+        <div style={{position:"relative",zIndex:1,padding:"0 14px 12px"}}>
+          <div style={{background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.2)",borderRadius:16,padding:"14px",textAlign:"center"}}>
+            <div style={{color:"#553366",fontSize:12,marginBottom:4}}>No character selected</div>
+            <button onClick={onPlay} style={{background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.4)",borderRadius:10,color:"#a855f7",fontWeight:800,fontSize:12,padding:"8px 16px",cursor:"pointer"}}>Pick Your Legend →</button>
+          </div>
+        </div>
+      )}
+
+      {/* Big play button */}
+      <div style={{position:"relative",zIndex:1,padding:"0 14px 14px"}}>
+        <button onClick={onPlay} style={{
+          width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",
+          color:"#fff",fontWeight:900,fontSize:18,border:"none",borderRadius:18,
+          padding:"18px",cursor:"pointer",letterSpacing:"-0.01em",
+          boxShadow:"0 0 60px rgba(168,85,247,0.45),0 0 120px rgba(168,85,247,0.12)",
+          position:"relative",overflow:"hidden",
+        }}>
+          <span style={{position:"relative",zIndex:1}}>🎮 Play Now</span>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.1),transparent)",pointerEvents:"none"}}/>
+        </button>
+      </div>
+
+      {/* Feature tiles */}
+      <div style={{position:"relative",zIndex:1,padding:"0 14px 8px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {[
+            {emoji:"🔥",title:"Combo Multiplier",desc:"Tap fast — stack up to 20× coins"},
+            {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn while AFK"},
+            {emoji:"⚡",title:"Upgrades",desc:"Power up in the Shop tab"},
+            {emoji:"🏆",title:"Win USDC",desc:"Top 20 players paid every 48hrs"},
+          ].map(f=>(
+            <div key={f.title} style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)",borderRadius:14,padding:"13px 11px"}}>
+              <div style={{fontSize:22,marginBottom:5}}>{f.emoji}</div>
+              <div style={{color:"#ccc",fontWeight:800,fontSize:12,marginBottom:3}}>{f.title}</div>
+              <div style={{color:"#333",fontSize:10,lineHeight:1.4}}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}:{onPlay:()=>void}){
   return(
     <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:46,paddingBottom:80,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -5%,rgba(120,40,200,0.35) 0%,transparent 55%)",pointerEvents:"none",zIndex:0}}/>
@@ -747,7 +859,7 @@ export default function TapGame() {
       )}
       {critFlash&&<div style={{position:"fixed",inset:0,background:"rgba(255,40,40,0.07)",zIndex:150,pointerEvents:"none"}}/>}
 
-      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")}/>}
+      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade}/>}
       {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} onSave={handleSettingsSave}/>}
