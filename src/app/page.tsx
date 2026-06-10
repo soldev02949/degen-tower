@@ -27,7 +27,8 @@ export default function Home() {
 
       {/* Nav */}
       <nav style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(10,0,15,0.95)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "14px 28px", display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontWeight: 900, fontSize: 20, color: "#fff" }}>🗼 DEGEN TOWER</span>
+        <img src="/logo.png" alt="Degen Clicker" style={{ height: 40, width: 40, objectFit: "contain" }} />
+        <span style={{ fontWeight: 900, fontSize: 20, color: "#fff" }}>DEGEN CLICKER</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 14, alignItems: "center" }}>
           <Link href="/leaderboard" style={{ color: "#888", fontSize: 13, textDecoration: "none" }}>Leaderboard</Link>
           <Link href="/login" style={{ color: "#888", fontSize: 13, textDecoration: "none" }}>Login</Link>
