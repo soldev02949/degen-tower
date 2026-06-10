@@ -2,1023 +2,841 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 
-// ─────────────────────────────────────────────
-//  Character definitions
-// ─────────────────────────────────────────────
+// ─── Character Definitions ───────────────────────────────────────────────────
 const CHARACTERS = [
-  { id: "pepe",     name: "Pepe",      emoji: "🐸", color: 0x4caf50, accentColor: 0x2e7d32, speed: 12, special: "Feels Good Man",   texture: "/characters/pepe.png"     },
-  { id: "gigachad", name: "Gigachad",  emoji: "💪", color: 0xe0b87a, accentColor: 0x8d6e3f, speed: 10, special: "Sigma Smash",      texture: "/characters/gigachad.png" },
-  { id: "trump",    name: "Trump",     emoji: "🎩", color: 0x1a3a6e, accentColor: 0xd32f2f, speed: 9,  special: "Build the Tower",  texture: "/characters/trump.png"    },
-  { id: "troll",    name: "Trollface", emoji: "🧌", color: 0x888888, accentColor: 0x222222, speed: 13, special: "U Mad Bro?",       texture: "/characters/troll.png"    },
-  { id: "bonk",     name: "Bonk",      emoji: "🐕", color: 0xe8853a, accentColor: 0xc0611a, speed: 14, special: "BONK!",           texture: "/characters/bonk.png"     },
+  { id: "pepe",     name: "Pepe",     emoji: "🐸", color: 0x4caf50, speed: 6.5, jumpPower: 14, texture: "/characters/pepe.png"     },
+  { id: "gigachad", name: "Gigachad", emoji: "💪", color: 0xe0b87a, speed: 5.5, jumpPower: 12, texture: "/characters/gigachad.png" },
+  { id: "trump",    name: "Trump",    emoji: "🎩", color: 0x1a5fa8, speed: 5.0, jumpPower: 11, texture: "/characters/trump.png"    },
+  { id: "troll",    name: "Trollface",emoji: "🧌", color: 0x888888, speed: 7.0, jumpPower: 13, texture: "/characters/troll.png"    },
+  { id: "bonk",     name: "Bonk",     emoji: "🐕", color: 0xe8853a, speed: 8.0, jumpPower: 15, texture: "/characters/bonk.png"     },
 ];
 
-interface Props {
-  onBack: () => void;
-}
+// ─── Constants ───────────────────────────────────────────────────────────────
+const GRAVITY       = -28;
+const TOWER_WIDTH   = 10;
+const PLATFORM_W    = 4.0;
+const PLATFORM_H    = 0.35;
+const FLOOR_HEIGHT  = 7;        // vertical distance between platform rows
+const FLOORS_VISIBLE= 6;        // floors rendered at once
+const ENEMY_SPEED   = 1.8;
 
-export default function DegenGame({ onBack }: Props) {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<GameEngine | null>(null);
-  const [selectedChar, setSelectedChar] = useState<string | null>(null);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [health, setHealth] = useState(100);
-  const [floor, setFloor] = useState(1);
-  const [specialReady, setSpecialReady] = useState(true);
+interface CharDef { id: string; name: string; emoji: string; color: number; speed: number; jumpPower: number; texture: string; }
+interface Props { onBack: () => void; }
 
-  const startGame = useCallback((charId: string) => {
-    setSelectedChar(charId);
-    setGameStarted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!gameStarted || !mountRef.current || !selectedChar) return;
-    const char = CHARACTERS.find(c => c.id === selectedChar)!;
-    const engine = new GameEngine(mountRef.current, char, {
-      onScoreChange: setScore,
-      onHealthChange: setHealth,
-      onFloorChange: setFloor,
-      onSpecialReady: setSpecialReady,
-    });
-    gameRef.current = engine;
-    engine.start();
-    return () => engine.destroy();
-  }, [gameStarted, selectedChar]);
-
-  const triggerSpecial = useCallback(() => {
-    if (gameRef.current && specialReady) {
-      gameRef.current.triggerSpecial();
-      setSpecialReady(false);
-      setTimeout(() => setSpecialReady(true), 8000);
-    }
-  }, [specialReady]);
-
-  if (!gameStarted) {
-    return (
-      <div style={{
-        minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0f 0%, #0d1117 100%)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        fontFamily: "'Inter', 'SF Pro', sans-serif", color: "#fff", padding: "20px",
-      }}>
-        <button onClick={onBack} style={{
-          position: "absolute", top: 24, left: 24,
-          background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
-          borderRadius: 8, padding: "8px 16px", color: "#fff", cursor: "pointer", fontSize: 14,
-        }}>← Back</button>
-
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <div style={{ fontSize: 56, marginBottom: 8 }}>🏙️</div>
-          <h1 style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.03em", marginBottom: 8 }}>
-            DEGEN ARENA
-          </h1>
-          <p style={{ color: "#94a3b8", fontSize: 16 }}>Choose your fighter. Own the streets of LA.</p>
-        </div>
-
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center", maxWidth: 900 }}>
-          {CHARACTERS.map(char => (
-            <div
-              key={char.id}
-              onClick={() => startGame(char.id)}
-              style={{
-                width: 160, background: "rgba(255,255,255,0.05)",
-                border: "2px solid rgba(255,255,255,0.1)",
-                borderRadius: 16, padding: "20px 16px", cursor: "pointer",
-                textAlign: "center", transition: "all 0.2s",
-                backdropFilter: "blur(10px)",
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.border = `2px solid #f5c842`;
-                el.style.background = "rgba(245,200,66,0.08)";
-                el.style.transform = "translateY(-4px)";
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.border = "2px solid rgba(255,255,255,0.1)";
-                el.style.background = "rgba(255,255,255,0.05)";
-                el.style.transform = "translateY(0)";
-              }}
-            >
-              {/* Character portrait */}
-              <div style={{
-                width: 100, height: 100, margin: "0 auto 12px",
-                borderRadius: "50%", overflow: "hidden",
-                border: `3px solid #${char.color.toString(16)}`,
-                background: `#${char.color.toString(16)}22`,
-              }}>
-                <img src={char.texture} alt={char.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{char.emoji} {char.name}</div>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>SPEED: {char.speed}</div>
-              <div style={{
-                background: "rgba(245,200,66,0.1)", border: "1px solid rgba(245,200,66,0.3)",
-                borderRadius: 6, padding: "4px 8px", fontSize: 11, color: "#f5c842", fontWeight: 600,
-              }}>
-                ⚡ {char.special}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginTop: 40, display: "flex", gap: 32, color: "#64748b", fontSize: 13 }}>
-          <span>WASD / Arrow Keys — Move</span>
-          <span>Space — Jump</span>
-          <span>E — Attack</span>
-          <span>Q — Special</span>
-        </div>
-      </div>
-    );
-  }
-
-  const charData = CHARACTERS.find(c => c.id === selectedChar)!;
-
-  return (
-    <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative", background: "#0a0a0f" }}>
-      {/* Game canvas */}
-      <div ref={mountRef} style={{ width: "100%", height: "100%" }} />
-
-      {/* HUD */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0,
-        padding: "16px 20px", pointerEvents: "none",
-        display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-      }}>
-        {/* Left: Health */}
-        <div style={{ pointerEvents: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%",
-              background: `#${charData.color.toString(16).padStart(6,'0')}33`,
-              border: `2px solid #${charData.color.toString(16).padStart(6,'0')}`,
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-            }}>{charData.emoji}</div>
-            <div>
-              <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{charData.name}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 140, height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ width: `${health}%`, height: "100%", background: health > 50 ? "#22d67a" : health > 25 ? "#f5c842" : "#ef4444", borderRadius: 4, transition: "width 0.3s" }} />
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{health}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Center: Score + Floor */}
-        <div style={{ textAlign: "center", pointerEvents: "none" }}>
-          <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Score</div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: "#f5c842", lineHeight: 1 }}>{score.toLocaleString()}</div>
-          <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Floor {floor}</div>
-        </div>
-
-        {/* Right: Back */}
-        <button
-          onClick={onBack}
-          style={{
-            background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 8, padding: "8px 16px", color: "#fff", cursor: "pointer", fontSize: 13,
-            pointerEvents: "all",
-          }}
-        >← Menu</button>
-      </div>
-
-      {/* Bottom HUD: Special ability */}
-      <div style={{
-        position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
-        display: "flex", alignItems: "center", gap: 16,
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Special [Q]</div>
-          <button
-            onClick={triggerSpecial}
-            disabled={!specialReady}
-            style={{
-              background: specialReady ? "rgba(245,200,66,0.15)" : "rgba(255,255,255,0.05)",
-              border: `2px solid ${specialReady ? "#f5c842" : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 12, padding: "10px 24px",
-              color: specialReady ? "#f5c842" : "#64748b",
-              fontWeight: 700, fontSize: 14, cursor: specialReady ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-            }}
-          >
-            ⚡ {charData.special} {!specialReady ? "(Cooldown)" : ""}
-          </button>
-        </div>
-      </div>
-
-      {/* Controls hint */}
-      <div style={{
-        position: "absolute", bottom: 24, right: 20,
-        fontSize: 11, color: "#334155", lineHeight: 1.8,
-        textAlign: "right",
-      }}>
-        <div>WASD — Move</div>
-        <div>Space — Jump</div>
-        <div>E — Attack</div>
-        <div>Q — Special</div>
-        <div>Mouse — Camera</div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 //  GAME ENGINE
-// ─────────────────────────────────────────────
-interface CharDef {
-  id: string; name: string; emoji: string;
-  color: number; accentColor: number;
-  speed: number; special: string; texture: string;
-}
-interface GameCallbacks {
-  onScoreChange: (n: number) => void;
-  onHealthChange: (n: number) => void;
-  onFloorChange: (n: number) => void;
-  onSpecialReady: (b: boolean) => void;
-}
-
-class GameEngine {
+// ─────────────────────────────────────────────────────────────────────────────
+class TowerEngine {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
-  private player!: THREE.Group;
-  private mixer!: THREE.AnimationMixer;
-  private clock = new THREE.Clock();
-  private keys: Record<string, boolean> = {};
-  private mouseX = 0;
-  private mouseY = 0;
-  private isDragging = false;
-  private cameraAngle = 0;
-  private cameraPitch = 0.3;
-  private cameraDistance = 14;
-  private velocity = new THREE.Vector3();
-  private isGrounded = false;
+  private clock: THREE.Clock;
+  private animId = 0;
+  private char: CharDef;
+  private callbacks: { onScore: (s:number)=>void; onHealth: (h:number)=>void; onFloor: (f:number)=>void; onDead: ()=>void };
+
+  // Player state
+  private player!: THREE.Mesh;
+  private playerSprite!: THREE.Mesh;
+  private velX = 0; velY = 0;
+  private onGround = false;
+  private facing = 1;
+
+  // Controls
+  public keys: Record<string,boolean> = {};
+  public joystickX = 0;
+  public jumpPressed = false;
+  public attackPressed = false;
+  private attackCooldown = 0;
+  private specialCooldown = 0;
+
+  // World
+  private platforms: { mesh: THREE.Mesh; x: number; y: number; w: number }[] = [];
+  private enemies: { mesh: THREE.Mesh; label: THREE.Sprite; x: number; y: number; vx: number; hp: number; range: number; originX: number }[] = [];
+  private particles: { mesh: THREE.Mesh; vx: number; vy: number; life: number }[] = [];
+
+  // Score / state
   private score = 0;
   private health = 100;
-  private floor = 1;
-  private enemies: THREE.Group[] = [];
-  private particles: THREE.Points[] = [];
-  private animFrame = 0;
-  private char: CharDef;
-  private callbacks: GameCallbacks;
-  private container: HTMLDivElement;
-  private audioCtx!: AudioContext;
-  private buildings: THREE.Mesh[] = [];
-  private walkCycle = 0;
-  private isAttacking = false;
-  private attackCooldown = 0;
-  private charTexture!: THREE.Texture;
-  private spawnTimer = 0;
-  private neons: THREE.Mesh[] = [];
-  private lastTime = 0;
+  private currentFloor = 1;
+  private highestFloor = 1;
+  private dead = false;
+  private invincibleTimer = 0;
 
-  constructor(container: HTMLDivElement, char: CharDef, callbacks: GameCallbacks) {
-    this.container = container;
+  // Floor gen
+  private generatedUpTo = 0;
+  private towerGroup!: THREE.Group;
+  private loader = new THREE.TextureLoader();
+
+  constructor(
+    container: HTMLDivElement,
+    char: CharDef,
+    cb: typeof TowerEngine.prototype.callbacks
+  ) {
     this.char = char;
-    this.callbacks = callbacks;
+    this.callbacks = cb;
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.8;
+    this.renderer.setClearColor(0x0a0014);
     container.appendChild(this.renderer.domElement);
 
     // Scene
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x0a0a1a, 0.018);
-    this.scene.background = new THREE.Color(0x0a0a1a);
+    this.scene.fog = new THREE.Fog(0x0a0014, 20, 60);
 
-    // Camera
-    this.camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+    // Camera — side view, follows player
+    this.camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 100);
+    this.camera.position.set(0, 5, 20);
+    this.camera.lookAt(0, 5, 0);
 
-    this.setupAudio();
-    this.buildWorld();
-    this.buildPlayer();
-    this.spawnEnemies(3);
-    this.bindEvents();
-  }
+    this.clock = new THREE.Clock();
 
-  private setupAudio() {
-    try {
-      this.audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      this.startBackgroundMusic();
-    } catch { /* no audio */ }
-  }
-
-  private startBackgroundMusic() {
-    try {
-      const audio = new Audio("/game-music.mp3");
-      audio.loop = true;
-      audio.volume = 0.35;
-      audio.play().catch(() => {
-        // Autoplay blocked — resume on first user interaction
-        const resume = () => { audio.play(); document.removeEventListener("click", resume); document.removeEventListener("keydown", resume); };
-        document.addEventListener("click", resume, { once: true });
-        document.addEventListener("keydown", resume, { once: true });
-      });
-    } catch { /* ignore */ }
-  }
-
-  private playTone(freq: number, duration: number, type: OscillatorType = "square", vol = 0.1) {
-    if (!this.audioCtx) return;
-    try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-      osc.connect(gain); gain.connect(this.audioCtx.destination);
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, this.audioCtx.currentTime + duration);
-      gain.gain.setValueAtTime(vol, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
-      osc.start(); osc.stop(this.audioCtx.currentTime + duration);
-    } catch { /* ignore */ }
-  }
-
-  private buildWorld() {
-    // Ambient + directional lights
-    const ambient = new THREE.AmbientLight(0x1a1a2e, 2);
+    // Lights
+    const ambient = new THREE.AmbientLight(0x8866bb, 0.8);
     this.scene.add(ambient);
+    const dir = new THREE.DirectionalLight(0xffd700, 1.2);
+    dir.position.set(5, 20, 10);
+    dir.castShadow = true;
+    this.scene.add(dir);
+    const pt = new THREE.PointLight(0x9933ff, 3, 30);
+    pt.position.set(0, 8, 5);
+    this.scene.add(pt);
 
-    const sun = new THREE.DirectionalLight(0xff6b35, 3);
-    sun.position.set(50, 80, 30);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 300;
-    sun.shadow.camera.left = -100;
-    sun.shadow.camera.right = 100;
-    sun.shadow.camera.top = 100;
-    sun.shadow.camera.bottom = -100;
-    this.scene.add(sun);
+    this.towerGroup = new THREE.Group();
+    this.scene.add(this.towerGroup);
 
-    // Neon fill lights
-    const neonColors = [0xff0080, 0x00ffff, 0xf5c842, 0x8b00ff];
-    neonColors.forEach((c, i) => {
-      const light = new THREE.PointLight(c, 3, 40);
-      light.position.set(Math.cos(i * Math.PI / 2) * 25, 8, Math.sin(i * Math.PI / 2) * 25);
-      this.scene.add(light);
+    this.buildTowerWalls();
+    this.generateFloors(0, 10);
+    this.spawnPlayer();
+    this.buildBackground();
+
+    window.addEventListener("resize", () => this.onResize(container));
+  }
+
+  // ─── Tower walls ──────────────────────────────────────────────────────────
+  private buildTowerWalls() {
+    const wallMat = new THREE.MeshLambertMaterial({
+      color: 0x1a0a3a,
+      emissive: 0x110028,
     });
+    const wallGeo = new THREE.BoxGeometry(0.6, 200, 3);
+    const lWall = new THREE.Mesh(wallGeo, wallMat);
+    lWall.position.set(-TOWER_WIDTH / 2 - 0.3, 100, 0);
+    const rWall = new THREE.Mesh(wallGeo, wallMat);
+    rWall.position.set(TOWER_WIDTH / 2 + 0.3, 100, 0);
 
-    // Ground - LA streets
-    const groundGeo = new THREE.PlaneGeometry(300, 300, 30, 30);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+    // Neon edge glow strips
+    const edgeMat = new THREE.MeshBasicMaterial({ color: 0xaa44ff });
+    const edgeGeo = new THREE.BoxGeometry(0.08, 200, 0.08);
+    const lEdge = new THREE.Mesh(edgeGeo, edgeMat);
+    lEdge.position.set(-TOWER_WIDTH / 2, 100, 1.6);
+    const rEdge = new THREE.Mesh(edgeGeo, edgeMat);
+    rEdge.position.set(TOWER_WIDTH / 2, 100, 1.6);
+
+    this.towerGroup.add(lWall, rWall, lEdge, rEdge);
+
+    // Floor (ground)
+    const groundGeo = new THREE.BoxGeometry(TOWER_WIDTH, 0.5, 4);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x220044 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(0, -0.25, 0);
     ground.receiveShadow = true;
-    this.scene.add(ground);
-
-    // Road grid
-    this.buildRoads();
-
-    // LA Buildings
-    this.buildBuildings();
-
-    // Palm trees
-    this.buildPalmTrees();
-
-    // Stars / smog layer
-    this.buildSkybox();
-
-    // Hollywood sign style hills in background
-    this.buildHills();
+    this.towerGroup.add(ground);
+    this.platforms.push({ mesh: ground, x: 0, y: 0, w: TOWER_WIDTH });
   }
 
-  private buildRoads() {
-    const roadMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
-    const lineMat = new THREE.MeshLambertMaterial({ color: 0xf5c842, emissive: 0xf5c842, emissiveIntensity: 0.3 });
+  // ─── Generate floors ──────────────────────────────────────────────────────
+  private generateFloors(fromFloor: number, toFloor: number) {
+    const platMat = new THREE.MeshLambertMaterial({ color: 0x3a1060, emissive: 0x1a0040 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xcc44ff });
 
-    // Main roads - grid
-    [-40, -20, 0, 20, 40].forEach(x => {
-      const road = new THREE.Mesh(new THREE.PlaneGeometry(4, 300), roadMat);
-      road.rotation.x = -Math.PI / 2;
-      road.position.set(x, 0.01, 0);
-      this.scene.add(road);
-    });
-    [-40, -20, 0, 20, 40].forEach(z => {
-      const road = new THREE.Mesh(new THREE.PlaneGeometry(300, 4), roadMat);
-      road.rotation.x = -Math.PI / 2;
-      road.position.set(0, 0.01, z);
-      this.scene.add(road);
-    });
+    for (let f = Math.max(1, fromFloor); f <= toFloor; f++) {
+      const baseY = f * FLOOR_HEIGHT;
+      // 2–3 platforms per floor, staggered
+      const count = f % 3 === 0 ? 3 : 2;
+      const positions = count === 2
+        ? [-2.2, 2.2]
+        : [-3.2, 0, 3.2];
 
-    // Center road markings
-    for (let i = -60; i < 60; i += 5) {
-      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 2.5), lineMat);
-      line.rotation.x = -Math.PI / 2;
-      line.position.set(0, 0.02, i);
-      this.scene.add(line);
+      positions.forEach((px, i) => {
+        const py = baseY + (i % 2) * 1.8;
+        const platGeo = new THREE.BoxGeometry(PLATFORM_W, PLATFORM_H, 3);
+        const plat = new THREE.Mesh(platGeo, platMat.clone());
+        plat.position.set(px, py, 0);
+        plat.receiveShadow = true;
+        plat.castShadow = true;
+        this.towerGroup.add(plat);
+        this.platforms.push({ mesh: plat, x: px, y: py, w: PLATFORM_W });
 
-      const line2 = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.3), lineMat);
-      line2.rotation.x = -Math.PI / 2;
-      line2.position.set(i, 0.02, 0);
-      this.scene.add(line2);
-    }
-  }
+        // Neon top edge
+        const edgeGeo = new THREE.BoxGeometry(PLATFORM_W, 0.05, 0.1);
+        const edge = new THREE.Mesh(edgeGeo, glowMat.clone());
+        (edge.material as THREE.MeshBasicMaterial).color.setHex(0x9966ff);
+        edge.position.set(px, py + PLATFORM_H / 2 + 0.025, 1.55);
+        this.towerGroup.add(edge);
 
-  private buildBuildings() {
-    const buildingConfigs = [
-      { x: -30, z: -30, w: 14, d: 14, h: 45, color: 0x1a237e, win: 0x4fc3f7 },
-      { x: 30, z: -30, w: 12, d: 16, h: 60, color: 0x0d47a1, win: 0x00e5ff },
-      { x: -30, z: 30, w: 16, d: 12, h: 35, color: 0x212121, win: 0xff6d00 },
-      { x: 30, z: 30,  w: 14, d: 14, h: 50, color: 0x1b5e20, win: 0x69f0ae },
-      { x: 10, z: -30, w: 8,  d: 10, h: 30, color: 0x311b92, win: 0xea80fc },
-      { x: -10, z: -30, w: 8, d: 8,  h: 25, color: 0x880e4f, win: 0xff80ab },
-      { x: 10, z: 30,  w: 8,  d: 10, h: 38, color: 0x263238, win: 0x80cbc4 },
-      { x: -10, z: 30, w: 10, d: 8,  h: 28, color: 0x37474f, win: 0xffcc02 },
-      { x: -50, z: 10, w: 10, d: 10, h: 20, color: 0x1a1a2e, win: 0xff4081 },
-      { x: 50, z: -10, w: 10, d: 10, h: 22, color: 0x0d1117, win: 0x40c4ff },
-      { x: -50, z: -20, w: 8, d: 8, h: 32, color: 0x1c2833, win: 0x76ff03 },
-      { x: 50, z: 20, w: 8, d: 8, h: 18, color: 0x2c3e50, win: 0xff9100 },
-    ];
-
-    buildingConfigs.forEach(cfg => {
-      // Main building body
-      const geo = new THREE.BoxGeometry(cfg.w, cfg.h, cfg.d);
-      const mat = new THREE.MeshLambertMaterial({ color: cfg.color });
-      const bld = new THREE.Mesh(geo, mat);
-      bld.position.set(cfg.x, cfg.h / 2, cfg.z);
-      bld.castShadow = true;
-      bld.receiveShadow = true;
-      this.scene.add(bld);
-      this.buildings.push(bld);
-
-      // Windows (emissive planes)
-      for (let row = 1; row < cfg.h / 3; row++) {
-        for (let col = -Math.floor(cfg.w / 4); col <= Math.floor(cfg.w / 4); col++) {
-          if (Math.random() > 0.4) {
-            const winMat = new THREE.MeshLambertMaterial({
-              color: cfg.win,
-              emissive: cfg.win,
-              emissiveIntensity: Math.random() * 0.8 + 0.2,
-            });
-            const win = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.4), winMat);
-            win.position.set(cfg.x + col * 3, row * 3, cfg.z + cfg.d / 2 + 0.05);
-            this.scene.add(win);
-          }
+        // Spawn enemy on some platforms
+        if (f > 0 && (i === 0 || count === 3) && Math.random() > 0.35) {
+          this.spawnEnemy(px, py + PLATFORM_H / 2 + 0.6, f);
         }
-      }
+      });
 
-      // Neon sign on top floors
-      if (Math.random() > 0.5) {
-        const neonColors = [0xff0080, 0x00ffff, 0xf5c842, 0xff6b35];
-        const nc = neonColors[Math.floor(Math.random() * neonColors.length)];
-        const neonMat = new THREE.MeshLambertMaterial({ color: nc, emissive: nc, emissiveIntensity: 2 });
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(cfg.w * 0.6, 0.5, 0.3), neonMat);
-        neon.position.set(cfg.x, cfg.h + 0.5, cfg.z + cfg.d / 2 + 0.2);
-        this.scene.add(neon);
-        this.neons.push(neon);
-      }
-    });
-  }
-
-  private buildPalmTrees() {
-    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
-    const leafMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, emissive: 0x1b5e20, emissiveIntensity: 0.2 });
-
-    const positions = [
-      [-8, 0], [8, 0], [0, -8], [0, 8],
-      [-15, -15], [15, -15], [-15, 15], [15, 15],
-      [-5, -18], [5, -18], [-5, 18], [5, 18],
-    ];
-
-    positions.forEach(([x, z]) => {
-      const height = 5 + Math.random() * 3;
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, height, 6), trunkMat);
-      trunk.position.set(x, height / 2, z);
-      trunk.rotation.z = (Math.random() - 0.5) * 0.2;
-      trunk.castShadow = true;
-      this.scene.add(trunk);
-
-      // Palm fronds
-      for (let i = 0; i < 7; i++) {
-        const angle = (i / 7) * Math.PI * 2;
-        const frond = new THREE.Mesh(new THREE.ConeGeometry(0.1, 2.5, 4), leafMat);
-        frond.position.set(
-          x + Math.cos(angle) * 1.5,
-          height + 0.5,
-          z + Math.sin(angle) * 1.5,
-        );
-        frond.rotation.z = Math.PI / 2 + Math.sin(angle) * 0.6;
-        frond.rotation.x = Math.cos(angle) * 0.6;
-        frond.castShadow = true;
-        this.scene.add(frond);
-      }
-      // Top leaf crown
-      const crown = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6, 4), leafMat);
-      crown.position.set(x, height + 0.8, z);
-      crown.scale.set(1.5, 0.5, 1.5);
-      this.scene.add(crown);
-    });
-  }
-
-  private buildSkybox() {
-    // Stars
-    const starGeo = new THREE.BufferGeometry();
-    const starPositions = new Float32Array(3000);
-    for (let i = 0; i < 3000; i += 3) {
-      starPositions[i] = (Math.random() - 0.5) * 800;
-      starPositions[i + 1] = Math.random() * 200 + 20;
-      starPositions[i + 2] = (Math.random() - 0.5) * 800;
+      // Floor number sign
+      const canvas = document.createElement("canvas");
+      canvas.width = 128; canvas.height = 64;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "rgba(0,0,0,0)";
+      ctx.clearRect(0, 0, 128, 64);
+      ctx.fillStyle = "#cc88ff";
+      ctx.font = "bold 28px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`FL.${f}`, 64, 32);
+      const tex = new THREE.CanvasTexture(canvas);
+      const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.7 }));
+      sign.scale.set(2.5, 1.2, 1);
+      sign.position.set(-TOWER_WIDTH / 2 + 1.5, baseY + 0.5, 1.5);
+      this.towerGroup.add(sign);
     }
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.4, transparent: true, opacity: 0.8 });
-    this.scene.add(new THREE.Points(starGeo, starMat));
-
-    // Moon
-    const moonMat = new THREE.MeshLambertMaterial({ color: 0xfff9c4, emissive: 0xfff9c4, emissiveIntensity: 0.5 });
-    const moon = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), moonMat);
-    moon.position.set(120, 80, -150);
-    this.scene.add(moon);
-
-    // Moon glow
-    const moonLight = new THREE.PointLight(0xfff9c4, 1, 200);
-    moonLight.position.copy(moon.position);
-    this.scene.add(moonLight);
+    this.generatedUpTo = toFloor;
   }
 
-  private buildHills() {
-    const hillMat = new THREE.MeshLambertMaterial({ color: 0x1a2a1a });
-    const hills = [
-      { x: -80, z: -100, r: 30, h: 40 },
-      { x: 0, z: -110, r: 25, h: 35 },
-      { x: 80, z: -100, r: 28, h: 38 },
+  // ─── Spawn player ─────────────────────────────────────────────────────────
+  private spawnPlayer() {
+    // Invisible physics body
+    const geo = new THREE.BoxGeometry(0.8, 1.4, 0.8);
+    const mat = new THREE.MeshBasicMaterial({ visible: false });
+    this.player = new THREE.Mesh(geo, mat);
+    this.player.position.set(0, 1.2, 0);
+    this.towerGroup.add(this.player);
+
+    // Visible sprite (billboard)
+    const spriteGeo = new THREE.PlaneGeometry(2, 2.5);
+    const spriteMat = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
+    this.playerSprite = new THREE.Mesh(spriteGeo, spriteMat);
+    this.playerSprite.position.set(0, 0, 0.5);
+    this.player.add(this.playerSprite);
+
+    // Load texture
+    this.loader.load(
+      this.char.texture,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        (this.playerSprite.material as THREE.MeshBasicMaterial).map = tex;
+        (this.playerSprite.material as THREE.MeshBasicMaterial).needsUpdate = true;
+      },
+      undefined,
+      () => {
+        // Fallback: draw emoji on canvas
+        const c = document.createElement("canvas");
+        c.width = 128; c.height = 128;
+        const ctx = c.getContext("2d")!;
+        ctx.fillStyle = "#" + this.char.color.toString(16).padStart(6, "0");
+        ctx.beginPath();
+        ctx.arc(64, 64, 60, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = "70px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.char.emoji, 64, 68);
+        const t = new THREE.CanvasTexture(c);
+        (this.playerSprite.material as THREE.MeshBasicMaterial).map = t;
+        (this.playerSprite.material as THREE.MeshBasicMaterial).needsUpdate = true;
+      }
+    );
+
+    // Shadow circle under player
+    const shadowGeo = new THREE.CircleGeometry(0.45, 12);
+    const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
+    const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.set(0, -0.68, 0);
+    this.player.add(shadow);
+  }
+
+  // ─── Spawn enemy ─────────────────────────────────────────────────────────
+  private spawnEnemy(x: number, y: number, floor: number) {
+    const ENEMY_TYPES = [
+      { color: 0xff3355, emoji: "💀", name: "FUD Bear" },
+      { color: 0xff8800, emoji: "🦐", name: "Shrimp" },
+      { color: 0x00ccff, emoji: "🤖", name: "Bot" },
+      { color: 0xcc00ff, emoji: "👾", name: "Rugger" },
     ];
-    hills.forEach(h => {
-      const geo = new THREE.SphereGeometry(h.r, 12, 8);
-      const mesh = new THREE.Mesh(geo, hillMat);
-      mesh.position.set(h.x, -h.r * 0.4, h.z);
-      mesh.scale.y = h.h / h.r;
-      this.scene.add(mesh);
-    });
-
-    // "DEGEN" letters on hill
-    const letterMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.8 });
-    const letters = "DEGEN";
-    letters.split("").forEach((l, i) => {
-      const geo = new THREE.BoxGeometry(2, 4, 0.5);
-      const mesh = new THREE.Mesh(geo, letterMat);
-      mesh.position.set(-10 + i * 5, 22, -95);
-      this.scene.add(mesh);
-    });
-  }
-
-  private buildPlayer() {
-    const textureLoader = new THREE.TextureLoader();
-    this.charTexture = textureLoader.load(this.char.texture);
-
-    this.player = new THREE.Group();
-
-    const color = this.char.color;
-    const accent = this.char.accentColor;
-
-    // Body (capsule-like shape from cylinders + spheres)
-    const torsoMat = new THREE.MeshLambertMaterial({ color });
-    const skinMat = new THREE.MeshLambertMaterial({ color: 0xffcc99 });
-
-    // Torso
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.35, 1.0, 8), torsoMat);
-    torso.position.y = 1.1;
-    torso.castShadow = true;
-    this.player.add(torso);
-
-    // Head - use character texture as face
-    const headGeo = new THREE.SphereGeometry(0.42, 16, 12);
-    const headMat = new THREE.MeshLambertMaterial({ map: this.charTexture });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.95;
-    head.castShadow = true;
-    head.name = "head";
-    this.player.add(head);
-
-    // Legs
-    const legMat = new THREE.MeshLambertMaterial({ color: accent });
-    const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.9, 6), legMat);
-    leftLeg.position.set(-0.2, 0.25, 0);
-    leftLeg.castShadow = true;
-    leftLeg.name = "leftLeg";
-    this.player.add(leftLeg);
-
-    const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.9, 6), legMat);
-    rightLeg.position.set(0.2, 0.25, 0);
-    rightLeg.castShadow = true;
-    rightLeg.name = "rightLeg";
-    this.player.add(rightLeg);
-
-    // Feet
-    const footMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.35), footMat);
-    leftFoot.position.set(-0.2, -0.2, 0.06);
-    leftFoot.name = "leftFoot";
-    this.player.add(leftFoot);
-
-    const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.35), footMat);
-    rightFoot.position.set(0.2, -0.2, 0.06);
-    rightFoot.name = "rightFoot";
-    this.player.add(rightFoot);
-
-    // Arms
-    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 6), torsoMat);
-    leftArm.position.set(-0.6, 1.1, 0);
-    leftArm.rotation.z = Math.PI / 8;
-    leftArm.castShadow = true;
-    leftArm.name = "leftArm";
-    this.player.add(leftArm);
-
-    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 6), torsoMat);
-    rightArm.position.set(0.6, 1.1, 0);
-    rightArm.rotation.z = -Math.PI / 8;
-    rightArm.castShadow = true;
-    rightArm.name = "rightArm";
-    this.player.add(rightArm);
-
-    // Character-specific extras
-    if (this.char.id === "bonk") {
-      // Bonk: hard hat + hammer
-      const hatMat = new THREE.MeshLambertMaterial({ color: 0xf5c842 });
-      const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.25, 8), hatMat);
-      hat.position.y = 2.35;
-      this.player.add(hat);
-      // Hammer
-      const hammerMat = new THREE.MeshLambertMaterial({ color: 0xe53935 });
-      const hammer = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.5, 8), hammerMat);
-      hammer.rotation.z = Math.PI / 2;
-      hammer.position.set(0.9, 1.1, 0.2);
-      this.player.add(hammer);
-    } else if (this.char.id === "trump") {
-      // Trump: red tie
-      const tieMat = new THREE.MeshLambertMaterial({ color: 0xd32f2f, emissive: 0xd32f2f, emissiveIntensity: 0.1 });
-      const tie = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.05), tieMat);
-      tie.position.set(0, 1.0, 0.36);
-      this.player.add(tie);
-    } else if (this.char.id === "gigachad") {
-      // Gigachad: extra wide shoulders
-      const shoulderMat = new THREE.MeshLambertMaterial({ color });
-      const lShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), shoulderMat);
-      lShoulder.position.set(-0.6, 1.55, 0);
-      this.player.add(lShoulder);
-      const rShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), shoulderMat);
-      rShoulder.position.set(0.6, 1.55, 0);
-      this.player.add(rShoulder);
-    }
-
-    // Player glow
-    const glowLight = new THREE.PointLight(color, 2, 5);
-    glowLight.position.y = 1;
-    this.player.add(glowLight);
-
-    this.player.position.set(0, 0.3, 0);
-    this.scene.add(this.player);
-    this.mixer = new THREE.AnimationMixer(this.player);
-  }
-
-  private createEnemyMesh(position: THREE.Vector3): THREE.Group {
-    const group = new THREE.Group();
-    const enemyColor = [0xef4444, 0x8b00ff, 0xff6b35][Math.floor(Math.random() * 3)];
-
-    const mat = new THREE.MeshLambertMaterial({ color: enemyColor });
-    const darkMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const type = ENEMY_TYPES[(floor + Math.floor(x)) % ENEMY_TYPES.length];
+    const hp = Math.min(1 + Math.floor(floor / 3), 5);
+    const speed = ENEMY_SPEED * (1 + floor * 0.05);
+    const range = 1.5 + Math.random() * 1.5;
 
     // Body
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 0.9, 8), mat);
-    body.position.y = 1.0;
-    body.castShadow = true;
-    group.add(body);
+    const geo = new THREE.BoxGeometry(1, 1.2, 0.8);
+    const mat = new THREE.MeshLambertMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.3 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, 0);
+    mesh.castShadow = true;
+    this.towerGroup.add(mesh);
 
-    // Head (skull-like)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 8), mat);
-    head.position.y = 1.82;
-    group.add(head);
+    // Emoji label
+    const c = document.createElement("canvas");
+    c.width = 80; c.height = 80;
+    const ctx = c.getContext("2d")!;
+    ctx.font = "52px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(type.emoji, 40, 42);
+    const tex = new THREE.CanvasTexture(c);
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    label.scale.set(1.4, 1.4, 1);
+    label.position.set(x, y + 0.7, 0.5);
+    this.towerGroup.add(label);
 
-    // Spiky top
-    for (let i = 0; i < 4; i++) {
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 4), mat);
-      spike.position.set(Math.cos(i * Math.PI / 2) * 0.2, 2.22, Math.sin(i * Math.PI / 2) * 0.2);
-      group.add(spike);
-    }
-
-    // Legs
-    [-0.18, 0.18].forEach(x => {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8, 6), darkMat);
-      leg.position.set(x, 0.22, 0);
-      group.add(leg);
-    });
-
-    // Eyes (glowing)
-    const eyeMat = new THREE.MeshLambertMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 2 });
-    [-0.12, 0.12].forEach(x => {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), eyeMat);
-      eye.position.set(x, 1.85, 0.33);
-      group.add(eye);
-    });
-
-    const light = new THREE.PointLight(enemyColor, 1.5, 4);
-    light.position.y = 1;
-    group.add(light);
-
-    group.position.copy(position);
-    group.position.y = 0.3;
-    return group;
+    this.enemies.push({ mesh, label, x, y, vx: speed, hp, range, originX: x });
   }
 
-  private spawnEnemies(count: number) {
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      const r = 12 + Math.random() * 8;
-      const pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-      const enemy = this.createEnemyMesh(pos);
-      this.enemies.push(enemy);
-      this.scene.add(enemy);
+  // ─── Background ───────────────────────────────────────────────────────────
+  private buildBackground() {
+    // Distant city silhouette / stars
+    for (let i = 0; i < 120; i++) {
+      const geo = new THREE.SphereGeometry(0.04 + Math.random() * 0.06, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(Math.random() * 0.15 + 0.7, 0.8, 0.8) });
+      const star = new THREE.Mesh(geo, mat);
+      star.position.set(
+        (Math.random() - 0.5) * 40,
+        Math.random() * 200,
+        -(10 + Math.random() * 20)
+      );
+      this.scene.add(star);
+    }
+    // Building silhouettes
+    for (let i = 0; i < 10; i++) {
+      const h = 15 + Math.random() * 40;
+      const w = 2 + Math.random() * 5;
+      const geo = new THREE.BoxGeometry(w, h, 1);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x0d0022 });
+      const b = new THREE.Mesh(geo, mat);
+      b.position.set((Math.random() - 0.5) * 50, h / 2 - 5, -15 - Math.random() * 10);
+      this.scene.add(b);
     }
   }
 
-  private emitParticles(position: THREE.Vector3, color: number, count = 20) {
-    const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
-    const velocities: number[] = [];
-
-    for (let i = 0; i < count * 3; i += 3) {
-      positions[i] = position.x + (Math.random() - 0.5) * 0.5;
-      positions[i + 1] = position.y + Math.random() * 1;
-      positions[i + 2] = position.z + (Math.random() - 0.5) * 0.5;
-      velocities.push((Math.random() - 0.5) * 0.2, Math.random() * 0.15, (Math.random() - 0.5) * 0.2);
-    }
-
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({ color, size: 0.25, transparent: true, opacity: 1 });
-    const pts = new THREE.Points(geo, mat);
-    (pts as unknown as { _vel: number[]; _age: number })._vel = velocities;
-    (pts as unknown as { _vel: number[]; _age: number })._age = 0;
-    this.scene.add(pts);
-    this.particles.push(pts);
-  }
-
-  private bindEvents() {
-    const onKey = (e: KeyboardEvent, val: boolean) => {
-      this.keys[e.code] = val;
-    };
-    window.addEventListener("keydown", e => onKey(e, true));
-    window.addEventListener("keyup", e => onKey(e, false));
-
-    const canvas = this.renderer.domElement;
-    canvas.addEventListener("mousedown", () => { this.isDragging = true; });
-    canvas.addEventListener("mouseup", () => { this.isDragging = false; });
-    canvas.addEventListener("mousemove", e => {
-      if (this.isDragging) {
-        this.cameraAngle -= e.movementX * 0.004;
-        this.cameraPitch = Math.max(0.05, Math.min(0.8, this.cameraPitch - e.movementY * 0.003));
-      }
-    });
-    canvas.addEventListener("wheel", e => {
-      this.cameraDistance = Math.max(5, Math.min(25, this.cameraDistance + e.deltaY * 0.01));
-    });
-    canvas.addEventListener("touchstart", e => {
-      this.isDragging = true;
-      this.mouseX = e.touches[0].clientX;
-      this.mouseY = e.touches[0].clientY;
-    });
-    canvas.addEventListener("touchend", () => { this.isDragging = false; });
-    canvas.addEventListener("touchmove", e => {
-      if (this.isDragging) {
-        const dx = e.touches[0].clientX - this.mouseX;
-        const dy = e.touches[0].clientY - this.mouseY;
-        this.cameraAngle -= dx * 0.004;
-        this.cameraPitch = Math.max(0.05, Math.min(0.8, this.cameraPitch - dy * 0.003));
-        this.mouseX = e.touches[0].clientX;
-        this.mouseY = e.touches[0].clientY;
-      }
-    });
-
-    window.addEventListener("resize", () => {
-      this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
-    });
-  }
-
-  triggerSpecial() {
-    this.playTone(440, 0.1, "sawtooth", 0.3);
-    setTimeout(() => this.playTone(880, 0.2, "square", 0.2), 100);
-    setTimeout(() => this.playTone(1320, 0.3, "triangle", 0.15), 200);
-
-    this.emitParticles(this.player.position.clone().add(new THREE.Vector3(0, 1, 0)), this.char.color, 40);
-
-    // Special attack - big AOE
-    this.enemies.forEach(enemy => {
-      const dist = enemy.position.distanceTo(this.player.position);
-      if (dist < 8) {
-        this.score += 500;
-        this.callbacks.onScoreChange(this.score);
-        this.emitParticles(enemy.position.clone(), 0xff4444, 30);
-        this.scene.remove(enemy);
-      }
-    });
-    this.enemies = this.enemies.filter(e => e.parent !== null);
-  }
-
+  // ─── Main update loop ─────────────────────────────────────────────────────
   start() {
     this.clock.start();
     this.loop();
   }
 
   private loop() {
-    this.animFrame = requestAnimationFrame(() => this.loop());
-    const delta = this.clock.getDelta();
-    const elapsed = this.clock.getElapsedTime();
-    this.update(delta, elapsed);
+    this.animId = requestAnimationFrame(() => this.loop());
+    const dt = Math.min(this.clock.getDelta(), 0.05);
+    if (!this.dead) this.update(dt);
     this.renderer.render(this.scene, this.camera);
   }
 
-  private update(delta: number, elapsed: number) {
-    // ── Player movement ──
-    const speed = this.char.speed;
-    const forward = new THREE.Vector3(Math.sin(this.cameraAngle), 0, Math.cos(this.cameraAngle));
-    const right = new THREE.Vector3(Math.cos(this.cameraAngle), 0, -Math.sin(this.cameraAngle));
-    const moveDir = new THREE.Vector3();
+  private update(dt: number) {
+    this.invincibleTimer = Math.max(0, this.invincibleTimer - dt);
+    this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    this.specialCooldown = Math.max(0, this.specialCooldown - dt);
 
-    if (this.keys["KeyW"] || this.keys["ArrowUp"]) moveDir.add(forward);
-    if (this.keys["KeyS"] || this.keys["ArrowDown"]) moveDir.sub(forward);
-    if (this.keys["KeyA"] || this.keys["ArrowLeft"]) moveDir.sub(right);
-    if (this.keys["KeyD"] || this.keys["ArrowRight"]) moveDir.add(right);
+    // ── Input ──
+    const moveLeft  = this.keys["ArrowLeft"]  || this.keys["a"] || this.keys["A"] || this.joystickX < -0.2;
+    const moveRight = this.keys["ArrowRight"] || this.keys["d"] || this.keys["D"] || this.joystickX > 0.2;
+    const jump      = this.keys[" "] || this.keys["ArrowUp"] || this.keys["w"] || this.keys["W"] || this.jumpPressed;
+    const attack    = this.keys["z"] || this.keys["Z"] || this.attackPressed;
 
-    const isMoving = moveDir.lengthSq() > 0;
-    if (isMoving) {
-      moveDir.normalize().multiplyScalar(speed * delta);
-      this.player.position.addVectors(this.player.position, moveDir);
-      this.player.rotation.y = Math.atan2(moveDir.x, moveDir.z);
-    }
+    const spd = this.char.speed * Math.abs(this.joystickX > 0.2 || this.joystickX < -0.2 ? Math.abs(this.joystickX) : 1);
 
-    // Boundary
-    this.player.position.x = Math.max(-60, Math.min(60, this.player.position.x));
-    this.player.position.z = Math.max(-60, Math.min(60, this.player.position.z));
-
-    // Jump
-    if ((this.keys["Space"] || this.keys["KeySpace"]) && this.isGrounded) {
-      this.velocity.y = 8;
-      this.isGrounded = false;
-      this.playTone(200, 0.1, "square", 0.05);
-    }
-
-    // Gravity
-    this.velocity.y -= 20 * delta;
-    this.player.position.y += this.velocity.y * delta;
-    if (this.player.position.y <= 0.3) {
-      this.player.position.y = 0.3;
-      this.velocity.y = 0;
-      this.isGrounded = true;
-    }
-
-    // Attack
-    if ((this.keys["KeyE"]) && !this.isAttacking && this.attackCooldown <= 0) {
-      this.isAttacking = true;
-      this.attackCooldown = 0.5;
-      this.playTone(300, 0.08, "sawtooth", 0.08);
-      setTimeout(() => { this.isAttacking = false; }, 200);
-
-      // Check hits
-      this.enemies.forEach(enemy => {
-        const dist = enemy.position.distanceTo(this.player.position);
-        if (dist < 3) {
-          this.score += 100;
-          this.callbacks.onScoreChange(this.score);
-          this.emitParticles(enemy.position.clone().add(new THREE.Vector3(0, 1, 0)), this.char.color, 15);
-          this.scene.remove(enemy);
-          this.playTone(440, 0.15, "square", 0.1);
-          setTimeout(() => this.playTone(600, 0.1, "square", 0.08), 80);
-        }
-      });
-      this.enemies = this.enemies.filter(e => e.parent !== null);
-    }
-    if (this.attackCooldown > 0) this.attackCooldown -= delta;
-
-    // ── Character animations ──
-    if (isMoving) {
-      this.walkCycle += delta * speed * 1.2;
+    if (moveLeft) {
+      this.velX = -spd;
+      this.facing = -1;
+      this.playerSprite.scale.x = -Math.abs(this.playerSprite.scale.x);
+    } else if (moveRight) {
+      this.velX = spd;
+      this.facing = 1;
+      this.playerSprite.scale.x = Math.abs(this.playerSprite.scale.x);
     } else {
-      this.walkCycle += delta * 0.8; // idle bob
+      this.velX *= 0.75;
     }
 
-    const leftLeg = this.player.getObjectByName("leftLeg");
-    const rightLeg = this.player.getObjectByName("rightLeg");
-    const leftArm = this.player.getObjectByName("leftArm");
-    const rightArm = this.player.getObjectByName("rightArm");
-    const leftFoot = this.player.getObjectByName("leftFoot");
-    const rightFoot = this.player.getObjectByName("rightFoot");
-
-    if (isMoving) {
-      const swing = Math.sin(this.walkCycle * 5) * 0.5;
-      if (leftLeg) leftLeg.rotation.x = swing;
-      if (rightLeg) rightLeg.rotation.x = -swing;
-      if (leftArm) leftArm.rotation.x = -swing * 0.6;
-      if (rightArm) rightArm.rotation.x = swing * 0.6;
-      if (leftFoot) leftFoot.rotation.x = swing * 0.3;
-      if (rightFoot) rightFoot.rotation.x = -swing * 0.3;
-      this.player.position.y += Math.abs(Math.sin(this.walkCycle * 5)) * 0.04;
-    } else {
-      // Idle breathing
-      const bob = Math.sin(elapsed * 1.5) * 0.02;
-      this.player.position.y = 0.3 + (this.isGrounded ? bob : 0);
-      const head = this.player.getObjectByName("head");
-      if (head) head.rotation.y = Math.sin(elapsed * 0.5) * 0.1;
+    if (jump && this.onGround) {
+      this.velY = this.char.jumpPower;
+      this.onGround = false;
+      this.jumpPressed = false;
+      this.spawnJumpParticles();
     }
 
-    // Attack animation
-    if (this.isAttacking) {
-      if (rightArm) rightArm.rotation.x = -1.5;
+    if (attack && this.attackCooldown <= 0) {
+      this.doAttack();
+      this.attackCooldown = 0.35;
+      this.attackPressed = false;
     }
 
-    // ── Enemies ──
-    this.spawnTimer += delta;
-    if (this.spawnTimer > 8 && this.enemies.length < 6) {
-      this.spawnTimer = 0;
-      const angle = Math.random() * Math.PI * 2;
-      const r = 20 + Math.random() * 10;
-      const pos = new THREE.Vector3(
-        this.player.position.x + Math.cos(angle) * r,
-        0,
-        this.player.position.z + Math.sin(angle) * r,
-      );
-      pos.x = Math.max(-55, Math.min(55, pos.x));
-      pos.z = Math.max(-55, Math.min(55, pos.z));
-      const e = this.createEnemyMesh(pos);
-      this.enemies.push(e);
-      this.scene.add(e);
-    }
+    // ── Physics ──
+    this.velY += GRAVITY * dt;
+    let nx = this.player.position.x + this.velX * dt;
+    let ny = this.player.position.y + this.velY * dt;
 
-    this.enemies.forEach((enemy, idx) => {
-      // Chase player
-      const dir = new THREE.Vector3().subVectors(this.player.position, enemy.position).normalize();
-      const enemySpeed = 3 + idx * 0.3;
-      enemy.position.addScaledVector(dir, enemySpeed * delta);
-      enemy.rotation.y = Math.atan2(dir.x, dir.z);
+    // Wall clamp
+    const hw = TOWER_WIDTH / 2 - 0.45;
+    nx = Math.max(-hw, Math.min(hw, nx));
 
-      // Enemy walk animation
-      const elbLeft = enemy.children[3];
-      const elbRight = enemy.children[4];
-      if (elbLeft) elbLeft.rotation.x = Math.sin(elapsed * 8 + idx) * 0.6;
-      if (elbRight) elbRight.rotation.x = -Math.sin(elapsed * 8 + idx) * 0.6;
-
-      // Enemy attack
-      if (enemy.position.distanceTo(this.player.position) < 1.8) {
-        this.health = Math.max(0, this.health - 8 * delta);
-        this.callbacks.onHealthChange(Math.round(this.health));
+    // Platform collision
+    this.onGround = false;
+    const pw = 0.4;
+    const ph = 0.7;
+    for (const plat of this.platforms) {
+      const py = plat.y + PLATFORM_H / 2;
+      if (
+        this.velY <= 0 &&
+        this.player.position.y + ph >= py &&
+        ny + ph <= py + 0.5 &&
+        nx + pw >= plat.x - plat.w / 2 &&
+        nx - pw <= plat.x + plat.w / 2
+      ) {
+        ny = py - ph;
+        this.velY = 0;
+        this.onGround = true;
       }
-    });
+    }
 
-    // ── Neon flicker ──
-    this.neons.forEach((n, i) => {
-      const mat = n.material as THREE.MeshLambertMaterial;
-      mat.emissiveIntensity = 1.5 + Math.sin(elapsed * 3 + i * 1.3) * 0.5;
-    });
+    // Fell off bottom
+    if (ny < -3) {
+      this.takeDamage(15);
+      ny = 1;
+      this.velY = 5;
+    }
+
+    this.player.position.x = nx;
+    this.player.position.y = ny;
+
+    // ── Enemy update ──
+    this.updateEnemies(dt);
 
     // ── Particles ──
-    this.particles = this.particles.filter(pts => {
-      const typed = pts as unknown as { _vel: number[]; _age: number };
-      typed._age += delta;
-      if (typed._age > 1.2) {
-        this.scene.remove(pts);
+    this.updateParticles(dt);
+
+    // ── Camera follows player ──
+    const targetY = this.player.position.y + 3;
+    this.camera.position.y += (targetY - this.camera.position.y) * 0.08;
+    this.camera.lookAt(0, this.camera.position.y - 3, 0);
+
+    // ── Floor tracking ──
+    const playerFloor = Math.max(1, Math.floor(this.player.position.y / FLOOR_HEIGHT) + 1);
+    if (playerFloor > this.highestFloor) {
+      this.highestFloor = playerFloor;
+      this.score += playerFloor * 10;
+      this.callbacks.onScore(this.score);
+    }
+    if (playerFloor !== this.currentFloor) {
+      this.currentFloor = playerFloor;
+      this.callbacks.onFloor(this.currentFloor);
+    }
+
+    // ── Generate more floors ahead ──
+    if (this.player.position.y > (this.generatedUpTo - 3) * FLOOR_HEIGHT) {
+      this.generateFloors(this.generatedUpTo + 1, this.generatedUpTo + 6);
+    }
+
+    // ── Despawn old platforms/enemies below camera ──
+    const cullY = this.camera.position.y - 20;
+    this.platforms = this.platforms.filter(p => {
+      if (p.y < cullY && p.y > 2) {
+        this.towerGroup.remove(p.mesh);
         return false;
       }
-      const pos = pts.geometry.attributes.position.array as Float32Array;
-      for (let i = 0; i < pos.length; i += 3) {
-        pos[i] += typed._vel[i] * delta * 60;
-        pos[i + 1] += typed._vel[i + 1] * delta * 60 - 0.15 * typed._age;
-        pos[i + 2] += typed._vel[i + 2] * delta * 60;
-      }
-      pts.geometry.attributes.position.needsUpdate = true;
-      (pts.material as THREE.PointsMaterial).opacity = 1 - typed._age / 1.2;
       return true;
     });
+  }
 
-    // ── Camera ──
-    const camX = this.player.position.x + Math.sin(this.cameraAngle) * this.cameraDistance * Math.cos(this.cameraPitch);
-    const camY = this.player.position.y + this.cameraDistance * Math.sin(this.cameraPitch) + 2;
-    const camZ = this.player.position.z + Math.cos(this.cameraAngle) * this.cameraDistance * Math.cos(this.cameraPitch);
-    this.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.1);
-    this.camera.lookAt(this.player.position.x, this.player.position.y + 1.5, this.player.position.z);
+  private updateEnemies(dt: number) {
+    for (const e of this.enemies) {
+      // Patrol
+      e.x += e.vx * dt;
+      if (Math.abs(e.x - e.originX) > e.range) e.vx *= -1;
+      e.mesh.position.x = e.x;
+      e.label.position.x = e.x;
 
-    // ── Score: time-based ──
-    this.score += Math.round(delta * 10);
-    if (Math.round(elapsed) % 1 === 0 && this.lastTime !== Math.round(elapsed)) {
-      this.lastTime = Math.round(elapsed);
-      this.callbacks.onScoreChange(this.score);
-      this.floor = 1 + Math.floor(this.score / 2000);
-      this.callbacks.onFloorChange(this.floor);
+      // Face direction
+      e.mesh.rotation.y = e.vx > 0 ? 0 : Math.PI;
+
+      // Check collision with player
+      if (this.invincibleTimer <= 0) {
+        const dx = Math.abs(e.x - this.player.position.x);
+        const dy = Math.abs(e.y - this.player.position.y);
+        if (dx < 1.0 && dy < 1.2) {
+          this.takeDamage(8);
+          this.invincibleTimer = 1.2;
+        }
+      }
     }
+  }
+
+  private doAttack() {
+    const range = 2.5;
+    const px = this.player.position.x;
+    const py = this.player.position.y;
+
+    // Visual slash
+    this.spawnSlash(px + this.facing * 1.2, py + 0.3);
+
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      const dx = e.x - px;
+      const dy = e.y - py;
+      if (Math.abs(dy) < 1.5 && Math.abs(dx) < range && Math.sign(dx) === this.facing) {
+        e.hp--;
+        // Knockback
+        e.vx = this.facing * 4;
+        e.x += this.facing * 0.5;
+        if (e.hp <= 0) {
+          this.towerGroup.remove(e.mesh);
+          this.towerGroup.remove(e.label);
+          this.enemies.splice(i, 1);
+          this.score += 50;
+          this.callbacks.onScore(this.score);
+          this.spawnDeathParticles(e.x, e.y);
+        }
+      }
+    }
+  }
+
+  private takeDamage(dmg: number) {
+    if (this.invincibleTimer > 0) return;
+    this.health = Math.max(0, this.health - dmg);
+    this.callbacks.onHealth(this.health);
+    this.invincibleTimer = 0.6;
+    // Flash red
+    const mat = this.playerSprite.material as THREE.MeshBasicMaterial;
+    const orig = mat.color.clone();
+    mat.color.setHex(0xff0000);
+    setTimeout(() => { if (!this.dead) mat.color.copy(orig); }, 200);
+    if (this.health <= 0) this.die();
+  }
+
+  private die() {
+    this.dead = true;
+    this.callbacks.onDead();
+  }
+
+  // ── Particles ──
+  private spawnJumpParticles() {
+    for (let i = 0; i < 6; i++) {
+      const geo = new THREE.SphereGeometry(0.1, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xaa44ff });
+      const p = new THREE.Mesh(geo, mat);
+      p.position.copy(this.player.position);
+      p.position.y -= 0.6;
+      this.towerGroup.add(p);
+      this.particles.push({ mesh: p, vx: (Math.random()-0.5)*4, vy: -Math.random()*3, life: 0.4 });
+    }
+  }
+
+  private spawnSlash(x: number, y: number) {
+    const geo = new THREE.PlaneGeometry(2, 0.3);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffff88, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+    const p = new THREE.Mesh(geo, mat);
+    p.position.set(x, y, 0.6);
+    p.rotation.z = (Math.random()-0.5) * 0.5;
+    this.towerGroup.add(p);
+    this.particles.push({ mesh: p, vx: this.facing * 3, vy: 0, life: 0.15 });
+  }
+
+  private spawnDeathParticles(x: number, y: number) {
+    for (let i = 0; i < 12; i++) {
+      const geo = new THREE.SphereGeometry(0.15, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(Math.random(), 1, 0.6) });
+      const p = new THREE.Mesh(geo, mat);
+      p.position.set(x, y, 0);
+      this.towerGroup.add(p);
+      const ang = (Math.PI * 2 * i) / 12;
+      this.particles.push({ mesh: p, vx: Math.cos(ang)*5, vy: Math.sin(ang)*5, life: 0.6 });
+    }
+  }
+
+  private updateParticles(dt: number) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.life -= dt;
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.vy -= 10 * dt;
+      const mat = p.mesh.material as THREE.MeshBasicMaterial;
+      mat.opacity = Math.max(0, p.life / 0.6);
+      if (p.life <= 0) {
+        this.towerGroup.remove(p.mesh);
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  private onResize(container: HTMLDivElement) {
+    this.camera.aspect = container.clientWidth / container.clientHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(container.clientWidth, container.clientHeight);
   }
 
   destroy() {
-    cancelAnimationFrame(this.animFrame);
+    cancelAnimationFrame(this.animId);
     this.renderer.dispose();
-    if (this.container.contains(this.renderer.domElement)) {
-      this.container.removeChild(this.renderer.domElement);
-    }
-    window.removeEventListener("keydown", () => {});
-    window.removeEventListener("keyup", () => {});
-    if (this.audioCtx) this.audioCtx.close();
+    if (this.renderer.domElement.parentNode)
+      this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  REACT COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+export default function DegenGame({ onBack }: Props) {
+  const mountRef   = useRef<HTMLDivElement>(null);
+  const engineRef  = useRef<TowerEngine | null>(null);
+  const [selectedChar, setSelectedChar] = useState<string | null>(null);
+  const [gameStarted, setGameStarted]   = useState(false);
+  const [gameOver, setGameOver]         = useState(false);
+  const [score, setScore]     = useState(0);
+  const [health, setHealth]   = useState(100);
+  const [floor, setFloor]     = useState(1);
+  const [joystickPos, setJoystickPos]   = useState({ x: 0, y: 0 });
+  const joystickRef   = useRef<HTMLDivElement>(null);
+  const joystickActive = useRef(false);
+  const joystickOrigin = useRef({ x: 0, y: 0 });
+
+  // ── Keyboard ──
+  useEffect(() => {
+    if (!gameStarted) return;
+    const down = (e: KeyboardEvent) => { if (engineRef.current) engineRef.current.keys[e.key] = true; };
+    const up   = (e: KeyboardEvent) => { if (engineRef.current) engineRef.current.keys[e.key] = false; };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, [gameStarted]);
+
+  // ── Start game ──
+  useEffect(() => {
+    if (!gameStarted || !mountRef.current || !selectedChar) return;
+    const char = CHARACTERS.find(c => c.id === selectedChar)!;
+    const engine = new TowerEngine(mountRef.current, char, {
+      onScore:  setScore,
+      onHealth: setHealth,
+      onFloor:  setFloor,
+      onDead:   () => setGameOver(true),
+    });
+    engineRef.current = engine;
+    engine.start();
+    return () => { engine.destroy(); engineRef.current = null; };
+  }, [gameStarted, selectedChar]);
+
+  // ── Joystick handlers ──
+  const onJoystickStart = useCallback((cx: number, cy: number) => {
+    joystickActive.current = true;
+    joystickOrigin.current = { x: cx, y: cy };
+  }, []);
+
+  const onJoystickMove = useCallback((cx: number, cy: number) => {
+    if (!joystickActive.current) return;
+    const dx = cx - joystickOrigin.current.x;
+    const dy = cy - joystickOrigin.current.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const maxDist = 42;
+    const clamped = Math.min(dist, maxDist);
+    const nx = dist > 0 ? (dx / dist) * clamped : 0;
+    const ny = dist > 0 ? (dy / dist) * clamped : 0;
+    setJoystickPos({ x: nx, y: ny });
+    if (engineRef.current) engineRef.current.joystickX = nx / maxDist;
+  }, []);
+
+  const onJoystickEnd = useCallback(() => {
+    joystickActive.current = false;
+    setJoystickPos({ x: 0, y: 0 });
+    if (engineRef.current) engineRef.current.joystickX = 0;
+  }, []);
+
+  const restartGame = () => {
+    setGameOver(false);
+    setScore(0);
+    setHealth(100);
+    setFloor(1);
+    setGameStarted(false);
+    setSelectedChar(null);
+  };
+
+  // ── Character Select ──
+  if (!gameStarted) {
+    return (
+      <div style={{
+        minHeight: "100vh", background: "#0a0014",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: 24, position: "relative", overflow: "hidden",
+      }}>
+        {/* Background glow */}
+        <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%,-50%)", width: 600, height: 600, background: "radial-gradient(circle, rgba(120,40,180,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+        <button onClick={onBack} style={{ position: "absolute", top: 20, left: 20, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#888", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13 }}>← Back</button>
+
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 52, marginBottom: 8 }}>🗼</div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.02em", marginBottom: 8 }}>DEGEN TOWER</h1>
+          <p style={{ color: "#9966bb", fontSize: 15 }}>Choose your climber — then ascend</p>
+        </div>
+
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", maxWidth: 600 }}>
+          {CHARACTERS.map(c => (
+            <button
+              key={c.id}
+              onClick={() => { setSelectedChar(c.id); setGameStarted(true); }}
+              style={{
+                width: 110, height: 130, borderRadius: 16,
+                background: selectedChar === c.id ? "rgba(180,80,255,0.25)" : "rgba(255,255,255,0.04)",
+                border: `2px solid ${selectedChar === c.id ? "#cc44ff" : "rgba(255,255,255,0.08)"}`,
+                cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.border = "2px solid #cc44ff")}
+              onMouseLeave={e => (e.currentTarget.style.border = `2px solid ${selectedChar === c.id ? "#cc44ff" : "rgba(255,255,255,0.08)"}`)}
+            >
+              <div style={{ fontSize: 44, lineHeight: 1 }}>{c.emoji}</div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{c.name}</div>
+              <div style={{ color: "#9966bb", fontSize: 11 }}>SPD {c.speed.toFixed(0)} · JMP {c.jumpPower}</div>
+            </button>
+          ))}
+        </div>
+
+        <p style={{ color: "#554466", fontSize: 12, marginTop: 32, textAlign: "center" }}>
+          WASD / Arrow Keys to move · SPACE to jump · Z to attack
+        </p>
+      </div>
+    );
+  }
+
+  // ── Game Over ──
+  if (gameOver) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0a0014", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 60, marginBottom: 8 }}>💀</div>
+          <h2 style={{ color: "#fff", fontSize: 28, fontWeight: 900, marginBottom: 6 }}>YOU DIED</h2>
+          <p style={{ color: "#9966bb", fontSize: 16 }}>Floor {floor} · Score {score.toLocaleString()}</p>
+        </div>
+        <button onClick={restartGame} style={{
+          padding: "14px 40px", borderRadius: 12,
+          background: "linear-gradient(135deg, #cc44ff, #6622aa)",
+          border: "none", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer",
+        }}>Play Again</button>
+        <button onClick={onBack} style={{ background: "none", border: "1px solid #333", color: "#666", borderRadius: 10, padding: "10px 28px", cursor: "pointer", fontSize: 14 }}>Back to Menu</button>
+      </div>
+    );
+  }
+
+  // ── Game Running ──
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100vh", background: "#0a0014", overflow: "hidden", touchAction: "none" }}>
+      {/* Three.js canvas mount */}
+      <div ref={mountRef} style={{ width: "100%", height: "100%" }} />
+
+      {/* HUD */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "12px 16px", display: "flex", gap: 12, alignItems: "center", pointerEvents: "none", zIndex: 10 }}>
+        {/* Health bar */}
+        <div style={{ flex: 1, maxWidth: 200 }}>
+          <div style={{ fontSize: 10, color: "#cc88ff", fontWeight: 700, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>HP</div>
+          <div style={{ height: 10, background: "rgba(255,255,255,0.08)", borderRadius: 5, overflow: "hidden" }}>
+            <div style={{
+              height: "100%", borderRadius: 5,
+              width: `${health}%`,
+              background: health > 50 ? "linear-gradient(90deg,#22d67a,#44ff88)" : health > 25 ? "linear-gradient(90deg,#ffaa00,#ffcc44)" : "linear-gradient(90deg,#ff3355,#ff6688)",
+              transition: "width 0.15s",
+            }} />
+          </div>
+        </div>
+
+        {/* Floor */}
+        <div style={{ textAlign: "center", background: "rgba(180,80,255,0.15)", border: "1px solid rgba(180,80,255,0.3)", borderRadius: 8, padding: "4px 12px" }}>
+          <div style={{ color: "#cc88ff", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Floor</div>
+          <div style={{ color: "#fff", fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{floor}</div>
+        </div>
+
+        {/* Score */}
+        <div style={{ textAlign: "right", marginLeft: "auto" }}>
+          <div style={{ color: "#f5c842", fontSize: 18, fontWeight: 900 }}>{score.toLocaleString()}</div>
+          <div style={{ color: "#9966bb", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Score</div>
+        </div>
+      </div>
+
+      {/* Mobile Controls */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 20px 28px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", zIndex: 10, pointerEvents: "none" }}>
+
+        {/* LEFT: Joystick */}
+        <div
+          ref={joystickRef}
+          style={{
+            width: 110, height: 110,
+            borderRadius: "50%",
+            background: "rgba(180,80,255,0.1)",
+            border: "2px solid rgba(180,80,255,0.25)",
+            position: "relative", pointerEvents: "auto",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onTouchStart={e => { const t = e.touches[0]; onJoystickStart(t.clientX, t.clientY); }}
+          onTouchMove={e => { e.preventDefault(); const t = e.touches[0]; onJoystickMove(t.clientX, t.clientY); }}
+          onTouchEnd={onJoystickEnd}
+          onMouseDown={e => onJoystickStart(e.clientX, e.clientY)}
+          onMouseMove={e => { if (e.buttons) onJoystickMove(e.clientX, e.clientY); }}
+          onMouseUp={onJoystickEnd}
+        >
+          {/* Knob */}
+          <div style={{
+            width: 44, height: 44, borderRadius: "50%",
+            background: "linear-gradient(135deg, #cc44ff, #6622aa)",
+            boxShadow: "0 0 16px rgba(180,80,255,0.5)",
+            position: "absolute",
+            left: `calc(50% + ${joystickPos.x}px - 22px)`,
+            top: `calc(50% + ${joystickPos.y}px - 22px)`,
+            transition: joystickActive.current ? "none" : "all 0.15s",
+          }} />
+        </div>
+
+        {/* RIGHT: Action buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end", pointerEvents: "auto" }}>
+          {/* Jump */}
+          <button
+            style={{
+              width: 66, height: 66, borderRadius: "50%",
+              background: "linear-gradient(135deg, #f5c842, #e0a820)",
+              border: "none", color: "#000", fontWeight: 900, fontSize: 13,
+              cursor: "pointer", boxShadow: "0 0 20px rgba(245,200,66,0.4)",
+              WebkitTapHighlightColor: "transparent",
+            }}
+            onTouchStart={e => { e.preventDefault(); if (engineRef.current) { engineRef.current.jumpPressed = true; engineRef.current.keys[" "] = true; } }}
+            onTouchEnd={() => { if (engineRef.current) { engineRef.current.jumpPressed = false; engineRef.current.keys[" "] = false; } }}
+            onMouseDown={() => { if (engineRef.current) { engineRef.current.jumpPressed = true; engineRef.current.keys[" "] = true; } }}
+            onMouseUp={() => { if (engineRef.current) { engineRef.current.jumpPressed = false; engineRef.current.keys[" "] = false; } }}
+          >JUMP</button>
+
+          {/* Attack row */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              style={{
+                width: 56, height: 56, borderRadius: "50%",
+                background: "linear-gradient(135deg, #ff3355, #cc1133)",
+                border: "none", color: "#fff", fontWeight: 900, fontSize: 11,
+                cursor: "pointer", boxShadow: "0 0 16px rgba(255,51,85,0.4)",
+                WebkitTapHighlightColor: "transparent",
+              }}
+              onTouchStart={e => { e.preventDefault(); if (engineRef.current) engineRef.current.attackPressed = true; }}
+              onTouchEnd={() => { if (engineRef.current) engineRef.current.attackPressed = false; }}
+              onMouseDown={() => { if (engineRef.current) engineRef.current.attackPressed = true; }}
+              onMouseUp={() => { if (engineRef.current) engineRef.current.attackPressed = false; }}
+            >⚔️</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Back button */}
+      <button onClick={onBack} style={{
+        position: "absolute", top: 14, left: 14, zIndex: 20,
+        background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)",
+        color: "#888", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12,
+      }}>← Exit</button>
+    </div>
+  );
 }
