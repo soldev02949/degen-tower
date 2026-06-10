@@ -2,12 +2,19 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+const TOKEN_CA = "AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf";
+
+const SOCIALS = [
+  { label:"𝕏 Twitter", href:"https://x.com/degenclickersol", emoji:"𝕏" },
+  { label:"Telegram",  href:"https://t.me/degenclicker",      emoji:"✈️" },
+];
+
 const FEATURES = [
   { emoji:"🔥", title:"Combo Multiplier",   desc:"Tap fast to stack up to 20× multiplier. Drop it and start over" },
   { emoji:"🤖", title:"Auto-Tappers",       desc:"Hire Bot Armies, Whale Wallets & Hedge Funds to earn while you sleep" },
   { emoji:"⚡", title:"Upgrades",            desc:"Power up tap strength, energy, crit chance and more" },
   { emoji:"👑", title:"Rank Ladder",        desc:"Earn $TOWER → gain XP → level up → unlock Gigachad, Sigma, God Tier ranks" },
-  { emoji:"🏆", title:"48hr Seasons",       desc:"Leaderboard resets every 48 hours. Top players win USDC" },
+  { emoji:"🏆", title:"48hr Seasons",       desc:"Leaderboard resets every 48 hours. Top 20 players win USDC" },
   { emoji:"🎮", title:"5 Characters",       desc:"Pepe, Gigachad, Trump, Trollface, Bonk — each with unique specials" },
 ];
 
@@ -32,6 +39,37 @@ function Coins() {
           animation:`floatCoin ${c.dur}s ${c.delay}s linear infinite`,
         }}>{c.emoji}</div>
       ))}
+    </div>
+  );
+}
+
+function CopyCA() {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(TOKEN_CA).then(()=>{
+      setCopied(true);
+      setTimeout(()=>setCopied(false), 2000);
+    });
+  }
+  return (
+    <div style={{
+      display:"inline-flex",alignItems:"center",gap:8,
+      background:"rgba(34,214,122,0.06)",
+      border:"1px solid rgba(34,214,122,0.2)",
+      borderRadius:12,padding:"8px 14px",cursor:"pointer",
+      maxWidth:"100%",
+    }} onClick={copy}>
+      <span style={{fontSize:14}}>🪙</span>
+      <span style={{
+        color:"#22d67a",fontWeight:700,fontSize:11,
+        fontFamily:"monospace",letterSpacing:"0.03em",
+        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+        maxWidth:220,
+      }}>{TOKEN_CA}</span>
+      <span style={{
+        color: copied ? "#22d67a" : "#2a5c3a",
+        fontSize:11,fontWeight:700,flexShrink:0,
+      }}>{copied ? "✓ Copied!" : "Copy CA"}</span>
     </div>
   );
 }
@@ -64,10 +102,28 @@ export default function SplashPage() {
         background:"rgba(8,0,16,0.92)", backdropFilter:"blur(20px)",
         borderBottom:"1px solid rgba(255,255,255,0.06)",
         padding:"12px 20px", display:"flex", alignItems:"center", gap:12,
+        flexWrap:"wrap",
       }}>
         <img src="/logo.png" alt="" onError={e=>{(e.target as HTMLImageElement).style.display="none";}}
           style={{height:34,width:34,objectFit:"contain",filter:"drop-shadow(0 0 8px rgba(168,85,247,0.5))"}}/>
         <span style={{fontWeight:900,fontSize:17,color:"#fff",letterSpacing:"-0.02em"}}>DEGEN CLICKER</span>
+
+        {/* Social links */}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {SOCIALS.map(s=>(
+            <a key={s.href} href={s.href} target="_blank" rel="noopener noreferrer" style={{
+              color:"#555",fontSize:12,textDecoration:"none",
+              padding:"5px 10px",fontWeight:600,
+              border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,
+              background:"rgba(255,255,255,0.02)",
+              display:"flex",alignItems:"center",gap:4,
+            }}>
+              {s.emoji === "𝕏" ? <span style={{fontWeight:900,fontSize:13}}>𝕏</span> : <span>✈️</span>}
+              <span style={{fontSize:11}}>{s.label}</span>
+            </a>
+          ))}
+        </div>
+
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
           <Link href="/leaderboard" style={{color:"#555",fontSize:13,textDecoration:"none",padding:"6px 12px",fontWeight:600}}>
             🏆 Ranks
@@ -94,7 +150,7 @@ export default function SplashPage() {
       <section style={{
         position:"relative",zIndex:1,
         textAlign:"center",padding:"70px 20px 50px",
-        maxWidth:680,margin:"0 auto",
+        maxWidth:700,margin:"0 auto",
       }}>
         <div style={{
           display:"inline-flex",alignItems:"center",gap:6,
@@ -114,10 +170,19 @@ export default function SplashPage() {
         }}>
           TAP YOUR WAY<br/>TO THE TOP
         </h1>
-        <p style={{color:"#6644aa",fontSize:"clamp(14px,3.5vw,18px)",lineHeight:1.6,marginBottom:36,maxWidth:500,margin:"0 auto 36px"}}>
-          Pick your legend. Tap to earn $TOWER. Build auto-tappers.<br/>
-          Compete every 48 hours for real USDC prizes.
+
+        {/* Description */}
+        <p style={{color:"#6644aa",fontSize:"clamp(13px,3.2vw,16px)",lineHeight:1.7,marginBottom:28,maxWidth:560,margin:"0 auto 28px"}}>
+          Climb the leaderboard, compete with other players, and earn rewards on Solana.
+          The Top 20 players receive payouts every 48 hours, with rewards funded by the game's reward pool.
+          As token volume grows, the reward pool grows too — creating bigger opportunities for top-ranked players.
+          Click, grind, rank up, and claim your share of the rewards. 💰🔥
         </p>
+
+        {/* Token CA */}
+        <div style={{marginBottom:32,display:"flex",justifyContent:"center"}}>
+          <CopyCA/>
+        </div>
 
         <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginBottom:52}}>
           <Link href="/signup" style={{
@@ -203,13 +268,28 @@ export default function SplashPage() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer style={{
         position:"relative",zIndex:1,
         borderTop:"1px solid rgba(255,255,255,0.05)",
-        padding:"20px",textAlign:"center",
-        color:"#2a1a3a",fontSize:11,
+        padding:"24px 20px",textAlign:"center",
       }}>
-        Degen Clicker · Tap to earn · Win USDC every 48 hours
+        <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:12,flexWrap:"wrap"}}>
+          {SOCIALS.map(s=>(
+            <a key={s.href} href={s.href} target="_blank" rel="noopener noreferrer" style={{
+              color:"#443355",fontSize:12,textDecoration:"none",fontWeight:600,
+            }}>
+              {s.label}
+            </a>
+          ))}
+          <a href={`https://solscan.io/token/${TOKEN_CA}`} target="_blank" rel="noopener noreferrer" style={{
+            color:"#443355",fontSize:12,textDecoration:"none",fontWeight:600,
+          }}>
+            Token on Solscan
+          </a>
+        </div>
+        <div style={{color:"#1e1030",fontSize:11,fontFamily:"monospace",marginBottom:6}}>{TOKEN_CA}</div>
+        <div style={{color:"#221530",fontSize:11}}>Degen Clicker · Built on Solana · Tap to earn · Win USDC every 48 hours</div>
       </footer>
 
       <style>{`
