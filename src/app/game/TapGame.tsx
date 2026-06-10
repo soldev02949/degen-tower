@@ -440,37 +440,6 @@ function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProg
       </div>
     </div>
   );
-}:{onPlay:()=>void}){
-  return(
-    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:46,paddingBottom:80,overflowY:"auto"}}>
-      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -5%,rgba(120,40,200,0.35) 0%,transparent 55%)",pointerEvents:"none",zIndex:0}}/>
-      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"28px 20px 16px"}}>
-        <img src="/logo.png" alt="Degen Clicker" onError={e=>{(e.target as HTMLImageElement).style.display="none";}} style={{width:150,height:150,objectFit:"contain",marginBottom:4,filter:"drop-shadow(0 0 40px rgba(168,85,247,0.6))"}}/>
-        <h1 style={{color:"#fff",fontWeight:900,fontSize:26,marginBottom:6,letterSpacing:"-0.02em",lineHeight:1.1}}>Degen Clicker</h1>
-        <p style={{color:"#7755aa",fontSize:14,marginBottom:20,lineHeight:1.6}}>Pick your legend · Tap to earn · Win USDC</p>
-        <button onClick={onPlay} style={{background:"linear-gradient(135deg,#7c3aed,#a855f7)",color:"#fff",fontWeight:900,fontSize:17,border:"none",borderRadius:18,padding:"16px 48px",cursor:"pointer",boxShadow:"0 0 50px rgba(168,85,247,0.5),0 0 100px rgba(168,85,247,0.15)",letterSpacing:"-0.01em"}}>
-          🎮 Play Free
-        </button>
-        <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:20,flexWrap:"wrap"}}>
-          {[["💰","Tap to Earn","$TOWER coins"],["⏱","48hr","Reset cycle"],["🏆","USDC","Top players win"],["🤖","Auto-Tappers","Earn while AFK"]].map(([e,v,l])=>(
-            <div key={l} style={{textAlign:"center"}}><div style={{fontSize:18}}>{e}</div><div style={{color:"#fff",fontWeight:900,fontSize:14}}>{v}</div><div style={{color:"#444",fontSize:10}}>{l}</div></div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{position:"relative",zIndex:1,padding:"0 14px 20px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          {[["🔥","Combo System","Tap fast for up to 20× multiplier"],["🤖","Auto-Tappers","Hire helpers to earn while AFK"],["⚡","Upgrades","Power up your tap and energy"],["🏆","Live Rankings","48hr season resets, USDC prizes"]].map(([e,t,d])=>(
-            <div key={t} style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"14px 12px"}}>
-              <div style={{fontSize:22,marginBottom:6}}>{e}</div>
-              <div style={{color:"#ddd",fontWeight:800,fontSize:12,marginBottom:3}}>{t}</div>
-              <div style={{color:"#444",fontSize:11,lineHeight:1.4}}>{d}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ─── LEADERBOARD TAB ──────────────────────────────────────────────────────────
