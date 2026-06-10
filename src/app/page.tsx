@@ -15,7 +15,6 @@ const FEATURES = [
   { emoji:"⚡", title:"Upgrades",            desc:"Power up tap strength, energy, crit chance and more" },
   { emoji:"👑", title:"Rank Ladder",        desc:"Earn $TOWER → gain XP → level up → unlock Gigachad, Sigma, God Tier ranks" },
   { emoji:"🏆", title:"48hr Seasons",       desc:"Leaderboard resets every 48 hours. Top 20 players win USDC" },
-  { emoji:"🎮", title:"5 Characters",       desc:"Pepe, Gigachad, Trump, Trollface, Bonk — each with unique specials" },
 ];
 
 function Coins() {
