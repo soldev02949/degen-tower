@@ -6,8 +6,9 @@ import Link from "next/link";
 // ─── Level / Rank system ──────────────────────────────────────────────────
 // XP = totalEarned; Level = floor(log2(totalEarned/100 + 1)) + 1
 // Every level-up moves you up the leaderboard
-function getLevel(totalEarned: number) {
-  return Math.max(1, Math.floor(Math.log2(totalEarned / 100 + 1)) + 1);
+function getLevel(totalEarned: number | bigint) {
+  const val = typeof totalEarned === 'bigint' ? Number(totalEarned) : totalEarned;
+  return Math.max(1, Math.floor(Math.log2(val / 100 + 1)) + 1);
 }
 function getXPForNextLevel(level: number) {
   return Math.round(100 * (Math.pow(2, level) - 1));
@@ -24,19 +25,20 @@ function getRank(level: number): { name: string; color: string; emoji: string } 
   return { name: "Ngmi",               color: "#6b6b8a", emoji: "😴" };
 }
 
-function formatNum(n: number): string {
-  if (n >= 1e15) {
-    return (n / 1e15).toPrecision(5).replace(/\.?0+$/, "") + " Quadrillion";
+function formatNum(n: number | bigint): string {
+  const val = typeof n === 'bigint' ? Number(n) : n;
+  if (val >= 1e15) {
+    return (val / 1e15).toPrecision(5).replace(/\.?0+$/, "") + " Quadrillion";
   }
-  if (n >= 1e12) {
-    return (n / 1e12).toPrecision(5).replace(/\.?0+$/, "") + " Trillion";
+  if (val >= 1e12) {
+    return (val / 1e12).toPrecision(5).replace(/\.?0+$/, "") + " Trillion";
   }
-  if (n >= 1e9) {
-    return (n / 1e9).toPrecision(5).replace(/\.?0+$/, "") + " Billion";
+  if (val >= 1e9) {
+    return (val / 1e9).toPrecision(5).replace(/\.?0+$/, "") + " Billion";
   }
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
-  return Math.floor(n).toString();
+  if (val >= 1e6) return (val / 1e6).toFixed(2) + "M";
+  if (val >= 1e3) return (val / 1e3).toFixed(1) + "K";
+  return Math.floor(val).toString();
 }
 
 // 48-hour reset countdown
@@ -178,7 +180,8 @@ export default function Leaderboard() {
               const level = getLevel(p.total_score || 0);
               const rank  = getRank(level);
               const nextXP = getXPForNextLevel(level);
-              const xpPct  = Math.min(100, ((p.total_score||0) / nextXP) * 100);
+              const scoreVal = typeof p.total_score === 'bigint' ? Number(p.total_score) : (p.total_score || 0);
+              const xpPct  = Math.min(100, (scoreVal / nextXP) * 100);
               return (
                 <div key={p.id} style={{
                   display: "grid",
