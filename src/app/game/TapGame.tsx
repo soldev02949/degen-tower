@@ -1485,7 +1485,20 @@ export default function TapGame() {
     // Fire immediately on mount (handles unsynced data from previous session)
     runSync();
     const interval=setInterval(runSync,1000);
-    return()=>clearInterval(interval);
+    const handleBeforeUnload=()=>{
+      const d=liveRef.current;
+      if(d.charId&&d.uid){
+        const gl=getGlobalTaps(d.uid);
+        const st=Math.max(d.totalTaps,gl.totalTaps);
+        const se=Math.max(d.totalEarned,gl.totalEarned);
+        syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+      }
+    };
+    window.addEventListener("beforeunload",handleBeforeUnload);
+    return()=>{
+      clearInterval(interval);
+      window.removeEventListener("beforeunload",handleBeforeUnload);
+    };
   },[user?.id]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const char=CHARACTERS.find(c=>c.id===charId);
@@ -1793,7 +1806,7 @@ export default function TapGame() {
         // Always update global tap counter so character switches preserve total
         setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
       }
-      // Fast DB write — debounced 400ms after last tap; leaderboard polls every 3s
+      // Fast DB write — debounced 100ms after last tap; leaderboard polls every 500ms
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
       dbDebounceRef.current=setTimeout(()=>{
         const d=liveRef.current;
@@ -1801,7 +1814,7 @@ export default function TapGame() {
           dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
           syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
         }
-      },400);
+      },100);
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));

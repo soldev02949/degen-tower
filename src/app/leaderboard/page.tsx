@@ -112,8 +112,8 @@ export default function Leaderboard() {
       }
     };
     fetchLB();
-    // Ultra-aggressive polling (300ms) for instant real-time updates
-    const id = setInterval(fetchLB, 300);
+    // Live polling (500ms) for high-frequency leaderboard updates
+    const id = setInterval(fetchLB, 500);
     return () => clearInterval(id);
   }, []);
 

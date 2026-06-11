@@ -179,10 +179,10 @@ export default function AdminDashboard() {
 
   useEffect(() => { if (authed) { fetchAll(); fetchSubmissions(); } }, [authed, fetchAll, fetchSubmissions]);
 
-  // Auto-refresh every 2s
+  // Auto-refresh every 3s
   useEffect(() => {
     if (!authed || !autoRefresh) return;
-    const id = setInterval(fetchAll, 2000);// near-live polling
+    const id = setInterval(fetchAll, 3000);// live polling
     return () => clearInterval(id);
   }, [authed, autoRefresh, fetchAll]);
 
