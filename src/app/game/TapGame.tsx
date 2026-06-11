@@ -160,8 +160,7 @@ function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:stri
     if(delText.toLowerCase()!=="delete"){return;}
     try{
       const{supabase}=await import("@/lib/supabase");
-      const pid=getPlayerId();
-      await supabase.from("dt_players").delete().eq("wallet_address",pid);
+      await supabase.from("dt_players").delete().eq("wallet_address",user?.id||"");
       await supabase.auth.admin?.deleteUser?.(user?.id||"").catch(()=>{});
       await signOut();
     }catch{
@@ -690,7 +689,7 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 
 // ─── MAIN GAME ────────────────────────────────────────────────────────────────
 export default function TapGame() {
-  const {signOut}=useAuth();
+  const {user,signOut}=useAuth();
   const [activeTab,setActiveTab]=useState<"home"|"play"|"shop"|"ranks"|"settings">("home");
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
@@ -734,7 +733,26 @@ export default function TapGame() {
     return sum + lvl*(u.tapsPerSec!);
   },0);
 
-  useEffect(()=>{ setPlayerId(getPlayerId()); setUsername(getPlayerName()); setSolWallet(getPlayerWallet()); },[]);
+  // Use Supabase auth user ID as the player ID — prevents all users sharing the same localStorage ID
+  useEffect(()=>{
+    if(!user?.id) return;
+    const authId = user.id;
+    setPlayerId(authId);
+    // Load player profile from Supabase keyed by auth user ID
+    import("@/lib/supabase").then(({supabase})=>{
+      supabase.from("dt_players").select("username,sol_wallet").eq("wallet_address",authId).maybeSingle()
+        .then(({data})=>{
+          if(data){
+            if(data.username){ setUsername(data.username); setPlayerName(data.username); }
+            if(data.sol_wallet){ setSolWallet(data.sol_wallet); setPlayerWallet(data.sol_wallet); }
+          } else {
+            // New user — use email prefix as default username
+            const defaultName = user.email?.split("@")[0] || "Degen_"+authId.slice(-6);
+            setUsername(defaultName); setPlayerName(defaultName);
+          }
+        });
+    });
+  },[user?.id]);
 
   function tryStart(id:string){
     if(!getPlayerName()){setPendingChar(id);setShowModal(true);}
@@ -754,14 +772,14 @@ export default function TapGame() {
     const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;setMaxEnergy(mx);setEnergy(mx);
     setScreen("game");setActiveTab("play");saveRef.current=s;
     const w=wallet??getPlayerWallet();
-    syncDB(getPlayerId(),name,id,s.totalEarned,s.totalTaps,w||undefined);
+    syncDB(user?.id||playerId,name,id,s.totalEarned,s.totalTaps,w||undefined);
   }
 
   const doSave=useCallback(()=>{
     if(!charId)return;
     const s:SaveData={charId:charId!,coins,totalEarned,totalTaps,upgrades,highScore:Math.max(coins,saveRef.current?.highScore||0)};
     persistSave(s);saveRef.current=s;
-    syncDB(playerId||getPlayerId(),username||getPlayerName(),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet()||undefined);
+    syncDB(user?.id||playerId,username||getPlayerName(),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet()||undefined);
   },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet]);
 
   useEffect(()=>{ if(screen!=="game"||!charId)return; const id=setInterval(doSave,8000); return()=>clearInterval(id); },[screen,charId,doSave]);
@@ -887,7 +905,7 @@ export default function TapGame() {
     setUsername(u); setPlayerName(u);
     setSolWallet(w); setPlayerWallet(w);
     setAvatar(av); setAvatarStore(av);
-    syncDB(playerId,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
+    syncDB(user?.id||playerId,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
   }
 
   return(
