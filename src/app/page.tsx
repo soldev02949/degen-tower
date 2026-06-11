@@ -290,8 +290,13 @@ export default function SplashPage() {
             Token on Solscan
           </a>
         </div>
+        <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:12,flexWrap:"wrap"}}>
+          <Link href="/whitepaper" style={{color:"#443355",fontSize:11,textDecoration:"none",fontWeight:600}}>Whitepaper</Link>
+          <Link href="/terms" style={{color:"#443355",fontSize:11,textDecoration:"none",fontWeight:600}}>Terms &amp; Conditions</Link>
+          <Link href="/privacy" style={{color:"#443355",fontSize:11,textDecoration:"none",fontWeight:600}}>Privacy Policy</Link>
+        </div>
         <div style={{color:"#1e1030",fontSize:11,fontFamily:"monospace",marginBottom:6}}>{TOKEN_CA}</div>
-        <div style={{color:"#221530",fontSize:11}}>Degen Clicker · Built on Solana · Tap to earn · Win USDC every 48 hours</div>
+        <div style={{color:"#221530",fontSize:11}}>© 2025 Degen Clicker · Built on Solana · Tap to earn · Win USDC every 48 hours</div>
       </footer>
 
       <style>{`
