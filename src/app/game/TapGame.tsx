@@ -1598,7 +1598,7 @@ export default function TapGame() {
   // Save every 5s during play; save immediately on exit (cleanup)
   useEffect(()=>{
     if(screen!=="game"||!charId)return;
-    const id=setInterval(doSave,5000);
+    const id=setInterval(doSave,1000);
     return()=>{clearInterval(id);doSave();};// save on screen/char change
   },[screen,charId]);// eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1606,7 +1606,10 @@ export default function TapGame() {
     if(activeTab!=="play"||screen!=="game"||!char)return;
     const rate=autoRate*(specialActive&&char.id==="trump"?5:1);
     if(rate<=0)return;
-    const id=setInterval(()=>{const pt=rate/20;setCoins(c=>c+pt);setTotalEarned(t=>t+pt);setTotalTaps(t=>t+pt);},50);
+    const id=setInterval(()=>{const pt=rate/20;setCoins(c=>c+pt);setTotalEarned(t=>t+pt);setTotalTaps(t=>t+pt);
+      if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
+      dbDebounceRef.current=setTimeout(()=>{const d=liveRef.current;if(d.charId&&d.uid){const gl=getGlobalTaps(d.uid);const st=Math.max(d.totalTaps,gl.totalTaps);const se=Math.max(d.totalEarned,gl.totalEarned);syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);}},400);
+    },50);
     return()=>clearInterval(id);
   },[autoRate,activeTab,screen,char,specialActive]);
 
