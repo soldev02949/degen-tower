@@ -50,7 +50,7 @@ export default function AdminDashboard() {
     const { data, error } = await supabase
       .from("dt_players")
       .select("id,username,character,total_score,games_played,is_verified,sol_wallet,wallet_address,created_at")
-      .order("total_score", { ascending: false });
+      .order("games_played", { ascending: false });
     if (error) { console.error("[Admin] dt_players fetch error:", error); setFetchError(error.message); }
     else setFetchError(null);
     const p = data || [];
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
               <div>
                 <h3 style={{ color:"#fff", fontWeight:900, margin:"0 0 2px", fontSize:16 }}>🏆 Live Leaderboard</h3>
-                <p style={{ color:"#443355", fontSize:12, margin:0 }}>All-time rankings by $TOWER earned</p>
+                <p style={{ color:"#443355", fontSize:12, margin:0 }}>{players.length} total players · Top 20 receive payout every 48hrs</p>
               </div>
               <button onClick={fetchData} style={{ background:"rgba(168,85,247,0.1)", border:"1px solid rgba(168,85,247,0.3)", color:"#a855f7", borderRadius:10, padding:"7px 16px", cursor:"pointer", fontSize:12, fontWeight:700 }}>🔄 Refresh</button>
             </div>
@@ -280,41 +280,55 @@ export default function AdminDashboard() {
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                 <thead>
                   <tr style={{ background:"rgba(255,255,255,0.03)" }}>
-                    {["Rank","Player","Character","Level","Title","$TOWER","Taps","Wallet"].map(h=>(
+                    {["Rank","Player","Character","Level","Title","Taps","$TOWER","Wallet"].map(h=>(
                       <th key={h} style={{ padding:"11px 14px", textAlign:"left", color:"#443355", fontWeight:700, fontSize:10, textTransform:"uppercase", letterSpacing:"0.06em", borderBottom:`1px solid ${BORDER}`, whiteSpace:"nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
+                  {players.length===0&&(
+                    <tr><td colSpan={8} style={{ padding:40, textAlign:"center", color:"#333" }}>No players yet</td></tr>
+                  )}
                   {players.map((p,i)=>{
                     const lv=getLevel(p.total_score||0);
                     const r=getRank(lv);
                     const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
                     const isPrize=i<20;
+                    const isLastPrize=i===19;
                     return(
-                      <tr key={p.id} style={{ borderBottom:`1px solid ${BORDER}`, background:i<3?"rgba(168,85,247,0.03)":"transparent" }}
-                        onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.025)")}
-                        onMouseLeave={e=>(e.currentTarget.style.background=i<3?"rgba(168,85,247,0.03)":"transparent")}
+                      <>
+                      <tr key={p.id} style={{ borderBottom:isLastPrize?`2px solid rgba(34,214,122,0.35)`:i===2?`2px solid rgba(168,85,247,0.2)`:`1px solid ${BORDER}`, background:isPrize?(i<3?"rgba(245,200,66,0.04)":"rgba(34,214,122,0.02)"):"rgba(255,255,255,0.005)" }}
+                        onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.04)")}
+                        onMouseLeave={e=>(e.currentTarget.style.background=isPrize?(i<3?"rgba(245,200,66,0.04)":"rgba(34,214,122,0.02)"):"rgba(255,255,255,0.005)")}
                       >
-                        <td style={{ padding:"10px 14px", fontWeight:900 }}>
-                          {medal?<span style={{ fontSize:16 }}>{medal}</span>:<span style={{ color:isPrize?"#a855f7":"#443355" }}>#{i+1}</span>}
+                        <td style={{ padding:"10px 14px", fontWeight:900, width:60 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                            {medal?<span style={{ fontSize:18 }}>{medal}</span>:<span style={{ color:isPrize?"#22d67a":"#443355", fontWeight:900 }}>#{i+1}</span>}
+                          </div>
                         </td>
-                        <td style={{ padding:"10px 14px", color:"#fff", fontWeight:700 }}>
-                          {p.username||"Anon"}
-                          {isPrize&&<span style={{ marginLeft:5, fontSize:9, background:"rgba(34,214,122,0.12)", color:"#22d67a", fontWeight:700, padding:"2px 6px", borderRadius:4 }}>PRIZE</span>}
+                        <td style={{ padding:"10px 14px" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span style={{ color:"#fff", fontWeight:700 }}>{p.username||"Anon"}</span>
+                            {isPrize&&<span style={{ fontSize:9, background:"rgba(34,214,122,0.15)", color:"#22d67a", fontWeight:800, padding:"2px 7px", borderRadius:4, border:"1px solid rgba(34,214,122,0.25)" }}>💰 PRIZE</span>}
+                          </div>
                         </td>
                         <td style={{ padding:"10px 14px", fontSize:18 }}>{CE[p.character]||"🎮"}</td>
                         <td style={{ padding:"10px 14px", color:"#a855f7", fontWeight:700 }}>Lv.{lv}</td>
                         <td style={{ padding:"10px 14px" }}><span style={{ color:r.color, fontWeight:700 }}>{r.emoji} {r.name}</span></td>
-                        <td style={{ padding:"10px 14px", color:"#f5c842", fontWeight:900 }}>💰{fmt(p.total_score||0)}</td>
-                        <td style={{ padding:"10px 14px", color:"#888" }}>{fmt(p.games_played||0)}</td>
-                        <td style={{ padding:"10px 14px", color:"#443355", fontSize:10, fontFamily:"monospace" }}>{p.sol_wallet?p.sol_wallet.slice(0,10)+"…":"—"}</td>
+                        <td style={{ padding:"10px 14px", color:"#f5c842", fontWeight:900 }}>👆{fmt(p.games_played||0)}</td>
+                        <td style={{ padding:"10px 14px", color:"#888" }}>💰{fmt(p.total_score||0)}</td>
+                        <td style={{ padding:"10px 14px", color:"#443355", fontSize:10, fontFamily:"monospace" }}>{p.sol_wallet?p.sol_wallet.slice(0,12)+"…":"—"}</td>
                       </tr>
+                      {isLastPrize&&players.length>20&&(
+                        <tr key="divider">
+                          <td colSpan={8} style={{ padding:"6px 14px", background:"rgba(34,214,122,0.06)", borderBottom:`1px solid rgba(34,214,122,0.15)` }}>
+                            <span style={{ color:"#22d67a", fontSize:10, fontWeight:800 }}>▲ TOP 20 PRIZE ZONE — {players.length-20} more players below</span>
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     );
                   })}
-                  {players.length===0&&(
-                    <tr><td colSpan={8} style={{ padding:40, textAlign:"center", color:"#333" }}>No players yet</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
