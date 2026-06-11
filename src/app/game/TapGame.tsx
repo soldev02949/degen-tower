@@ -948,7 +948,8 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       // Use raw fetch with no-cache to guarantee fresh data from Postgres
       const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
       const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
-      const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&order=games_played.desc&limit=200`,{
+      const sevenDaysAgo=new Date(Date.now()-7*24*60*60*1000).toISOString();
+      const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&last_seen=gte.${sevenDaysAgo}&order=games_played.desc&limit=200`,{
         headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
         cache:"no-store",
       });
@@ -1443,11 +1444,12 @@ export default function TapGame() {
             const dbCoins=Number(existing.token_balance)||0;
             const dbUpgrades=(existing.upgrades as Record<string,number>)||{};
             dbValuesRef.current={totalEarned:dbEarned,totalTaps:dbTaps,coins:dbCoins,upgrades:dbUpgrades};
-            // Auto-push local state if it's higher than DB (catches tabs/sessions that weren't synced)
+            // Always push local state to DB on load — GREATEST RPC makes it safe (DB only goes up).
+            // This ensures the leaderboard always reflects the player's real count without manual fixes.
             const globalLocal=getGlobalTaps(authId);
             const localTaps=globalLocal.totalTaps||0;
             const localEarned=globalLocal.totalEarned||0;
-            if(localTaps>dbTaps||localEarned>dbEarned){
+            if(true){
               const pushedTaps=Math.max(localTaps,dbTaps);
               const pushedEarned=Math.max(localEarned,dbEarned);
               const uname=existing.username as string||getPlayerName(authId);
