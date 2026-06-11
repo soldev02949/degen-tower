@@ -968,69 +968,29 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
   },[]);
   useEffect(()=>{
     load();
-    const id=setInterval(load,3000);
+    const id=setInterval(load,1000);
     return()=>clearInterval(id);
   },[load]);
 
-  const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
-  // Patch current user's entry with live state (instant updates every tap)
+    const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
+  // Patch current user's entry with live state (instant updates, no DB lag)
+  // liveTaps may be 0 before game loads - still show DB value via Math.max
   const displayPlayers=React.useMemo(()=>{
-    if(!myPlayerId||liveTaps===0)return players;
+    if(!myPlayerId||!players.length)return players;
+    const localTaps=typeof window!=="undefined"?Number(JSON.parse(localStorage.getItem(myPlayerId?`degen_global_${myPlayerId}`:"degen_global")||"{}").totalTaps||0):0;
+    const effectiveTaps=Math.max(liveTaps,localTaps);
+    const effectiveEarned=Math.max(liveEarned,typeof window!=="undefined"?Number(JSON.parse(localStorage.getItem(myPlayerId?`degen_global_${myPlayerId}`:"degen_global")||"{}").totalEarned||0):0);
     const patched=players.map(p=>{
       if(p.wallet_address!==myPlayerId)return p;
-      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
+      return{...p,games_played:Math.max(p.games_played,effectiveTaps),total_score:Math.max(p.total_score,effectiveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
     });
-    // If current user not in DB list yet, add them
     const exists=patched.some(p=>p.wallet_address===myPlayerId);
-    if(!exists&&liveTaps>0){
-      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
+    if(!exists&&effectiveTaps>0){
+      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:effectiveEarned,games_played:effectiveTaps,avatar_url:liveAvatarUrl});
     }
     return patched.sort((a,b)=>b.games_played-a.games_played);
   },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
-  // Patch current user's entry with live state (instant updates every tap)
-  const displayPlayers=React.useMemo(()=>{
-    if(!myPlayerId||liveTaps===0)return players;
-    const patched=players.map(p=>{
-      if(p.wallet_address!==myPlayerId)return p;
-      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
-    });
-    // If current user not in DB list yet, add them
-    const exists=patched.some(p=>p.wallet_address===myPlayerId);
-    if(!exists&&liveTaps>0){
-      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
-    }
-    return patched.sort((a,b)=>b.games_played-a.games_played);
-  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
-  // Patch current user's entry with live state (instant updates every tap)
-  const displayPlayers=React.useMemo(()=>{
-    if(!myPlayerId||liveTaps===0)return players;
-    const patched=players.map(p=>{
-      if(p.wallet_address!==myPlayerId)return p;
-      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
-    });
-    // If current user not in DB list yet, add them
-    const exists=patched.some(p=>p.wallet_address===myPlayerId);
-    if(!exists&&liveTaps>0){
-      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
-    }
-    return patched.sort((a,b)=>b.games_played-a.games_played);
-  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
-  // Patch current user's entry with live state (instant updates every tap)
-  const displayPlayers=React.useMemo(()=>{
-    if(!myPlayerId||liveTaps===0)return players;
-    const patched=players.map(p=>{
-      if(p.wallet_address!==myPlayerId)return p;
-      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
-    });
-    // If current user not in DB list yet, add them
-    const exists=patched.some(p=>p.wallet_address===myPlayerId);
-    if(!exists&&liveTaps>0){
-      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
-    }
-    return patched.sort((a,b)=>b.games_played-a.games_played);
-  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
-
-  return(
+    return(
     <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
 
