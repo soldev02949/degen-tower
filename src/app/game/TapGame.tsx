@@ -269,41 +269,142 @@ function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.
 const SUPA_URL_CONST="https://paxtohwiycuhwmlziwrr.supabase.co";
 const SUPA_KEY_CONST="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
 
+type DirectSyncPayload = {
+  pid:string;
+  uname:string;
+  charId:string;
+  totalEarned?:number;
+  totalTaps:number;
+  coins?:number;
+  upgrades?:Record<string,number>;
+  solWallet?:string;
+  avatarUrl?:string;
+};
+
+let _upsertPlayerRpcBroken=false;
+let _syncTapsRpcBroken=false;
+
+async function getAuthToken(){
+  let authToken=SUPA_KEY_CONST;
+  try{
+    const{supabase}=await import("@/lib/supabase");
+    const{data:{session}}=await supabase.auth.getSession();
+    if(session?.access_token)authToken=session.access_token;
+  }catch{}
+  return authToken;
+}
+
+function dbNum(v:unknown):number{
+  if(typeof v==="number")return Number.isFinite(v)?v:0;
+  if(typeof v==="bigint")return Number(v);
+  if(typeof v==="string"){
+    const n=Number(v);
+    return Number.isFinite(n)?n:0;
+  }
+  return 0;
+}
+
+function mergeUpgrades(local?:Record<string,number>,db?:Record<string,number>){
+  const merged:Record<string,number>={...(db||{})};
+  for(const[k,v]of Object.entries(local||{}))merged[k]=Math.max(Number(merged[k])||0,Number(v)||0);
+  return merged;
+}
+
+async function fetchPlayerDirect(pid:string,authToken:string):Promise<Record<string,unknown>|null>{
+  const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,token_balance,upgrades,sol_wallet,avatar_url&wallet_address=eq.${encodeURIComponent(pid)}&limit=1`,{
+    headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
+    cache:"no-store",
+  });
+  if(!resp.ok)throw new Error(`direct_fetch_failed_${resp.status}: ${await resp.text()}`);
+  const text=await resp.text();
+  const rows=JSON.parse(text.replace(/:(\d{16,})([,}])/g, ':"$1"$2')) as Record<string,unknown>[];
+  return rows[0]||null;
+}
+
+// Direct table fallback used when Supabase RPCs fail. It always reads the current row first
+// and writes MAX(current DB, local browser) values so a stale tab cannot lower leaderboard stats.
+async function syncPlayerDirect(p:DirectSyncPayload,authToken?:string):Promise<number|null>{
+  if(!p.pid||p.totalTaps<=0)return null;
+  const token=authToken||await getAuthToken();
+  const existing=await fetchPlayerDirect(p.pid,token);
+  const localTaps=Math.floor(p.totalTaps)||0;
+  const localScore=Math.floor(p.totalEarned||0)||0;
+  const localCoins=Math.floor(p.coins||0)||0;
+  const payload:Record<string,unknown>={
+    wallet_address:p.pid,
+    username:p.uname||(`Degen_${p.pid.slice(-6)}`),
+    character:p.charId||"pepe",
+    games_played:localTaps,
+    last_seen:new Date().toISOString(),
+  };
+
+  if(typeof p.totalEarned==="number")payload.total_score=localScore;
+  if(typeof p.coins==="number")payload.token_balance=localCoins;
+  if(p.upgrades)payload.upgrades=p.upgrades;
+  if(p.solWallet)payload.sol_wallet=p.solWallet;
+  if(p.avatarUrl)payload.avatar_url=p.avatarUrl;
+
+  if(existing){
+    payload.games_played=Math.max(dbNum(existing.games_played),localTaps);
+    if(typeof p.totalEarned==="number")payload.total_score=Math.max(dbNum(existing.total_score),localScore);
+    if(typeof p.coins==="number")payload.token_balance=Math.max(dbNum(existing.token_balance),localCoins);
+    if(p.upgrades)payload.upgrades=mergeUpgrades(p.upgrades,existing.upgrades as Record<string,number>|undefined);
+    const patch=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(p.pid)}`,{
+      method:"PATCH",
+      headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${token}`,"Content-Type":"application/json","Prefer":"return=representation","Cache-Control":"no-cache"},
+      body:JSON.stringify(payload),
+    });
+    if(!patch.ok)throw new Error(`direct_patch_failed_${patch.status}: ${await patch.text()}`);
+    const saved=(await patch.json()) as Record<string,unknown>[];
+    return dbNum(saved?.[0]?.games_played);
+  }
+
+  const insert=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players`,{
+    method:"POST",
+    headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${token}`,"Content-Type":"application/json","Prefer":"return=representation","Cache-Control":"no-cache"},
+    body:JSON.stringify(payload),
+  });
+  if(!insert.ok)throw new Error(`direct_insert_failed_${insert.status}: ${await insert.text()}`);
+  const saved=(await insert.json()) as Record<string,unknown>[];
+  return dbNum(saved?.[0]?.games_played);
+}
+
 async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,coins:number,upgrades?:Record<string,number>,solWallet?:string,avatarUrl?:string){
   if(!pid)return;
-  try{
-    // Try to get fresh auth token for RLS if possible
-    let authToken = SUPA_KEY_CONST;
-    try {
-      const { supabase } = await import("@/lib/supabase");
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) authToken = session.access_token;
-    } catch {}
-
-    // Use the GREATEST-based RPC so no browser can ever lower tap/coin counts in DB
-    const rpcPayload:Record<string,unknown>={
-      p_wallet_address:pid,
-      p_username:uname||("Degen_"+pid.slice(-6)),
-      p_character:charId,
-      p_total_score:String(Math.round(totalEarned)||0),// send as string to avoid JS float precision losing bignum
-      p_games_played:Math.floor(totalTaps),
-      p_token_balance:Math.floor(coins),
-      p_is_verified:false,
-      p_last_seen:new Date().toISOString(),
-    };
-    if(upgrades)rpcPayload.p_upgrades=upgrades;
-    if(solWallet)rpcPayload.p_sol_wallet=solWallet;
-    if(avatarUrl)rpcPayload.p_avatar_url=avatarUrl;
-    await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
-      method:"POST",
-      headers:{
-        "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,
-        "Content-Type":"application/json",
-        "Cache-Control":"no-cache",
-      },
-      body:JSON.stringify(rpcPayload),
-    });
-  }catch(e){console.error("[syncDB] error",e);logSyncError(pid,"syncDB_exception",String(e),totalTaps);}
+  const authToken=await getAuthToken();
+  const payload={pid,uname,charId,totalEarned,totalTaps,coins,upgrades,solWallet,avatarUrl};
+  if(!_upsertPlayerRpcBroken){
+    try{
+      const rpcPayload:Record<string,unknown>={
+        p_wallet_address:pid,
+        p_username:uname||("Degen_"+pid.slice(-6)),
+        p_character:charId,
+        // Send numeric here; string payloads hit overloaded RPC ambiguity in this Supabase project.
+        p_total_score:Math.floor(totalEarned)||0,
+        p_games_played:Math.floor(totalTaps),
+        p_token_balance:Math.floor(coins),
+        p_is_verified:false,
+        p_last_seen:new Date().toISOString(),
+      };
+      if(upgrades)rpcPayload.p_upgrades=upgrades;
+      if(solWallet)rpcPayload.p_sol_wallet=solWallet;
+      if(avatarUrl)rpcPayload.p_avatar_url=avatarUrl;
+      const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache"},
+        body:JSON.stringify(rpcPayload),
+      });
+      if(resp.ok)return;
+      const errText=await resp.text();
+      console.error("[syncDB] RPC rejected; falling back to direct table sync:",errText);
+      logSyncError(pid,"syncDB_rpc_error",errText,totalTaps);
+      if(errText.includes("PGRST203")||errText.includes("function")||errText.includes("column"))_upsertPlayerRpcBroken=true;
+    }catch(e){
+      console.error("[syncDB] RPC error; falling back to direct table sync",e);
+      logSyncError(pid,"syncDB_rpc_exception",String(e),totalTaps);
+    }
+  }
+  try{await syncPlayerDirect(payload,authToken);}catch(e){console.error("[syncDB] direct fallback failed",e);logSyncError(pid,"syncDB_direct_error",String(e),totalTaps);}
 }
 
 // ─── DEDICATED TAP SYNC (fully independent of earned/currency) ───────────────
@@ -313,31 +414,39 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
 const _tapRetryQueue: Map<string,{pid:string;uname:string;charId:string;taps:number;retries:number}> = new Map();
 
 // syncTaps: writes taps to DB via dedicated RPC, returns DB value (or null on failure).
-// On failure, queues for retry. On success, any queued entry for this pid is cleared.
+// On failure, tries a direct monotonic table update before queueing for retry.
 async function syncTaps(pid:string,uname:string,charId:string,taps:number): Promise<number|null>{
   if(!pid||taps<=0)return null;
-  let authToken=SUPA_KEY_CONST;
-  try{const{supabase}=await import("@/lib/supabase");const{data:{session}}=await supabase.auth.getSession();if(session?.access_token)authToken=session.access_token;}catch{}
-  try{
-    const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/sync_taps_only`,{
-      method:"POST",
-      headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache","Prefer":"return=representation"},
-      body:JSON.stringify({p_wallet_address:pid,p_username:uname||("Degen_"+pid.slice(-6)),p_character:charId||"pepe",p_games_played:Math.floor(taps),p_last_seen:new Date().toISOString()}),
-    });
-    if(!resp.ok){
+  const authToken=await getAuthToken();
+  if(!_syncTapsRpcBroken){
+    try{
+      const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/sync_taps_only`,{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache","Prefer":"return=representation"},
+        body:JSON.stringify({p_wallet_address:pid,p_username:uname||("Degen_"+pid.slice(-6)),p_character:charId||"pepe",p_games_played:Math.floor(taps),p_last_seen:new Date().toISOString()}),
+      });
+      if(resp.ok){
+        const dbVal=await resp.json();
+        const dbTaps=dbNum(dbVal)||((Array.isArray(dbVal)&&dbVal[0])?dbNum(dbVal[0]):0);
+        _tapRetryQueue.delete(pid);
+        return dbTaps||Math.floor(taps);
+      }
       const errText=await resp.text();
-      console.error("[syncTaps] DB rejected:",errText,"— queueing for retry");
-      logSyncError(pid,"syncTaps_http_error",errText,taps);
-      _tapRetryQueue.set(pid,{pid,uname,charId,taps,retries:(_tapRetryQueue.get(pid)?.retries||0)+1});
-      return null;
+      console.error("[syncTaps] RPC rejected; falling back to direct table sync:",errText);
+      logSyncError(pid,"syncTaps_rpc_error",errText,taps);
+      if(errText.includes("character_id")||errText.includes("column")||errText.includes("42703"))_syncTapsRpcBroken=true;
+    }catch(e){
+      console.error("[syncTaps] RPC network error; falling back to direct table sync",e);
+      logSyncError(pid,"syncTaps_rpc_exception",String(e),taps);
     }
-    const dbVal=await resp.json();// RPC returns bigint (the actual DB games_played)
-    const dbTaps=typeof dbVal==="number"?dbVal:(Array.isArray(dbVal)&&dbVal[0])?Number(dbVal[0]):null;
-    _tapRetryQueue.delete(pid);// success — clear any queued retry
+  }
+  try{
+    const dbTaps=await syncPlayerDirect({pid,uname,charId,totalTaps:taps},authToken);
+    _tapRetryQueue.delete(pid);
     return dbTaps;
   }catch(e){
-    console.error("[syncTaps] Network error:",e,"— queueing for retry");
-    logSyncError(pid,"syncTaps_network_error",String(e),taps);
+    console.error("[syncTaps] Direct fallback failed — queueing for retry",e);
+    logSyncError(pid,"syncTaps_direct_error",String(e),taps);
     _tapRetryQueue.set(pid,{pid,uname,charId,taps,retries:(_tapRetryQueue.get(pid)?.retries||0)+1});
     return null;
   }
