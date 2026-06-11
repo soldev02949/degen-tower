@@ -913,7 +913,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
             {emoji:"🔥",title:"Combo System",desc:"Tap fast to stack up to 20× coin multiplier"},
             {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn taps while AFK"},
             {emoji:"⚡",title:"40+ Upgrades",desc:"Power up every stat in the Shop"},
-            {emoji:"🏆",title:"Win USDC",desc:"Top 20 earn USDC every 48 hours"},
+            {emoji:"🏆",title:"Win USDC",desc:"Top 20 earn USDC every 7 days"},
           ].map(f=>(
             <div key={f.title} style={{
               background:G.glass,border:`1px solid ${G.border}`,
@@ -1033,7 +1033,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
         {/* Prize info */}
         <div style={{background:"rgba(245,200,66,0.05)",border:"1px solid rgba(245,200,66,0.12)",borderRadius:10,padding:"6px 10px",display:"flex",gap:6,alignItems:"center"}}>
           <span style={{fontSize:12}}>💰</span>
-          <span style={{color:"#7a6020",fontSize:10,fontWeight:700}}>Top 20 players receive USDC every 48 hours. Must have a Solana wallet set in Settings.</span>
+          <span style={{color:"#7a6020",fontSize:10,fontWeight:700}}>Top 20 players receive USDC every 7 days. Must have a Solana wallet set in Settings.</span>
         </div>
       </div>
 
