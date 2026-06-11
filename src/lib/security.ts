@@ -116,15 +116,12 @@ export async function flagAccount(
       { player_id: playerId, flag_reason: reason, flag_details: details, status: "pending", updated_at: new Date().toISOString() },
       { onConflict: "player_id" }
     );
-    // Increment flag_count
-    await supabase.rpc("increment_flag_count", { p_id: playerId }).catch(() => {
-      supabase.from("dt_players").select("flag_count").eq("wallet_address", playerId).maybeSingle()
-        .then(({ data }) => {
-          supabase.from("dt_players")
-            .update({ flag_count: ((data?.flag_count) || 0) + 1 })
-            .eq("wallet_address", playerId);
-        });
-    });
+    // Increment flag_count manually
+    const { data: pdata } = await supabase
+      .from("dt_players").select("flag_count").eq("wallet_address", playerId).maybeSingle();
+    await supabase.from("dt_players")
+      .update({ flag_count: ((pdata?.flag_count) || 0) + 1 })
+      .eq("wallet_address", playerId);
     // Log event
     await supabase.from("dt_security_events").insert({
       player_id: playerId,
