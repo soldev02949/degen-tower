@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank } from "@/lib/progression";
 import { useAuth } from "@/lib/auth";
 
@@ -976,7 +976,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
     const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
   // Read live taps directly from localStorage on a 500ms interval — completely independent
   // of DB polls and game state. Works even when user is on leaderboard tab while playing in another tab.
-  const readLocalTaps=React.useCallback(()=>{
+  const readLocalTaps=useCallback(()=>{
     if(!myPlayerId)return{taps:0,earned:0};
     try{
       const raw=localStorage.getItem(`degen_global_${myPlayerId}`);
@@ -991,7 +991,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
     const id=setInterval(()=>setLocalSnapshot(readLocalTaps()),500);
     return()=>clearInterval(id);
   },[readLocalTaps]);
-  const displayPlayers=React.useMemo(()=>{
+  const displayPlayers=useMemo(()=>{
     if(!myPlayerId||!players.length)return players;
     const effectiveTaps=Math.max(liveTaps,localSnapshot.taps);
     const effectiveEarned=Math.max(liveEarned,localSnapshot.earned);
