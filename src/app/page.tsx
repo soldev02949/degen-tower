@@ -124,6 +124,9 @@ export default function SplashPage() {
         </div>
 
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+          <Link href="/whitepaper" style={{color:"#c084fc",fontSize:12,textDecoration:"none",padding:"6px 10px",fontWeight:700,border:"1px solid rgba(168,85,247,0.25)",borderRadius:8,background:"rgba(168,85,247,0.07)"}}>
+            📄 Whitepaper
+          </Link>
           <Link href="/leaderboard" style={{color:"#555",fontSize:13,textDecoration:"none",padding:"6px 12px",fontWeight:600}}>
             🏆 Ranks
           </Link>
