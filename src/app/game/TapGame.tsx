@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank } from "@/lib/progression";
 import { useAuth } from "@/lib/auth";
-import { safeBigInt, bigIntToNumber, maxBigInt, formatBigInt } from "@/lib/bigint-utils";
 
 // ─── Characters ───────────────────────────────────────────────────────────────
 export const CHARACTERS = [
@@ -232,9 +231,7 @@ const G = {
 };
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
-function fmt(n:number|bigint):string{
-  return formatBigInt(n);
-}
+function fmt(n:number){ if(n>=1e9)return(n/1e9).toFixed(2)+"B"; if(n>=1e6)return(n/1e6).toFixed(2)+"M"; if(n>=1e3)return(n/1e3).toFixed(1)+"K"; return Math.floor(n).toString(); }
 function getUpgCost(u:typeof UPGRADES[0], lv:number){ return Math.floor(u.baseCost*Math.pow(u.costMult,lv)); }
 function getPlayerName(uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ return localStorage.getItem(k)||""; }catch{ return ""; } }
 function setPlayerName(n:string,uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ localStorage.setItem(k,n); }catch{} }
@@ -246,61 +243,28 @@ function setAvatarStore(a:string,uid:string=""){ const k=uid?`degen_avatar_${uid
 // ── Global tap counter (shared across all characters) ────────────────────────
 function getGlobalTaps(uid:string):{totalTaps:number;totalEarned:number}{
   if(typeof window==="undefined")return{totalTaps:0,totalEarned:0};
-  try{ 
-    const r=localStorage.getItem(uid?`degen_global_${uid}`:"degen_global"); 
-    if(r){ 
-      const d=JSON.parse(r); 
-      // Return as numbers for now, but parse carefully from strings if they exist
-      return{
-        totalTaps: Number(safeBigInt(String(d.totalTaps||0))),
-        totalEarned: Number(safeBigInt(String(d.totalEarned||0)))
-      }; 
-    } 
-  }catch{}
+  try{ const r=localStorage.getItem(uid?`degen_global_${uid}`:"degen_global"); if(r){ const d=JSON.parse(r); return{totalTaps:d.totalTaps||0,totalEarned:d.totalEarned||0}; } }catch{}
   return{totalTaps:0,totalEarned:0};
 }
 function setGlobalTaps(uid:string,totalTaps:number,totalEarned:number){
   if(typeof window==="undefined")return;
-  // Always store as strings to preserve BigInt precision
-  const data = JSON.stringify({
-    totalTaps: safeBigInt(totalTaps).toString(),
-    totalEarned: safeBigInt(totalEarned).toString()
-  });
-  try{ localStorage.setItem(uid?`degen_global_${uid}`:"degen_global", data); }catch{}
+  try{ localStorage.setItem(uid?`degen_global_${uid}`:"degen_global",JSON.stringify({totalTaps:Math.floor(totalTaps),totalEarned})); }catch{}
 }
 
 interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:number; upgrades:Record<string,number>; highScore:number; }
 
 function loadSave(uid:string,charId:string):SaveData{
   const scopedKey=uid?`degen_save_${uid}_${charId}`:`degen_save_${charId}`;
-  try{
-    const r=localStorage.getItem(scopedKey);
-    if(r){
-      const d=JSON.parse(r);
-      return{
-        charId:d.charId||charId,
-        coins:Number(safeBigInt(String(d.coins||0))),
-        totalEarned:Number(safeBigInt(String(d.totalEarned||0))),
-        totalTaps:Number(safeBigInt(String(d.totalTaps||0))),
-        upgrades:d.upgrades||{},
-        highScore:Number(safeBigInt(String(d.highScore||0)))
-      };
-    }
-  }catch{}
+  const legacyKey=`degen_save_${charId}`;
+  // Try scoped key first
+  try{ const r=localStorage.getItem(scopedKey); if(r){ const d=JSON.parse(r); return { charId:d.charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; } }catch{}
+  // Fall back to legacy global key (one-time migration for existing users)
+  if(uid&&scopedKey!==legacyKey){
+    try{ const r=localStorage.getItem(legacyKey); if(r){ const d=JSON.parse(r); const save={ charId:d.charId||charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; localStorage.setItem(scopedKey,JSON.stringify(save)); localStorage.removeItem(legacyKey); return save; } }catch{}
+  }
   return { charId, coins:0, totalEarned:0, totalTaps:0, upgrades:{}, highScore:0 };
 }
-function persistSave(uid:string,d:SaveData){
-  const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`;
-  // Always store numbers as strings in JSON to preserve BigInt precision
-  const data = JSON.stringify({
-    ...d,
-    coins: safeBigInt(d.coins).toString(),
-    totalEarned: safeBigInt(d.totalEarned).toString(),
-    totalTaps: safeBigInt(d.totalTaps).toString(),
-    highScore: safeBigInt(d.highScore).toString()
-  });
-  try{ localStorage.setItem(k,data); }catch{}
-}
+function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
 
 const SUPA_URL_CONST="https://paxtohwiycuhwmlziwrr.supabase.co";
 const SUPA_KEY_CONST="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
@@ -317,44 +281,28 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
     } catch {}
 
     // Use the GREATEST-based RPC so no browser can ever lower tap/coin counts in DB
-    // Use BigInt to ensure precision for extremely large scores
-    const safeTotalEarned = safeBigInt(totalEarned);
-    const safeTotalTaps = safeBigInt(totalTaps);
-    const safeCoins = safeBigInt(coins);
-    
     const rpcPayload:Record<string,unknown>={
       p_wallet_address:pid,
       p_username:uname||("Degen_"+pid.slice(-6)),
       p_character:charId,
-      p_total_score: safeTotalEarned.toString(),
-      p_games_played: safeTotalTaps.toString(),
-      p_token_balance: safeCoins.toString(),
+      p_total_score:String(Math.round(totalEarned)||0),// send as string to avoid JS float precision losing bignum
+      p_games_played:Math.floor(totalTaps),
+      p_token_balance:Math.floor(coins),
       p_is_verified:false,
       p_last_seen:new Date().toISOString(),
     };
     if(upgrades)rpcPayload.p_upgrades=upgrades;
     if(solWallet)rpcPayload.p_sol_wallet=solWallet;
     if(avatarUrl)rpcPayload.p_avatar_url=avatarUrl;
-    // Ensure large numbers are serialized as plain integers, not scientific notation
-    const body = JSON.stringify(rpcPayload);
-    // Note: We send BigInts as strings in rpcPayload to avoid Number precision loss,
-    // but the Supabase RPC expects a numeric type. We manually fix the JSON string
-    // to remove the quotes around the large numbers so they are treated as numeric/bigint.
-    const fixedBody = body.replace(/:\"(\d{1,})\"/g, ':$1');
-
-    const resp = await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
+    await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
       method:"POST",
       headers:{
         "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,
         "Content-Type":"application/json",
-        "Cache-Control":"no-cache, no-store, must-revalidate",
+        "Cache-Control":"no-cache",
       },
-      body: fixedBody,
+      body:JSON.stringify(rpcPayload),
     });
-    if (!resp.ok) {
-      const errTxt = await resp.text();
-      console.error("syncDB failed:", resp.status, errTxt);
-    }
   }catch(e){console.error("syncDB error",e);}
 }
 
@@ -1013,50 +961,55 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
         cache:"no-store",
       });
       if(!resp.ok)throw new Error(`LB fetch ${resp.status}`);
-      const text=await resp.text();
-      // High-precision parser that handles each player's large numbers individually
-      const data = JSON.parse(text.replace(/:(\d{16,})/g, ':"$1"'), (key, value) => {
-        if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'string' && /^\d+$/.test(value)) {
-          return BigInt(value);
-        }
-        return value;
-      }) as LBEntry[];
+      const data=await resp.json() as LBEntry[];
       const error=null;
       if(error){console.error("LB error",error);return;}
       if(seq!==loadRef.current)return; // stale response, discard
       // Remove deduplication by username which was causing the "stuck" stock number issue
       // when multiple records existed for the same name.
-      setPlayers((data || []).sort((a, b) => {
-        const ag = safeBigInt(a.games_played);
-        const bg = safeBigInt(b.games_played);
-        if (bg > ag) return 1;
-        if (bg < ag) return -1;
-        return 0;
-      }));
+      setPlayers((data || []).sort((a, b) => b.games_played - a.games_played));
     }catch(e){console.error("LB fetch error",e);}
     if(seq===loadRef.current)setLoading(false);
   },[]);
   useEffect(()=>{
     load();
-    // Ultra-aggressive polling (300ms) for instant leaderboard updates
-    const id=setInterval(load,300);
+    const id=setInterval(load,1000);
     return()=>clearInterval(id);
   },[load]);
 
     const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
-  // We rely on the DB polling and the GREATEST-based RPC for real-time consistency across all users.
+  // Read live taps directly from localStorage on a 500ms interval — completely independent
+  // of DB polls and game state. Works even when user is on leaderboard tab while playing in another tab.
+  const readLocalTaps=useCallback(()=>{
+    if(!myPlayerId)return{taps:0,earned:0};
+    try{
+      const raw=localStorage.getItem(`degen_global_${myPlayerId}`);
+      if(!raw)return{taps:0,earned:0};
+      const d=JSON.parse(raw);
+      return{taps:Number(d.totalTaps)||0,earned:Number(d.totalEarned)||0};
+    }catch{return{taps:0,earned:0};}
+  },[myPlayerId]);
+  const [localSnapshot,setLocalSnapshot]=useState(()=>readLocalTaps());
+  useEffect(()=>{
+    setLocalSnapshot(readLocalTaps());
+    const id=setInterval(()=>setLocalSnapshot(readLocalTaps()),500);
+    return()=>clearInterval(id);
+  },[readLocalTaps]);
   const displayPlayers=useMemo(()=>{
-    if(!players.length) return [];
-    // No more local patching - we rely on the 1s DB polling and the GREATEST-based RPC
-    // This ensures that what you see is what's actually in the database for everyone.
-    return [...players].sort((a,b) => {
-      const ag = safeBigInt(a.games_played);
-      const bg = safeBigInt(b.games_played);
-      if (bg > ag) return 1;
-      if (bg < ag) return -1;
-      return 0;
+    if(!myPlayerId||!players.length)return players;
+    const effectiveTaps=Math.max(liveTaps,localSnapshot.taps);
+    const effectiveEarned=Math.max(liveEarned,localSnapshot.earned);
+    const patched=players.map(p=>{
+      // Use both id and wallet_address to ensure we match the current player correctly
+      if(p.wallet_address!==myPlayerId && p.id!==myPlayerId)return p;
+      return{...p,games_played:Math.max(p.games_played,effectiveTaps),total_score:Math.max(p.total_score,effectiveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
     });
-  },[players]);
+    const exists=patched.some(p=>(p.wallet_address===myPlayerId || p.id===myPlayerId));
+    if(!exists&&effectiveTaps>0){
+      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:effectiveEarned,games_played:effectiveTaps,avatar_url:liveAvatarUrl});
+    }
+    return patched.sort((a,b)=>b.games_played-a.games_played);
+  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId,localSnapshot]);
     return(
     <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
@@ -1211,26 +1164,80 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
               );
             })}
           </div>
-          {/* Force Sync Button for Admin/High Scores */}
-          <div style={{marginTop:20,textAlign:"center"}}>
-            <button 
-              onClick={() => doSave()}
-              style={{
-                background:"rgba(168,85,247,0.15)",
-                border:"1px solid rgba(168,85,247,0.4)",
-                color:"#c084fc",
-                padding:"8px 16px",
-                borderRadius:12,
-                fontSize:12,
-                fontWeight:800,
-                cursor:"pointer"
-              }}
-            >
-              🔄 Force Sync to Leaderboard
-            </button>
-          </div>
         </div>
       )}
+
+      {/* ── SUBMIT SCORE SECTION ── */}
+      <SubmitScoreSection myPlayerId={myPlayerId} liveTaps={liveTaps} liveEarned={liveEarned} liveUsername={liveUsername} liveCharId={liveCharId}/>
+    </div>
+  );
+}
+
+// ─── SUBMIT SCORE SECTION ─────────────────────────────────────────────────────
+function SubmitScoreSection({myPlayerId,liveTaps,liveEarned,liveUsername,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveCharId:string}){
+  const SUPA_URL=SUPA_URL_CONST;
+  const SUPA_KEY=SUPA_KEY_CONST;
+  const [state,setState]=useState<"idle"|"uploading"|"done"|"error">("idle");
+  const [msg,setMsg]=useState("");
+  const fileRef=useRef<HTMLInputElement>(null);
+
+  async function handleFile(e:React.ChangeEvent<HTMLInputElement>){
+    const file=e.target.files?.[0];
+    if(!file||!myPlayerId){setMsg("Please log in first.");setState("error");return;}
+    setState("uploading");setMsg("Uploading screenshot…");
+    try{
+      const ext=file.name.split(".").pop()||"png";
+      const fname=`${myPlayerId}_${Date.now()}.${ext}`;
+      // Upload to Supabase storage
+      let authToken=SUPA_KEY;
+      try{const{supabase}=await import("@/lib/supabase");const{data:{session}}=await supabase.auth.getSession();if(session?.access_token)authToken=session.access_token;}catch{}
+      const upResp=await fetch(`${SUPA_URL}/storage/v1/object/score-screenshots/${fname}`,{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Content-Type":file.type,"Cache-Control":"3600","x-upsert":"true"},
+        body:file,
+      });
+      if(!upResp.ok){const t=await upResp.text();throw new Error(t);}
+      const screenshotUrl=`${SUPA_URL}/storage/v1/object/public/score-screenshots/${fname}`;
+      // Insert submission record
+      const subResp=await fetch(`${SUPA_URL}/rest/v1/dt_submissions`,{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({player_id:myPlayerId,username:liveUsername,screenshot_url:screenshotUrl,taps_claimed:Math.floor(liveTaps)||0,earned_claimed:String(Math.round(liveEarned)||0),level_claimed:getLevelFromXP(liveEarned)}),
+      });
+      if(!subResp.ok){const t=await subResp.text();throw new Error(t);}
+      setState("done");setMsg("Score submitted! ✅");
+    }catch(err){setState("error");setMsg("Upload failed: "+(err instanceof Error?err.message:"Unknown error"));console.error(err);}
+  }
+
+  return(
+    <div style={{margin:"20px 16px 100px",background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:20,padding:24,textAlign:"center"}}>
+      <div style={{fontSize:28,marginBottom:8}}>📸</div>
+      <div style={{color:"#c084fc",fontWeight:900,fontSize:16,marginBottom:6}}>Submit Your Score</div>
+      <div style={{color:"#888",fontSize:12,marginBottom:16,lineHeight:1.5}}>
+        Go to your <span style={{color:"#f5c842"}}>Home tab</span> and screenshot your stats,<br/>
+        then upload it here as proof of your score.
+      </div>
+      {state==="idle"&&(
+        <button onClick={()=>fileRef.current?.click()} style={{background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:14,padding:"12px 28px",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:"0 4px 20px rgba(168,85,247,0.4)"}}>
+          📤 Upload Screenshot
+        </button>
+      )}
+      {state==="uploading"&&<div style={{color:"#a855f7",fontWeight:700,fontSize:14}}>⏳ {msg}</div>}
+      {state==="done"&&<div style={{color:"#22d67a",fontWeight:800,fontSize:15}}>{msg}</div>}
+      {state==="error"&&(
+        <div>
+          <div style={{color:"#f87171",fontSize:12,marginBottom:10}}>{msg}</div>
+          <button onClick={()=>{setState("idle");setMsg("");}} style={{background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.4)",borderRadius:10,padding:"8px 20px",color:"#c084fc",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+            Try Again
+          </button>
+        </div>
+      )}
+      {state==="done"&&(
+        <button onClick={()=>{setState("idle");setMsg("");}} style={{background:"rgba(34,214,122,0.1)",border:"1px solid rgba(34,214,122,0.3)",borderRadius:10,padding:"8px 20px",color:"#22d67a",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:10}}>
+          Submit Another
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
     </div>
   );
 }
@@ -1561,12 +1568,11 @@ export default function TapGame() {
             const savedAv=getAvatar(authId);
             if(savedAv){setAvatar(savedAv);}
             if(existing.avatar_url){setAvatarUrl(existing.avatar_url as string);}
-            // USE STRINGS FOR LOAD to prevent precision loss for massive scores
-            const dbTaps=safeBigInt(String(existing.games_played));
-            const dbEarned=safeBigInt(String(existing.total_score));
-            const dbCoins=safeBigInt(String(existing.token_balance));
+            const dbTaps=Number(existing.games_played)||0;
+            const dbEarned=Number(existing.total_score)||0;
+            const dbCoins=Number(existing.token_balance)||0;
             const dbUpgrades=(existing.upgrades as Record<string,number>)||{};
-            dbValuesRef.current={totalEarned:Number(dbEarned),totalTaps:Number(dbTaps),coins:Number(dbCoins),upgrades:dbUpgrades};
+            dbValuesRef.current={totalEarned:dbEarned,totalTaps:dbTaps,coins:dbCoins,upgrades:dbUpgrades};
             // Always push local state to DB on load — GREATEST RPC makes it safe (DB only goes up).
             // This ensures the leaderboard always reflects the player's real count without manual fixes.
             const globalLocal=getGlobalTaps(authId);
@@ -1574,27 +1580,22 @@ export default function TapGame() {
             const localEarned=globalLocal.totalEarned||0;
             // Also scan all character saves for highest tap count
             const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${authId}_`));
-            let bestTaps=safeBigInt(localTaps);
-            let bestEarned=safeBigInt(localEarned);
-            let bestCoins=dbCoins;
+            let bestTaps=localTaps;let bestEarned=localEarned;let bestCoins=dbCoins;
             for(const sk of saves){
               try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");
-                const svTaps = safeBigInt(String(sv.totalTaps||"0"));
-                const svEarned = safeBigInt(String(sv.totalEarned||"0"));
-                const svCoins = safeBigInt(String(sv.coins||"0"));
-                if(svTaps > bestTaps) bestTaps = svTaps;
-                if(svEarned > bestEarned) bestEarned = svEarned;
-                if(svCoins > bestCoins) bestCoins = svCoins;
+                if((sv.totalTaps||0)>bestTaps)bestTaps=sv.totalTaps;
+                if((sv.totalEarned||0)>bestEarned)bestEarned=sv.totalEarned;
+                if((sv.coins||0)>bestCoins)bestCoins=sv.coins;
               }catch{}
             }
             {
-              const pushedTaps=maxBigInt(bestTaps, dbTaps);
-              const pushedEarned=maxBigInt(bestEarned, dbEarned);
-              const pushedCoins=maxBigInt(bestCoins, dbCoins);
+              const pushedTaps=Math.max(bestTaps,dbTaps);
+              const pushedEarned=Math.max(bestEarned,dbEarned);
+              const pushedCoins=Math.max(bestCoins,dbCoins);
               const uname=existing.username as string||getPlayerName(authId);
               const charId=existing.character as string||"pepe";
-              syncDB(authId,uname,charId,Number(pushedEarned),Number(pushedTaps),Number(pushedCoins),dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
-              dbValuesRef.current={totalEarned:Number(pushedEarned),totalTaps:Number(pushedTaps),coins:Number(pushedCoins),upgrades:dbUpgrades};
+              syncDB(authId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
+              dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
             }
           } else {
             // Try to migrate old p_xxx localStorage player ID to this auth account
@@ -1640,16 +1641,7 @@ export default function TapGame() {
         const data=arr[0];
         if(data){
           const prev=dbValuesRef.current;
-          const freshTaps = safeBigInt(String(data.games_played));
-          const freshEarned = safeBigInt(String(data.total_score));
-          const freshCoins = safeBigInt(String(data.token_balance));
-          
-          dbValuesRef.current={
-            totalTaps: Number(maxBigInt(safeBigInt(prev?.totalTaps||0), freshTaps)),
-            totalEarned: Number(maxBigInt(safeBigInt(prev?.totalEarned||0), freshEarned)),
-            coins: Number(maxBigInt(safeBigInt(prev?.coins||0), freshCoins)),
-            upgrades:(data.upgrades as Record<string,number>)||(prev?.upgrades||{})
-          };
+          dbValuesRef.current={totalTaps:Math.max(prev?.totalTaps||0,Number(data.games_played)||0),totalEarned:Math.max(prev?.totalEarned||0,Number(data.total_score)||0),coins:Math.max(prev?.coins||0,Number(data.token_balance)||0),upgrades:(data.upgrades as Record<string,number>)||(prev?.upgrades||{})};
         }
       }).catch(()=>{});
     };
@@ -1695,17 +1687,10 @@ export default function TapGame() {
     const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:safeUpgrades};
     saveRef.current=mergedSave;
     persistSave(uid,mergedSave);
-    // IMMEDIATE SYNC: Push stats to DB right away when starting game so other players see the update instantly
+    // Only syncDB if we have meaningful data — don't overwrite DB with zeros
     if(safeTaps>0||safeCoins>0||Object.keys(safeUpgrades).length>0){
       syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
     }
-    // Force another sync after a short delay to ensure it reaches the database and all clients
-    setTimeout(()=>{
-      const d=liveRef.current;
-      if(d.charId===id){
-        syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
-      }
-    },150);
   }
 
   // Stable doSave — reads from liveRef so deps never change, interval never restarts
@@ -1716,8 +1701,8 @@ export default function TapGame() {
     // This ensures previous-session taps (stored in degen_global_${uid}) are never lost
     // even if this session started from a lower DB value.
     const globalLocal=getGlobalTaps(d.uid);
-    const safeTaps=Math.max(Number(d.totalTaps)||0, Number(globalLocal.totalTaps)||0);
-    const safeEarned=Math.max(Number(d.totalEarned)||0, Number(globalLocal.totalEarned)||0);
+    const safeTaps=Math.max(d.totalTaps,globalLocal.totalTaps);
+    const safeEarned=Math.max(d.totalEarned,globalLocal.totalEarned);
     const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
     persistSave(d.uid,s);saveRef.current=s;
     setGlobalTaps(d.uid,safeTaps,safeEarned);
@@ -1728,8 +1713,6 @@ export default function TapGame() {
   // Save every 5s during play; save immediately on exit (cleanup)
   useEffect(()=>{
     if(screen!=="game"||!charId)return;
-    // IMMEDIATE SYNC: Sync immediately when entering game screen so other players see you right away
-    doSave();
     const id=setInterval(doSave,1000);
     return()=>{clearInterval(id);doSave();};// save on screen/char change
   },[screen,charId]);// eslint-disable-line react-hooks/exhaustive-deps
@@ -1740,7 +1723,7 @@ export default function TapGame() {
     if(rate<=0)return;
     const id=setInterval(()=>{const pt=rate/20;setCoins(c=>c+pt);setTotalEarned(t=>t+pt);setTotalTaps(t=>t+pt);
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
-      dbDebounceRef.current=setTimeout(()=>{const d=liveRef.current;if(d.charId&&d.uid){const gl=getGlobalTaps(d.uid);const st=Math.max(d.totalTaps,gl.totalTaps);const se=Math.max(d.totalEarned,gl.totalEarned);syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);}},100);
+      dbDebounceRef.current=setTimeout(()=>{const d=liveRef.current;if(d.charId&&d.uid){const gl=getGlobalTaps(d.uid);const st=Math.max(d.totalTaps,gl.totalTaps);const se=Math.max(d.totalEarned,gl.totalEarned);syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);}},400);
     },50);
     return()=>clearInterval(id);
   },[autoRate,screen,char,specialActive]);
@@ -1831,7 +1814,7 @@ export default function TapGame() {
         // Always update global tap counter so character switches preserve total
         setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
       }
-      // Fast DB write — debounced 100ms after last tap for instant updates
+      // Fast DB write — debounced 400ms after last tap; leaderboard polls every 3s
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
       dbDebounceRef.current=setTimeout(()=>{
         const d=liveRef.current;
@@ -1839,12 +1822,10 @@ export default function TapGame() {
           dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
           syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
         }
-      },100);
+      },400);
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
-    // Check if score is extremely large and needs BigInt handling
-    const safeEarned = totalEarned > 1e15 ? Math.floor(totalEarned) : totalEarned;
     const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1+(upgrades["combo_spd4"]||0)*2+(upgrades["combo_spd5"]||0)*5;
     const gcBonus=char.id==="gigachad"?2:1;
     const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30+(upgrades["combo_max4"]||0)*60+(upgrades["combo_max5"]||0)*120+(upgrades["combo_max6"]||0)*300;
