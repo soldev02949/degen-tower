@@ -272,24 +272,28 @@ const SUPA_KEY_CONST="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,coins:number,upgrades?:Record<string,number>,solWallet?:string,avatarUrl?:string){
   if(!pid)return;
   try{
-    const payload:Record<string,unknown>={
-      wallet_address:pid, username:uname||("Degen_"+pid.slice(-6)), character:charId,
-      total_score:Math.floor(totalEarned), games_played:Math.floor(totalTaps),
-      token_balance:Math.floor(coins), is_verified:false,
-      last_seen:new Date().toISOString(),
+    // Use the GREATEST-based RPC so no browser can ever lower tap/coin counts in DB
+    const rpcPayload:Record<string,unknown>={
+      p_wallet_address:pid,
+      p_username:uname||("Degen_"+pid.slice(-6)),
+      p_character:charId,
+      p_total_score:Math.floor(totalEarned),
+      p_games_played:Math.floor(totalTaps),
+      p_token_balance:Math.floor(coins),
+      p_is_verified:false,
+      p_last_seen:new Date().toISOString(),
     };
-    if(upgrades)payload.upgrades=upgrades;
-    if(solWallet)payload.sol_wallet=solWallet;
-    if(avatarUrl)payload.avatar_url=avatarUrl;
-    // Use raw fetch with no-cache to guarantee writes reach Postgres immediately
-    await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players`,{
+    if(upgrades)rpcPayload.p_upgrades=upgrades;
+    if(solWallet)rpcPayload.p_sol_wallet=solWallet;
+    if(avatarUrl)rpcPayload.p_avatar_url=avatarUrl;
+    await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
       method:"POST",
       headers:{
         "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${SUPA_KEY_CONST}`,
-        "Content-Type":"application/json","Prefer":"resolution=merge-duplicates",
+        "Content-Type":"application/json",
         "Cache-Control":"no-cache",
       },
-      body:JSON.stringify(payload),
+      body:JSON.stringify(rpcPayload),
     });
   }catch(e){console.error("syncDB error",e);}
 }
