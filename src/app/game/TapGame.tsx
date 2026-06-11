@@ -423,7 +423,7 @@ async function syncTaps(pid:string,uname:string,charId:string,taps:number): Prom
       const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/sync_taps_only`,{
         method:"POST",
         headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache","Prefer":"return=representation"},
-        body:JSON.stringify({p_wallet_address:pid,p_username:uname||("Degen_"+pid.slice(-6)),p_character:charId||"pepe",p_games_played:Math.floor(taps),p_last_seen:new Date().toISOString()}),
+        body:JSON.stringify({p_walletaddress:pid,p_username:uname||("Degen_"+pid.slice(-6)),p_character:charId||"pepe",p_gamesplayed:Math.floor(taps),p_lastseen:new Date().toISOString()}),
       });
       if(resp.ok){
         const dbVal=await resp.json();
@@ -434,7 +434,7 @@ async function syncTaps(pid:string,uname:string,charId:string,taps:number): Prom
       const errText=await resp.text();
       console.error("[syncTaps] RPC rejected; falling back to direct table sync:",errText);
       logSyncError(pid,"syncTaps_rpc_error",errText,taps);
-      if(errText.includes("character_id")||errText.includes("column")||errText.includes("42703"))_syncTapsRpcBroken=true;
+      if(errText.includes("PGRST202")||errText.includes("column")||errText.includes("42703"))_syncTapsRpcBroken=true;
     }catch(e){
       console.error("[syncTaps] RPC network error; falling back to direct table sync",e);
       logSyncError(pid,"syncTaps_rpc_exception",String(e),taps);
@@ -532,7 +532,7 @@ function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string
 }
 
 // ─── BOTTOM BAR (glass) ──────────────────────────────────────────────────────
-const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Submit",emoji:"📸"},{id:"settings",label:"Settings",emoji:"⚙️"}];
+const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
 
 function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
   const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="settings"?"#888":"#c084fc";
@@ -695,7 +695,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
   const {user,signOut}=useAuth();
   const [name,setName]=useState(username);
   const [wallet,setWallet]=useState(solWallet);
-  const [avatar,setAvatar]=useState(()=>getAvatar(user?.id||"")||"🐸");
+  const [avatar,setAvatar]=useState(()=>getAvatar(user?.email||user?.id||"")||"🐸");
   const [avatarUrl,setAvatarUrl]=useState(currentAvatarUrl||"");
   const [uploading,setUploading]=useState(false);
   const [uploadErr,setUploadErr]=useState("");
@@ -708,6 +708,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
 
   async function handleAvatarUpload(file:File){
     if(!user?.id)return;
+    // Note: avatar upload uses user.id for storage path (UUID required by Supabase storage)
     if(file.size>2*1024*1024){setUploadErr("Image must be under 2MB");return;}
     setUploading(true);setUploadErr("");
     try{
@@ -727,7 +728,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
 
   async function handleSave(){
     setSaving(true);
-    setAvatarStore(avatar, user?.id||"");
+    setAvatarStore(avatar, user?.email||user?.id||"");
     onSave(name.trim()||username, wallet.trim(), avatar, avatarUrl||undefined);
     setTimeout(()=>{setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),2200);},600);
   }
@@ -743,7 +744,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
     if(delText.toLowerCase()!=="delete")return;
     try{
       const{supabase}=await import("@/lib/supabase");
-      await supabase.from("dt_players").delete().eq("wallet_address",user?.id||"");
+      await supabase.from("dt_players").delete().eq("wallet_address",user?.email||user?.id||"");
       await signOut();
     }catch{await signOut();}
   }
@@ -1107,17 +1108,56 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 // ─── LEADERBOARD TAB → SUBMIT SCORE (no player-facing leaderboard) ──────────────────
 // Leaderboard is admin-only. Players see the Submit Score screen here.
 function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveAvatarUrl?:string;liveCharId:string}){
+  const [leaders,setLeaders]=useState<LBEntry[]>([]);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    let active=true;
+    const fetchLeaders=async()=>{
+      try{
+        const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&order=games_played.desc&limit=50`,{
+          headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${SUPA_KEY_CONST}`,"Cache-Control":"no-cache, no-store"},
+          cache:"no-store",
+        });
+        if(resp.ok&&active){const data=await resp.json();setLeaders(data);setLoading(false);}
+      }catch{if(active)setLoading(false);}
+    };
+    fetchLeaders();
+    const iv=setInterval(fetchLeaders,2000);
+    return()=>{active=false;clearInterval(iv);};
+  },[]);
+  const fmtTaps=(n:number)=>{if(!n)return"0";if(n>=1e9)return(n/1e9).toFixed(1)+"B";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"K";return Math.floor(n).toString();};
+  const rankBadge=(i:number)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+  const charEmoji=(c:string)=>({"pepe":"🐸","gigachad":"💪","trump":"🎩","troll":"🧌","bonk":"🐕"}[c]||"🐸");
+  // Inject current player's live stats if they exist in list
+  const displayLeaders=leaders.map(l=>l.wallet_address===myPlayerId?{...l,games_played:Math.max(l.games_played,liveTaps),total_score:Math.max(l.total_score,liveEarned),username:liveUsername||l.username}:l).sort((a,b)=>b.games_played-a.games_played);
   return(
-    <div style={{flex:1,overflowY:"auto",paddingTop:16}}>
-      <div style={{textAlign:"center",padding:"24px 16px 8px"}}>
-        <div style={{fontSize:36,marginBottom:8}}>🏆</div>
-        <div style={{color:"#c084fc",fontWeight:900,fontSize:18,marginBottom:6}}>Weekly Competition</div>
-        <div style={{color:"#888",fontSize:13,lineHeight:1.6,maxWidth:300,margin:"0 auto"}}>
-          Screenshot your best score from the <span style={{color:"#f5c842",fontWeight:700}}>Home tab</span> and submit it below.<br/>
-          <span style={{color:"#555",fontSize:11}}>Winners are verified by the admin team.</span>
-        </div>
+    <div style={{flex:1,overflowY:"auto",paddingTop:16,paddingBottom:100}}>
+      <div style={{textAlign:"center",padding:"16px 16px 8px"}}>
+        <div style={{fontSize:32,marginBottom:4}}>🏆</div>
+        <div style={{color:"#f5c842",fontWeight:900,fontSize:20,letterSpacing:1}}>LEADERBOARD</div>
+        <div style={{color:"#888",fontSize:11,marginTop:4}}>Ranked by total taps • Updates live</div>
       </div>
-      <SubmitScoreSection myPlayerId={myPlayerId} liveTaps={liveTaps} liveEarned={liveEarned} liveUsername={liveUsername} liveCharId={liveCharId}/>
+      {loading&&<div style={{textAlign:"center",color:"#888",padding:40}}>Loading...</div>}
+      {!loading&&displayLeaders.length===0&&<div style={{textAlign:"center",color:"#888",padding:40}}>No players yet</div>}
+      {!loading&&displayLeaders.map((p,i)=>{
+        const isMe=p.wallet_address===myPlayerId;
+        return(
+          <div key={p.id} style={{margin:"6px 16px",background:isMe?"rgba(168,85,247,0.15)":"rgba(255,255,255,0.03)",border:isMe?"1px solid rgba(168,85,247,0.4)":"1px solid rgba(255,255,255,0.06)",borderRadius:14,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:36,textAlign:"center",fontSize:i<3?22:14,fontWeight:900,color:i===0?"#f5c842":i===1?"#c0c0c0":i===2?"#cd7f32":"#888"}}>{rankBadge(i)}</div>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(168,85,247,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:isMe?"2px solid #a855f7":"2px solid transparent"}}>
+              {p.avatar_url?<img src={p.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt=""/>:charEmoji(p.character)}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{color:isMe?"#c084fc":"#e0d4f0",fontWeight:800,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Degen"}{isMe&&" (you)"}</div>
+              <div style={{color:"#888",fontSize:11}}>{charEmoji(p.character)} {(CHARACTERS.find(c=>c.id===p.character)||CHARACTERS[0]).name}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{color:"#f5c842",fontWeight:900,fontSize:15}}>{fmtTaps(p.games_played)}</div>
+              <div style={{color:"#888",fontSize:10}}>taps</div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1409,7 +1449,7 @@ export default function TapGame() {
 
   // Heartbeat — update last_seen every 30s so online presence is accurate
   useEffect(()=>{
-    const uid=user?.id;
+    const uid=user?.email||user?.id;
     if(!uid)return;
     async function ping(){
       try{
@@ -1420,7 +1460,7 @@ export default function TapGame() {
     ping();// immediate ping on mount
     const id=setInterval(ping,30000);
     return()=>clearInterval(id);
-  },[user?.id]);
+  },[user?.id,user?.email]);
 
   // ── REAL-TIME DB SYNC ───────────────────────────────────────────────────────
   // Runs every 1s. Fires immediately on mount (no initial delay).
@@ -1430,7 +1470,7 @@ export default function TapGame() {
   // 4. Drains any queued retries from previous failures
   // 5. Full syncDB (earned/coins/upgrades) runs in parallel — won't block tap sync
   useEffect(()=>{
-    const uid=user?.id;
+    const uid=user?.email||user?.id;
     if(!uid)return;
     const safeUid:string=uid;
 
@@ -1499,7 +1539,7 @@ export default function TapGame() {
       clearInterval(interval);
       window.removeEventListener("beforeunload",handleBeforeUnload);
     };
-  },[user?.id]);// eslint-disable-line react-hooks/exhaustive-deps
+  },[user?.id,user?.email]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
@@ -1512,11 +1552,11 @@ export default function TapGame() {
     return sum+lvl*(u.tapsPerSec!)*autoBoostMult;
   },0);
   // Keep liveRef in sync so stable doSave always reads fresh values
-  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.id||playerId,username,solWallet,avatarUrl};
+  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.email||user?.id||playerId,username,solWallet,avatarUrl};
 
   useEffect(()=>{
     if(!user?.id)return;
-    const authId=user.id;
+    const authId=user.email||user.id;
     setPlayerId(authId);
     // Device fingerprinting — runs silently in background
     import("@/lib/security").then(async({getDeviceFingerprint,registerDeviceFingerprint,checkPlayerStatus})=>{
@@ -1587,8 +1627,45 @@ export default function TapGame() {
               dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
             }
           } else {
-            // Try to migrate old p_xxx localStorage player ID to this auth account
+            // Try to migrate existing UUID-based record to email-based ID
             let migrated=false;
+            if(user.email&&user.id!==authId){
+              // authId is email, user.id is UUID — check if a record exists under UUID
+              const migrResp=await fetch(`${SUPA_URL}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(user.id)}&limit=1`,{
+                headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache"},
+                cache:"no-store",
+              });
+              if(migrResp.ok){
+                const migrArr=await migrResp.json() as Record<string,unknown>[];
+                const oldRec=migrArr[0];
+                if(oldRec){
+                  // Migrate: update wallet_address from UUID to email
+                  try{const{supabase:sb}=await import("@/lib/supabase");await sb.from("dt_players").update({wallet_address:authId}).eq("wallet_address",user.id);}catch{}
+                  if(oldRec.username){setUsername(oldRec.username as string);setPlayerName(oldRec.username as string,authId);}
+                  if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet as string);setPlayerWallet(oldRec.sol_wallet as string,authId);}
+                  const savedAv=getAvatar(user.id);
+                  if(savedAv){setAvatar(savedAv);setAvatarStore(savedAv,authId);}
+                  if(oldRec.avatar_url){setAvatarUrl(oldRec.avatar_url as string);}
+                  dbValuesRef.current={totalEarned:Number(oldRec.total_score)||0,totalTaps:Number(oldRec.games_played)||0,coins:Number(oldRec.token_balance)||0,upgrades:(oldRec.upgrades as Record<string,number>)||{}};
+                  // Migrate localStorage keys from UUID to email
+                  try{
+                    const oldGlobal=localStorage.getItem(`degen_global_${user.id}`);
+                    if(oldGlobal){localStorage.setItem(`degen_global_${authId}`,oldGlobal);localStorage.removeItem(`degen_global_${user.id}`);}
+                    const oldSaves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${user.id}_`));
+                    for(const sk of oldSaves){const val=localStorage.getItem(sk);if(val){const newKey=sk.replace(`degen_save_${user.id}_`,`degen_save_${authId}_`);localStorage.setItem(newKey,val);localStorage.removeItem(sk);}}
+                    const oldName=localStorage.getItem(`degen_name_${user.id}`);
+                    if(oldName){localStorage.setItem(`degen_name_${authId}`,oldName);localStorage.removeItem(`degen_name_${user.id}`);}
+                    const oldWallet=localStorage.getItem(`degen_wallet_${user.id}`);
+                    if(oldWallet){localStorage.setItem(`degen_wallet_${authId}`,oldWallet);localStorage.removeItem(`degen_wallet_${user.id}`);}
+                    const oldAvatar=localStorage.getItem(`degen_avatar_${user.id}`);
+                    if(oldAvatar){localStorage.setItem(`degen_avatar_${authId}`,oldAvatar);localStorage.removeItem(`degen_avatar_${user.id}`);}
+                  }catch{}
+                  migrated=true;
+                }
+              }
+            }
+            // Also try to migrate old p_xxx localStorage player ID to this auth account
+            if(!migrated){
             const oldId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
             if(oldId&&oldId.startsWith("p_")){
               const resp2=await fetch(`${SUPA_URL}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(oldId)}&limit=1`,{
@@ -1613,6 +1690,7 @@ export default function TapGame() {
               const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
               setUsername(defaultName);setPlayerName(defaultName,authId);
             }
+            } // close if(!migrated) for p_xxx check
           }
         }
       }catch(e){console.error("DB load error",e);}
@@ -1621,9 +1699,10 @@ export default function TapGame() {
     // On page focus, re-fetch DB to catch any cloud updates (e.g. playing on another device)
     const onFocus=()=>{
       if(!user?.id)return;
+      const focusId=user.email||user.id;
       const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
       const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
-      fetch(`${SUPA_URL}/rest/v1/dt_players?select=games_played,total_score,token_balance,upgrades&wallet_address=eq.${encodeURIComponent(user.id)}&limit=1`,{
+      fetch(`${SUPA_URL}/rest/v1/dt_players?select=games_played,total_score,token_balance,upgrades&wallet_address=eq.${encodeURIComponent(focusId)}&limit=1`,{
         headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Cache-Control":"no-cache, no-store"},
         cache:"no-store",
       }).then(r=>r.json()).then((arr:Record<string,unknown>[])=>{
@@ -1636,22 +1715,22 @@ export default function TapGame() {
     };
     window.addEventListener("focus",onFocus);
     return()=>window.removeEventListener("focus",onFocus);
-  },[user?.id]);
+  },[user?.id,user?.email]);
 
   function tryStart(id:string){
-    const uid=user?.id||playerId;
+    const uid=user?.email||user?.id||playerId;
     if(!username&&!getPlayerName(uid)){setPendingChar(id);setShowModal(true);}
     else startGame(id,username||getPlayerName(uid),solWallet||getPlayerWallet(uid));
   }
   function onUsername(name:string,wallet:string){
-    const uid=user?.id||playerId;
+    const uid=user?.email||user?.id||playerId;
     setPlayerName(name,uid);setUsername(name);
     setPlayerWallet(wallet,uid);setSolWallet(wallet);
     setShowModal(false);
     if(pendingChar)startGame(pendingChar,name,wallet);
   }
   function startGame(id:string,name:string,wallet?:string){
-    const uid=user?.id||playerId;
+    const uid=user?.email||user?.id||playerId;
     const s=loadSave(uid,id);
     const globalLocal=getGlobalTaps(uid);
     // DB is always the authoritative floor — local can only be HIGHER (new taps since last sync)
@@ -1852,7 +1931,7 @@ export default function TapGame() {
   void comboTimer;
 
   function handleSettingsSave(u:string,w:string,av:string,url?:string){
-    const uid=user?.id||playerId;
+    const uid=user?.email||user?.id||playerId;
     setUsername(u);setPlayerName(u,uid);
     setSolWallet(w);setPlayerWallet(w,uid);
     setAvatar(av);setAvatarStore(av,uid);
@@ -1912,7 +1991,7 @@ export default function TapGame() {
               {!dbLoaded&&<div style={{color:"#f5c842",fontSize:13,fontWeight:700,marginBottom:8,letterSpacing:"0.05em"}}>Loading your account…</div>}
               <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
                 {CHARACTERS.map(c=>{
-                  const s=loadSave(user?.id||playerId,c.id);
+                  const s=loadSave(user?.email||user?.id||playerId,c.id);
                   return(
                     <button key={c.id} onClick={()=>dbLoaded&&tryStart(c.id)} disabled={!dbLoaded}
                       style={{
