@@ -78,20 +78,21 @@ const G = {
 // ─── Utils ────────────────────────────────────────────────────────────────────
 function fmt(n:number){ if(n>=1e9)return(n/1e9).toFixed(2)+"B"; if(n>=1e6)return(n/1e6).toFixed(2)+"M"; if(n>=1e3)return(n/1e3).toFixed(1)+"K"; return Math.floor(n).toString(); }
 function getUpgCost(u:typeof UPGRADES[0], lv:number){ return Math.floor(u.baseCost*Math.pow(u.costMult,lv)); }
-function getPlayerName(){ try{ return localStorage.getItem("degen_username")||""; }catch{ return ""; } }
-function setPlayerName(n:string){ try{ localStorage.setItem("degen_username",n); }catch{} }
-function getPlayerWallet(){ try{ return localStorage.getItem("degen_sol_wallet")||""; }catch{ return ""; } }
-function setPlayerWallet(w:string){ try{ localStorage.setItem("degen_sol_wallet",w); }catch{} }
-function getAvatar(){ try{return localStorage.getItem("degen_avatar")||"";}catch{return "";} }
-function setAvatarStore(a:string){ try{localStorage.setItem("degen_avatar",a);}catch{} }
+function getPlayerName(uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ return localStorage.getItem(k)||""; }catch{ return ""; } }
+function setPlayerName(n:string,uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ localStorage.setItem(k,n); }catch{} }
+function getPlayerWallet(uid:string=""){ const k=uid?`degen_sol_wallet_${uid}`:"degen_sol_wallet"; try{ return localStorage.getItem(k)||""; }catch{ return ""; } }
+function setPlayerWallet(w:string,uid:string=""){ const k=uid?`degen_sol_wallet_${uid}`:"degen_sol_wallet"; try{ localStorage.setItem(k,w); }catch{} }
+function getAvatar(uid:string=""){ const k=uid?`degen_avatar_${uid}`:"degen_avatar"; try{return localStorage.getItem(k)||"";}catch{return "";} }
+function setAvatarStore(a:string,uid:string=""){ const k=uid?`degen_avatar_${uid}`:"degen_avatar"; try{localStorage.setItem(k,a);}catch{} }
 
 interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:number; upgrades:Record<string,number>; highScore:number; }
 
-function loadSave(charId:string):SaveData{
-  try{ const r=localStorage.getItem(`degen_save_${charId}`); if(r){ const d=JSON.parse(r); return { charId:d.charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; } }catch{}
+function loadSave(uid:string,charId:string):SaveData{
+  const k=uid?`degen_save_${uid}_${charId}`:`degen_save_${charId}`;
+  try{ const r=localStorage.getItem(k); if(r){ const d=JSON.parse(r); return { charId:d.charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; } }catch{}
   return { charId, coins:0, totalEarned:0, totalTaps:0, upgrades:{}, highScore:0 };
 }
-function persistSave(d:SaveData){ try{ localStorage.setItem(`degen_save_${d.charId}`,JSON.stringify(d)); }catch{} }
+function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
 
 async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,solWallet?:string){
   try{
@@ -323,7 +324,7 @@ function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:stri
   const {user,signOut}=useAuth();
   const [name,setName]=useState(username);
   const [wallet,setWallet]=useState(solWallet);
-  const [avatar,setAvatar]=useState(()=>getAvatar()||"🐸");
+  const [avatar,setAvatar]=useState(()=>getAvatar(user?.id||"")||"🐸");
   const [pwMode,setPwMode]=useState(false);
   const [pwMsg,setPwMsg]=useState("");
   const [saving,setSaving]=useState(false);
@@ -333,7 +334,7 @@ function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:stri
 
   async function handleSave(){
     setSaving(true);
-    setAvatarStore(avatar);
+    setAvatarStore(avatar, user?.id||"");
     onSave(name.trim()||username, wallet.trim(), avatar);
     setTimeout(()=>{setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),2200);},600);
   }
@@ -981,7 +982,7 @@ export default function TapGame() {
   const [playerId,setPlayerId]=useState("");
   const [username,setUsername]=useState("");
   const [solWallet,setSolWallet]=useState("");
-  const [avatar,setAvatar]=useState(()=>getAvatar()||"🐸");
+  const [avatar,setAvatar]=useState("🐸");
 
   const [coins,setCoins]=useState(0);
   const [energy,setEnergy]=useState(1000);
@@ -1035,55 +1036,48 @@ export default function TapGame() {
     import("@/lib/supabase").then(async({supabase})=>{
       const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
       if(existing){
-        if(existing.username){setUsername(existing.username);setPlayerName(existing.username);}
-        if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet);}
+        if(existing.username){setUsername(existing.username);setPlayerName(existing.username,authId);}
+        if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet,authId);}
+        const savedAv=getAvatar(authId);
+        if(savedAv){setAvatar(savedAv);}
       } else {
-        const oldLocalId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
-        if(oldLocalId&&oldLocalId!==authId){
-          const{data:oldData}=await supabase.from("dt_players").select("*").eq("wallet_address",oldLocalId).maybeSingle();
-          if(oldData){
-            await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldLocalId);
-            if(oldData.username){setUsername(oldData.username);setPlayerName(oldData.username);}
-            if(oldData.sol_wallet){setSolWallet(oldData.sol_wallet);setPlayerWallet(oldData.sol_wallet);}
-          } else {
-            const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
-            setUsername(defaultName);setPlayerName(defaultName);
-          }
-        } else {
-          const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
-          setUsername(defaultName);setPlayerName(defaultName);
-        }
+        const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
+        setUsername(defaultName);setPlayerName(defaultName,authId);
       }
     });
   },[user?.id]);
 
   function tryStart(id:string){
-    if(!getPlayerName()){setPendingChar(id);setShowModal(true);}
-    else startGame(id,getPlayerName(),getPlayerWallet());
+    const uid=user?.id||playerId;
+    if(!username&&!getPlayerName(uid)){setPendingChar(id);setShowModal(true);}
+    else startGame(id,username||getPlayerName(uid),solWallet||getPlayerWallet(uid));
   }
   function onUsername(name:string,wallet:string){
-    setPlayerName(name);setUsername(name);
-    setPlayerWallet(wallet);setSolWallet(wallet);
+    const uid=user?.id||playerId;
+    setPlayerName(name,uid);setUsername(name);
+    setPlayerWallet(wallet,uid);setSolWallet(wallet);
     setShowModal(false);
     if(pendingChar)startGame(pendingChar,name,wallet);
   }
   function startGame(id:string,name:string,wallet?:string){
-    const s=loadSave(id);
+    const uid=user?.id||playerId;
+    const s=loadSave(uid,id);
     setCharId(id);setCoins(s.coins);setTotalEarned(s.totalEarned);setTotalTaps(s.totalTaps);
     setUpgrades(s.upgrades);
     const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;
     setMaxEnergy(mx);setEnergy(mx);
     setScreen("game");setActiveTab("play");saveRef.current=s;
-    const w=wallet??getPlayerWallet();
-    syncDB(user?.id||playerId,name,id,s.totalEarned,s.totalTaps,w||undefined);
+    const w=wallet??getPlayerWallet(uid);
+    syncDB(uid,name,id,s.totalEarned,s.totalTaps,w||undefined);
   }
 
   const doSave=useCallback(()=>{
     if(!charId)return;
+    const uid=user?.id||playerId;
     const s:SaveData={charId:charId!,coins,totalEarned,totalTaps,upgrades,highScore:Math.max(coins,saveRef.current?.highScore||0)};
-    persistSave(s);saveRef.current=s;
-    syncDB(user?.id||playerId,username||getPlayerName(),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet()||undefined);
-  },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet]);
+    persistSave(uid,s);saveRef.current=s;
+    syncDB(uid,username||getPlayerName(uid),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet(uid)||undefined);
+  },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet,user?.id]);
 
   useEffect(()=>{if(screen!=="game"||!charId)return;const id=setInterval(doSave,8000);return()=>clearInterval(id);},[screen,charId,doSave]);
 
@@ -1199,10 +1193,11 @@ export default function TapGame() {
   void comboTimer;
 
   function handleSettingsSave(u:string,w:string,av:string){
-    setUsername(u);setPlayerName(u);
-    setSolWallet(w);setPlayerWallet(w);
-    setAvatar(av);setAvatarStore(av);
-    syncDB(user?.id||playerId,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
+    const uid=user?.id||playerId;
+    setUsername(u);setPlayerName(u,uid);
+    setSolWallet(w);setPlayerWallet(w,uid);
+    setAvatar(av);setAvatarStore(av,uid);
+    syncDB(uid,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
   }
 
   // ─── RENDER ─────────────────────────────────────────────────────────────────
@@ -1256,7 +1251,7 @@ export default function TapGame() {
               </div>
               <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
                 {CHARACTERS.map(c=>{
-                  const s=loadSave(c.id);
+                  const s=loadSave(user?.id||playerId,c.id);
                   return(
                     <button key={c.id} onClick={()=>tryStart(c.id)}
                       style={{
