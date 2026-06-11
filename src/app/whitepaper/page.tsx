@@ -100,9 +100,9 @@ export default function Whitepaper() {
             "3. Progression & Ranking System",
             "4. Shop & Economy",
             "5. Leaderboard & Reward Pool",
-            "6. $TOWER Token",
+            "6. $DEGEN CLICKER Token",
             "7. Technical Architecture",
-            "8. Roadmap",
+            "8. Roadmap (5 Phases)",
             "9. Community & Ecosystem",
           ].map((item, i) => (
             <div key={i} style={{
@@ -270,9 +270,9 @@ export default function Whitepaper() {
           </SubSection>
         </Section>
 
-        <Section title="6. $TOWER Token">
+        <Section title="6. $DEGEN CLICKER Token">
           <p style={{ marginBottom: 16 }}>
-            The <strong style={{ color: "#a855f7" }}>$TOWER</strong> token is the native currency of the Degen Clicker ecosystem,
+            The <strong style={{ color: "#a855f7" }}>$DEGEN CLICKER</strong> token is the native currency of the Degen Clicker ecosystem,
             deployed on Solana.
           </p>
 
@@ -281,7 +281,7 @@ export default function Whitepaper() {
               ["Network", "Solana"],
               ["Standard", "SPL Token"],
               ["CA", TOKEN_CA.slice(0, 8) + "..." + TOKEN_CA.slice(-6)],
-              ["Symbol", "$TOWER"],
+              ["Symbol", "$DEGEN (DEGEN CLICKER)"],
             ].map(([k, v]) => (
               <div key={k} style={{
                 background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.15)",
@@ -294,7 +294,7 @@ export default function Whitepaper() {
           </div>
 
           <SubSection title="Utility">
-            $TOWER is the primary reward mechanism for top leaderboard performers. Holding $TOWER
+            $DEGEN CLICKER is the primary reward mechanism for top leaderboard performers. Holding $DEGEN CLICKER
             grants in-game perks including bonus coin generation, early access to new shop items,
             and exclusive cosmetics.
           </SubSection>
@@ -338,33 +338,95 @@ export default function Whitepaper() {
         </Section>
 
         <Section title="8. Roadmap">
+          <p style={{ marginBottom: 24, color: "#888", fontSize: 14 }}>
+            Tap. Rank Up. Earn. 🚀
+          </p>
           {[
             {
-              phase: "Phase 1 — Live",
+              phase: "Phase 1 — Foundation & Growth",
+              subtitle: "Current Focus",
               color: "#22d67a",
-              items: ["Core clicker gameplay", "40+ shop items", "9 auto-tapper tiers", "Leaderboard (top 20)", "Solana wallet integration", "Telegram sticker packs"],
+              items: [
+                "Grow the Degen Clicker community",
+                "Increase token awareness and trading volume",
+                "Bond the token",
+                "Secure Jupiter Verification",
+                "Apply for CoinMarketCap listing",
+                "Expand social presence and partnerships",
+                "Reach 200K Market Cap",
+                "Launch first community giveaway at 200K MC",
+                "Continue leaderboard rewards every 48 hours",
+                "Strengthen community engagement",
+              ],
             },
             {
-              phase: "Phase 2 — Q3 2025",
+              phase: "Phase 2 — Platform Expansion",
+              subtitle: "Making Degen Clicker Bigger",
               color: "#f5c842",
-              items: ["48-hour competitive seasons", "On-chain USDC prize payouts", "Daily quest system", "Guild/team leaderboards", "Mobile app (iOS + Android)"],
+              items: [
+                "Complete website redesign",
+                "Improved user experience and interface",
+                "New playable characters",
+                "Character progression system",
+                "In-game purchases using the Degen Clicker token",
+                "Daily challenges and achievements",
+                "Referral rewards system",
+                "More reward opportunities for active players",
+                "Community events and competitions",
+                "Additional game modes",
+              ],
             },
             {
-              phase: "Phase 3 — Q4 2025",
+              phase: "Phase 3 — Mobile Development",
+              subtitle: "Expanding Beyond the Browser",
               color: "#a855f7",
-              items: ["$TOWER token staking", "NFT cosmetics marketplace", "Tournament mode", "Cross-game leaderboards", "DAO governance for reward pool"],
+              items: [
+                "Begin Degen Clicker mobile app development",
+                "Android release",
+                "iOS release",
+                "Mobile-exclusive rewards",
+                "Push notifications for rewards and events",
+                "Account syncing across devices",
+                "Improved player profiles",
+                "Enhanced leaderboard system",
+                "More gameplay features and mechanics",
+              ],
             },
             {
-              phase: "Phase 4 — 2026",
+              phase: "Phase 4 — Ecosystem Growth",
+              subtitle: "Building More Than a Clicker Game",
               color: "#4fc3f7",
-              items: ["Degen Tower PvP mode", "Seasonal character unlocks", "Creator economy tools", "API for third-party integrations", "Cross-chain expansion"],
+              items: [
+                "Launch Degen Clicker Arcade",
+                "Allow developers to submit games",
+                "Community voting for featured games",
+                "Partnership integrations",
+                "Cross-game rewards system",
+                "Creator and developer incentives",
+                "Expand the Degen Clicker ecosystem",
+              ],
             },
-          ].map(({ phase, color, items }) => (
+            {
+              phase: "Phase 5 — Long-Term Vision",
+              subtitle: "The Future of Degen Clicker",
+              color: "#ff6b35",
+              items: [
+                "Major platform partnerships",
+                "Multi-game ecosystem",
+                "Competitive tournaments",
+                "Team and guild systems",
+                "Advanced reward mechanics",
+                "Community governance features",
+                "Become a leading Web3 gaming ecosystem",
+              ],
+            },
+          ].map(({ phase, subtitle, color, items }) => (
             <div key={phase} style={{
               marginBottom: 20, background: "rgba(255,255,255,0.02)",
-              border: `1px solid ${color}33`, borderRadius: 12, padding: "16px 20px",
+              border: `1px solid ${color}33`, borderRadius: 12, padding: "18px 20px",
             }}>
-              <div style={{ color: color, fontWeight: 800, fontSize: 14, marginBottom: 10 }}>{phase}</div>
+              <div style={{ color: color, fontWeight: 900, fontSize: 15, marginBottom: 4 }}>{phase}</div>
+              <div style={{ color: "#666", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 12, textTransform: "uppercase" as const }}>{subtitle}</div>
               <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
                 {items.map(item => (
                   <span key={item} style={{
