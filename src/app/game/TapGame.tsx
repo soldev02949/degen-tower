@@ -1122,7 +1122,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       }catch{if(active)setLoading(false);}
     };
     fetchLeaders();
-    const iv=setInterval(fetchLeaders,2000);
+    const iv=setInterval(fetchLeaders,1000);
     return()=>{active=false;clearInterval(iv);};
   },[]);
   const fmtTaps=(n:number)=>{if(!n)return"0";if(n>=1e9)return(n/1e9).toFixed(1)+"B";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"K";return Math.floor(n).toString();};
@@ -1474,6 +1474,7 @@ export default function TapGame() {
     if(!uid)return;
     const safeUid:string=uid;
 
+    let _fullSyncCounter=0;
     async function runSync(){
       const gl=getGlobalTaps(safeUid);
       let bestTaps=gl.totalTaps||0;
@@ -1494,19 +1495,14 @@ export default function TapGame() {
       if(bestTaps<=0){drainRetryQueue();return;}
       const name=getPlayerName(safeUid)||username;
       const cid=liveRef.current.charId||charId||"pepe";
-      const coins=liveRef.current.coins||0;
-      const upgrades=liveRef.current.upgrades||{};
-      const wallet=liveRef.current.solWallet||getPlayerWallet(safeUid)||undefined;
-      const av=liveRef.current.avatarUrl||avatarUrl||undefined;
 
-      // 1. Push taps (independent of earned). Get back DB's authoritative value.
+      // 1. Push taps every second (lightweight — games_played only).
       const dbTaps=await syncTaps(safeUid,name,cid,bestTaps);
 
       // 2. If DB has MORE taps than we do locally, adopt the DB value
       if(dbTaps!==null&&dbTaps>bestTaps){
         bestTaps=dbTaps;
         setGlobalTaps(safeUid,bestTaps,bestEarned);
-        // Also push into liveRef so in-game counter stays correct
         if(liveRef.current.uid===safeUid&&dbTaps>liveRef.current.totalTaps){
           liveRef.current.totalTaps=dbTaps;
         }
@@ -1515,8 +1511,16 @@ export default function TapGame() {
         setGlobalTaps(safeUid,bestTaps,bestEarned);
       }
 
-      // 3. Full sync (earned, coins, upgrades) — runs in parallel, taps already safe
-      syncDB(safeUid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
+      // 3. Full sync (earned, coins, upgrades) — only every 10s to reduce write load
+      _fullSyncCounter++;
+      if(_fullSyncCounter>=10){
+        _fullSyncCounter=0;
+        const coins=liveRef.current.coins||0;
+        const upgrades=liveRef.current.upgrades||{};
+        const wallet=liveRef.current.solWallet||getPlayerWallet(safeUid)||undefined;
+        const av=liveRef.current.avatarUrl||avatarUrl||undefined;
+        syncDB(safeUid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
+      }
 
       // 4. Drain any queued retries
       drainRetryQueue();
