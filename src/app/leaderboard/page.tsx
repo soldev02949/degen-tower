@@ -80,8 +80,11 @@ export default function Leaderboard() {
           headers: {
             "apikey": SUPA_KEY,
             "Authorization": `Bearer ${SUPA_KEY}`,
-            "Cache-Control": "no-cache"
-          }
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+          },
+          cache: "no-store"
         });
         if (resp.ok) {
           const data = await resp.json();

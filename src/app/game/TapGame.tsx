@@ -305,9 +305,9 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
       p_wallet_address:pid,
       p_username:uname||("Degen_"+pid.slice(-6)),
       p_character:charId,
-      p_total_score: Number(safeTotalEarned),
-      p_games_played: Number(safeTotalTaps),
-      p_token_balance: Number(safeCoins),
+      p_total_score: safeTotalEarned.toString(),
+      p_games_played: safeTotalTaps.toString(),
+      p_token_balance: safeCoins.toString(),
       p_is_verified:false,
       p_last_seen:new Date().toISOString(),
     };
@@ -315,17 +315,11 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
     if(solWallet)rpcPayload.p_sol_wallet=solWallet;
     if(avatarUrl)rpcPayload.p_avatar_url=avatarUrl;
     // Ensure large numbers are serialized as plain integers, not scientific notation
-    const body = JSON.stringify(rpcPayload, (key, value) => {
-      if (typeof value === 'number' && value >= 1e15) {
-        // Return as number in the JSON string but avoid scientific notation
-        return Math.round(value).toLocaleString('fullwide', {useGrouping:false});
-      }
-      return value;
-    });
-    // Note: JSON.stringify with the above replacer will turn the number into a string in the JSON
-    // but the Supabase RPC expects a numeric type. We need to manually fix the JSON string
+    const body = JSON.stringify(rpcPayload);
+    // Note: We send BigInts as strings in rpcPayload to avoid Number precision loss,
+    // but the Supabase RPC expects a numeric type. We manually fix the JSON string
     // to remove the quotes around the large numbers so they are treated as numeric/bigint.
-    const fixedBody = body.replace(/:\"(\d{15,})\"/g, ':$1');
+    const fixedBody = body.replace(/:\"(\d{1,})\"/g, ':$1');
 
     await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
       method:"POST",
