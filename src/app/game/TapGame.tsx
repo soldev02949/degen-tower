@@ -932,7 +932,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 }
 
 // ─── LEADERBOARD TAB (glass) ─────────────────────────────────────────────────
-function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
+function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveAvatarUrl?:string;liveCharId:string}){
   const [players,setPlayers]=useState<LBEntry[]>([]);
   const [loading,setLoading]=useState(true);
   const cd=useCountdown();
@@ -973,6 +973,62 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
   },[load]);
 
   const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
+  // Patch current user's entry with live state (instant updates every tap)
+  const displayPlayers=React.useMemo(()=>{
+    if(!myPlayerId||liveTaps===0)return players;
+    const patched=players.map(p=>{
+      if(p.wallet_address!==myPlayerId)return p;
+      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
+    });
+    // If current user not in DB list yet, add them
+    const exists=patched.some(p=>p.wallet_address===myPlayerId);
+    if(!exists&&liveTaps>0){
+      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
+    }
+    return patched.sort((a,b)=>b.games_played-a.games_played);
+  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
+  // Patch current user's entry with live state (instant updates every tap)
+  const displayPlayers=React.useMemo(()=>{
+    if(!myPlayerId||liveTaps===0)return players;
+    const patched=players.map(p=>{
+      if(p.wallet_address!==myPlayerId)return p;
+      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
+    });
+    // If current user not in DB list yet, add them
+    const exists=patched.some(p=>p.wallet_address===myPlayerId);
+    if(!exists&&liveTaps>0){
+      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
+    }
+    return patched.sort((a,b)=>b.games_played-a.games_played);
+  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
+  // Patch current user's entry with live state (instant updates every tap)
+  const displayPlayers=React.useMemo(()=>{
+    if(!myPlayerId||liveTaps===0)return players;
+    const patched=players.map(p=>{
+      if(p.wallet_address!==myPlayerId)return p;
+      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
+    });
+    // If current user not in DB list yet, add them
+    const exists=patched.some(p=>p.wallet_address===myPlayerId);
+    if(!exists&&liveTaps>0){
+      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
+    }
+    return patched.sort((a,b)=>b.games_played-a.games_played);
+  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
+  // Patch current user's entry with live state (instant updates every tap)
+  const displayPlayers=React.useMemo(()=>{
+    if(!myPlayerId||liveTaps===0)return players;
+    const patched=players.map(p=>{
+      if(p.wallet_address!==myPlayerId)return p;
+      return{...p,games_played:Math.max(p.games_played,liveTaps),total_score:Math.max(p.total_score,liveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
+    });
+    // If current user not in DB list yet, add them
+    const exists=patched.some(p=>p.wallet_address===myPlayerId);
+    if(!exists&&liveTaps>0){
+      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:liveEarned,games_played:liveTaps,avatar_url:liveAvatarUrl});
+    }
+    return patched.sort((a,b)=>b.games_played-a.games_played);
+  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
 
   return(
     <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
@@ -1024,7 +1080,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
           {players.length>=1&&(
             <div style={{display:"flex",gap:10,alignItems:"flex-end",justifyContent:"center",marginBottom:20}}>
               {/* 2nd */}
-              {players[1]&&(()=>{const p=players[1];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
+              {displayPlayers[1]&&(()=>{const p=displayPlayers[1];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
                 return(
                   <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(180,180,180,0.1)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
                     <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px silver)"}}>🥈</div>
@@ -1036,7 +1092,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                 );
               })()}
               {/* 1st — taller */}
-              {players[0]&&(()=>{const p=players[0];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
+              {displayPlayers[0]&&(()=>{const p=displayPlayers[0];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
                 return(
                   <div style={{
                     flex:1,
@@ -1055,7 +1111,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                 );
               })()}
               {/* 3rd */}
-              {players[2]&&(()=>{const p=players[2];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
+              {displayPlayers[2]&&(()=>{const p=displayPlayers[2];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
                 return(
                   <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(205,127,50,0.15)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
                     <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px #cd7f32)"}}>🥉</div>
@@ -1071,7 +1127,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
 
           {/* Rest of list (4-20+) */}
           <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
-            {players.slice(3).map((p,i)=>{
+            {displayPlayers.slice(3).map((p,i)=>{
               const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);
               const me=p.wallet_address===myPlayerId;const isPrize=i+3<20;
               return(
@@ -1100,7 +1156,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
       ):(
         <div style={{position:"relative",zIndex:1,padding:"16px"}}>
           <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
-            {players.map((p,i)=>{
+            {displayPlayers.map((p,i)=>{
               const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);
               const me=p.wallet_address===myPlayerId;const isPrize=i<20;
               const medalEmoji=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
@@ -1741,7 +1797,7 @@ export default function TapGame() {
 
       {/* Tab content */}
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
-      {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} key="lb"/>}
+      {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} liveTaps={totalTaps} liveEarned={totalEarned} liveUsername={username} liveAvatarUrl={avatarUrl} liveCharId={charId||"pepe"} key="lb"/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
       {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} currentAvatarUrl={avatarUrl} onSave={handleSettingsSave}/>}
 
