@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank } from "@/lib/progression";
 import { useAuth } from "@/lib/auth";
+import { safeBigInt, bigIntToNumber, maxBigInt, formatBigInt } from "@/lib/bigint-utils";
 
 // ─── Characters ───────────────────────────────────────────────────────────────
 export const CHARACTERS = [
@@ -231,13 +232,8 @@ const G = {
 };
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
-function fmt(n:number){
-  if(n>=1e15)return(n/1e15).toFixed(2)+"Q";
-  if(n>=1e12)return(n/1e12).toFixed(2)+"T";
-  if(n>=1e9)return(n/1e9).toFixed(2)+"B";
-  if(n>=1e6)return(n/1e6).toFixed(2)+"M";
-  if(n>=1e3)return(n/1e3).toFixed(1)+"K";
-  return Math.floor(n).toString();
+function fmt(n:number|bigint):string{
+  return formatBigInt(n);
 }
 function getUpgCost(u:typeof UPGRADES[0], lv:number){ return Math.floor(u.baseCost*Math.pow(u.costMult,lv)); }
 function getPlayerName(uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ return localStorage.getItem(k)||""; }catch{ return ""; } }
@@ -300,15 +296,18 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
     } catch {}
 
     // Use the GREATEST-based RPC so no browser can ever lower tap/coin counts in DB
-    // Use BigInt for extremely large scores to avoid scientific notation in JSON
-    // but convert back to regular numbers for the payload as Supabase expects bigint/numeric
+    // Use BigInt to ensure precision for extremely large scores
+    const safeTotalEarned = safeBigInt(totalEarned);
+    const safeTotalTaps = safeBigInt(totalTaps);
+    const safeCoins = safeBigInt(coins);
+    
     const rpcPayload:Record<string,unknown>={
       p_wallet_address:pid,
       p_username:uname||("Degen_"+pid.slice(-6)),
       p_character:charId,
-      p_total_score: Math.round(totalEarned),
-      p_games_played: Math.round(totalTaps),
-      p_token_balance: Math.round(coins),
+      p_total_score: Number(safeTotalEarned),
+      p_games_played: Number(safeTotalTaps),
+      p_token_balance: Number(safeCoins),
       p_is_verified:false,
       p_last_seen:new Date().toISOString(),
     };
