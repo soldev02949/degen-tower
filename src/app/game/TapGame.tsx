@@ -101,11 +101,16 @@ function loadSave(uid:string,charId:string):SaveData{
 function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
 
 async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,solWallet?:string,avatarUrl?:string){
+  if(!pid)return;
   try{
     const{supabase}=await import("@/lib/supabase");
+    // Use DB-safe update: only write taps/score if new value is higher than stored
+    const{data:cur}=await supabase.from("dt_players").select("games_played,total_score").eq("wallet_address",pid).maybeSingle();
+    const safeTaps=Math.max(Math.floor(totalTaps),cur?.games_played||0);
+    const safeScore=Math.max(Math.floor(totalEarned),cur?.total_score||0);
     await supabase.from("dt_players").upsert({
       wallet_address:pid, username:uname||("Degen_"+pid.slice(-6)), character:charId,
-      total_score:Math.floor(totalEarned), games_played:Math.floor(totalTaps),
+      total_score:safeScore, games_played:safeTaps,
       is_verified:false,
       ...(solWallet?{sol_wallet:solWallet}:{}),
       ...(avatarUrl?{avatar_url:avatarUrl}:{}),
@@ -517,8 +522,8 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
 }
 
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
-function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId}:{
-  onPlay:()=>void;username:string;avatar:string;totalEarned:number;totalTaps:number;
+function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId}:{
+  onPlay:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
   level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
   nextRank:ReturnType<typeof getNextRank>;charId:string|null;
 }){
@@ -540,11 +545,16 @@ function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProg
             background:`radial-gradient(ellipse,rgba(${char?char.glow:"168,85,247"},0.2),transparent 70%)`,
             border:`2px solid rgba(${char?char.glow:"168,85,247"},0.3)`,
             display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:56,lineHeight:1,
+            fontSize:56,lineHeight:1,overflow:"hidden",
             filter:`drop-shadow(0 0 20px rgba(${char?char.glow:"168,85,247"},0.5))`,
             transform:pulse?"scale(1.07)":"scale(1)",transition:"transform 0.5s ease",
             boxShadow:`0 0 40px rgba(${char?char.glow:"168,85,247"},0.2)`,
-          }}>{avatar||"🐸"}</div>
+          }}>
+            {avatarUrl
+              ?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>{}}/>
+              :<span>{avatar||"🐸"}</span>
+            }
+          </div>
           <div style={{color:"#4a2d68",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>Welcome back</div>
           <h2 style={{color:"#fff",fontWeight:900,fontSize:26,marginBottom:10,letterSpacing:"-0.03em"}}>{username||"Degen"}</h2>
 
@@ -845,7 +855,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   <div style={{width:26,textAlign:"center",flexShrink:0,fontWeight:900,fontSize:13,color:medalEmoji?undefined:isPrize?"#22d67a":"#2a1540"}}>
                     {medalEmoji||`#${i+1}`}
                   </div>
-                  <div style={{fontSize:20,flexShrink:0}}>{CE[p.character]||"🎮"}</div>
+                  <div style={{flexShrink:0,display:"flex",alignItems:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={28}/></div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{color:me?"#c084fc":"#ccc",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {p.username||"Anon"}{me&&" 👈"}
@@ -1070,6 +1080,8 @@ export default function TapGame() {
 
   const pidRef=useRef(0);
   const saveRef=useRef<SaveData|null>(null);
+  // liveRef keeps current values in sync for use by stable doSave callback
+  const liveRef=useRef({charId:"",coins:0,totalEarned:0,totalTaps:0,upgrades:{} as Record<string,number>,uid:"",username:"",solWallet:"",avatarUrl:""});
 
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
@@ -1080,6 +1092,8 @@ export default function TapGame() {
     const lvl=upgrades[u.id]||0;
     return sum+lvl*(u.tapsPerSec!);
   },0);
+  // Keep liveRef in sync so stable doSave always reads fresh values
+  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.id||playerId,username,solWallet,avatarUrl};
 
   useEffect(()=>{
     if(!user?.id)return;
@@ -1161,19 +1175,25 @@ export default function TapGame() {
     const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps};
     saveRef.current=mergedSave;
     persistSave(uid,mergedSave);
-    // DO NOT call syncDB here — startGame must never reset DB values.
-    // doSave() handles all DB writes during active play.
+    // Sync to DB immediately on start (creates record for new users, never decrements)
+    syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
   }
 
+  // Stable doSave — reads from liveRef so deps never change, interval never restarts
   const doSave=useCallback(()=>{
-    if(!charId)return;
-    const uid=user?.id||playerId;
-    const s:SaveData={charId:charId!,coins,totalEarned,totalTaps,upgrades,highScore:Math.max(coins,saveRef.current?.highScore||0)};
-    persistSave(uid,s);saveRef.current=s;
-    syncDB(uid,username||getPlayerName(uid),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
-  },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet,avatarUrl,user?.id]);
+    const d=liveRef.current;
+    if(!d.charId)return;
+    const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
+    persistSave(d.uid,s);saveRef.current=s;
+    syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+  },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(()=>{if(screen!=="game"||!charId)return;const id=setInterval(doSave,8000);return()=>clearInterval(id);},[screen,charId,doSave]);
+  // Save every 5s during play; save immediately on exit (cleanup)
+  useEffect(()=>{
+    if(screen!=="game"||!charId)return;
+    const id=setInterval(doSave,5000);
+    return()=>{clearInterval(id);doSave();};// save on screen/char change
+  },[screen,charId]);// eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(()=>{
     if(activeTab!=="play"||screen!=="game"||!char)return;
@@ -1250,7 +1270,16 @@ export default function TapGame() {
     spawn(tx,ty,`+${fmt(Math.round(earned*10)/10)}`,coinColors(earned),false);
     setCoins(c=>c+earned);
     setTotalEarned(t=>{const nt=t+earned;checkAchievements(newTapCount,nt);return nt;});
-    setTotalTaps(t=>t+1);
+    setTotalTaps(t=>{
+      const nt=t+1;
+      // Persist to localStorage immediately on every tap (cheap, keeps progress safe)
+      const d=liveRef.current;
+      if(d.charId){
+        const s:SaveData={charId:d.charId,coins:d.coins+earned,totalEarned:d.totalEarned+earned,totalTaps:nt,upgrades:d.upgrades,highScore:Math.max(d.coins+earned,saveRef.current?.highScore||0)};
+        persistSave(d.uid,s);saveRef.current=s;
+      }
+      return nt;
+    });
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
     const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1;
@@ -1327,7 +1356,7 @@ export default function TapGame() {
       {critFlash&&<div style={{position:"fixed",inset:0,background:"rgba(255,50,50,0.06)",zIndex:150,pointerEvents:"none"}}/>}
 
       {/* Tab content */}
-      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
+      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
       {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} currentAvatarUrl={avatarUrl} onSave={handleSettingsSave}/>}
