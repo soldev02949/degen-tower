@@ -991,6 +991,7 @@ export default function TapGame() {
   const [username,setUsername]=useState("");
   const [solWallet,setSolWallet]=useState("");
   const [avatar,setAvatar]=useState("🐸");
+  const [dbLoaded,setDbLoaded]=useState(false);
 
   const [coins,setCoins]=useState(0);
   const [energy,setEnergy]=useState(1000);
@@ -1050,6 +1051,7 @@ export default function TapGame() {
         if(savedAv){setAvatar(savedAv);}
         // Store DB values — these are the source of truth for taps/coins
         dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0};
+        setDbLoaded(true); // unblock character select
       } else {
         // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
         let migrated=false;
@@ -1060,6 +1062,7 @@ export default function TapGame() {
             await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);
             if(oldRec.username){setUsername(oldRec.username);setPlayerName(oldRec.username,authId);}
             if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet);setPlayerWallet(oldRec.sol_wallet,authId);}
+            dbValuesRef.current={totalEarned:oldRec.total_score||0,totalTaps:oldRec.games_played||0};
             localStorage.removeItem("degen_player_id"); // clear so migration only runs once
             migrated=true;
           }
@@ -1068,6 +1071,7 @@ export default function TapGame() {
           const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
           setUsername(defaultName);setPlayerName(defaultName,authId);
         }
+        setDbLoaded(true); // unblock character select
       }
     });
   },[user?.id]);
@@ -1087,10 +1091,10 @@ export default function TapGame() {
   function startGame(id:string,name:string,wallet?:string){
     const uid=user?.id||playerId;
     const s=loadSave(uid,id);
-    // Use whichever is higher: local save or DB — never go backwards
+    // DB is source of truth — never load a value lower than what's in DB
     const safeTaps=Math.max(s.totalTaps, dbValuesRef.current?.totalTaps||0);
     const safeEarned=Math.max(s.totalEarned, dbValuesRef.current?.totalEarned||0);
-    const safeCoins=safeTaps>s.totalTaps ? safeEarned : s.coins; // if DB ahead, use earned as balance
+    const safeCoins=safeTaps>s.totalTaps ? safeEarned : s.coins;
     setCharId(id);setCoins(safeCoins);setTotalEarned(safeEarned);setTotalTaps(safeTaps);
     setUpgrades(s.upgrades);
     const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;
@@ -1098,10 +1102,9 @@ export default function TapGame() {
     setScreen("game");setActiveTab("play");
     const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps};
     saveRef.current=mergedSave;
-    persistSave(uid,mergedSave); // write merged values to local cache
-    const w=wallet??getPlayerWallet(uid);
-    // Only sync to DB if we have actual data to write (don't reset DB with zeros)
-    if(safeTaps>0||safeEarned>0||name){syncDB(uid,name,id,safeEarned,safeTaps,w||undefined);}
+    persistSave(uid,mergedSave);
+    // DO NOT call syncDB here — startGame must never reset DB values.
+    // doSave() handles all DB writes during active play.
   }
 
   const doSave=useCallback(()=>{
@@ -1282,11 +1285,12 @@ export default function TapGame() {
                 <h2 style={{color:"#fff",fontWeight:900,fontSize:20,margin:"0 0 4px",letterSpacing:"-0.02em"}}>Choose Your Legend</h2>
                 <p style={{color:"#3a2255",fontSize:12,margin:0}}>Each legend has unique abilities and passives</p>
               </div>
+              {!dbLoaded&&<div style={{color:"#f5c842",fontSize:13,fontWeight:700,marginBottom:8,letterSpacing:"0.05em"}}>Loading your account…</div>}
               <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
                 {CHARACTERS.map(c=>{
                   const s=loadSave(user?.id||playerId,c.id);
                   return(
-                    <button key={c.id} onClick={()=>tryStart(c.id)}
+                    <button key={c.id} onClick={()=>dbLoaded&&tryStart(c.id)} disabled={!dbLoaded}
                       style={{
                         width:130,
                         background:`linear-gradient(145deg,rgba(${c.glow},0.06),rgba(${c.glow},0.02))`,
