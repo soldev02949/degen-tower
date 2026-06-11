@@ -1323,9 +1323,10 @@ export default function TapGame() {
   useEffect(()=>{
     const uid=user?.id;
     if(!uid)return;
+    const safeUid:string=uid;
 
     async function runSync(){
-      const gl=getGlobalTaps(uid);
+      const gl=getGlobalTaps(safeUid);
       let bestTaps=gl.totalTaps||0;
       let bestEarned=gl.totalEarned||0;
       try{
@@ -1337,36 +1338,36 @@ export default function TapGame() {
           }catch{}
         }
       }catch{}
-      if(liveRef.current.charId&&liveRef.current.uid===uid){
+      if(liveRef.current.charId&&liveRef.current.uid===safeUid){
         bestTaps=Math.max(bestTaps,liveRef.current.totalTaps);
         bestEarned=Math.max(bestEarned,liveRef.current.totalEarned);
       }
       if(bestTaps<=0){drainRetryQueue();return;}
-      const name=getPlayerName(uid)||username;
+      const name=getPlayerName(safeUid)||username;
       const cid=liveRef.current.charId||charId||"pepe";
       const coins=liveRef.current.coins||0;
       const upgrades=liveRef.current.upgrades||{};
-      const wallet=liveRef.current.solWallet||getPlayerWallet(uid)||undefined;
+      const wallet=liveRef.current.solWallet||getPlayerWallet(safeUid)||undefined;
       const av=liveRef.current.avatarUrl||avatarUrl||undefined;
 
       // 1. Push taps (independent of earned). Get back DB's authoritative value.
-      const dbTaps=await syncTaps(uid,name,cid,bestTaps);
+      const dbTaps=await syncTaps(safeUid,name,cid,bestTaps);
 
       // 2. If DB has MORE taps than we do locally, adopt the DB value
       if(dbTaps!==null&&dbTaps>bestTaps){
         bestTaps=dbTaps;
-        setGlobalTaps(uid,bestTaps,bestEarned);
+        setGlobalTaps(safeUid,bestTaps,bestEarned);
         // Also push into liveRef so in-game counter stays correct
-        if(liveRef.current.uid===uid&&dbTaps>liveRef.current.totalTaps){
+        if(liveRef.current.uid===safeUid&&dbTaps>liveRef.current.totalTaps){
           liveRef.current.totalTaps=dbTaps;
         }
         console.log("[sync] DB had higher taps:",dbTaps,"— local updated");
       }else{
-        setGlobalTaps(uid,bestTaps,bestEarned);
+        setGlobalTaps(safeUid,bestTaps,bestEarned);
       }
 
       // 3. Full sync (earned, coins, upgrades) — runs in parallel, taps already safe
-      syncDB(uid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
+      syncDB(safeUid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
 
       // 4. Drain any queued retries
       drainRetryQueue();
