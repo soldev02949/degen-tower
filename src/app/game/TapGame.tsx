@@ -492,8 +492,14 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
     setLoading(true);
     try{
       const{supabase}=await import("@/lib/supabase");
-      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played").order("games_played",{ascending:false}).limit(100);
-      setPlayers((data||[]) as LBEntry[]);
+      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played").order("games_played",{ascending:false}).limit(200);
+      // Deduplicate by username — keep the record with highest taps per user
+      const seen=new Map<string,LBEntry>();
+      for(const p of (data||[]) as LBEntry[]){
+        const key=(p.username||"").toLowerCase();
+        if(!seen.has(key)||( p.games_played>(seen.get(key)!.games_played))){ seen.set(key,p); }
+      }
+      setPlayers(Array.from(seen.values()).sort((a,b)=>b.games_played-a.games_played));
     }catch{}
     setLoading(false);
   },[]);
@@ -739,18 +745,26 @@ export default function TapGame() {
     const authId = user.id;
     setPlayerId(authId);
     // Load player profile from Supabase keyed by auth user ID
-    import("@/lib/supabase").then(({supabase})=>{
-      supabase.from("dt_players").select("username,sol_wallet").eq("wallet_address",authId).maybeSingle()
-        .then(({data})=>{
-          if(data){
-            if(data.username){ setUsername(data.username); setPlayerName(data.username); }
-            if(data.sol_wallet){ setSolWallet(data.sol_wallet); setPlayerWallet(data.sol_wallet); }
-          } else {
-            // New user — use email prefix as default username
-            const defaultName = user.email?.split("@")[0] || "Degen_"+authId.slice(-6);
-            setUsername(defaultName); setPlayerName(defaultName);
-          }
-        });
+    import("@/lib/supabase").then(async ({supabase})=>{
+      const {data} = await supabase.from("dt_players").select("username,sol_wallet,games_played,total_score,character").eq("wallet_address",authId).maybeSingle();
+      if(data){
+        if(data.username){ setUsername(data.username); setPlayerName(data.username); }
+        if(data.sol_wallet){ setSolWallet(data.sol_wallet); setPlayerWallet(data.sol_wallet); }
+      } else {
+        // No record for this auth ID — check if there's an OLD localStorage-based record to migrate
+        const oldLocalId = getPlayerId(); // old random localStorage ID
+        const {data: oldData} = await supabase.from("dt_players").select("*").eq("wallet_address",oldLocalId).maybeSingle();
+        if(oldData){
+          // Migrate: update wallet_address to auth UUID so the record is now owned by this account
+          await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldLocalId);
+          if(oldData.username){ setUsername(oldData.username); setPlayerName(oldData.username); }
+          if(oldData.sol_wallet){ setSolWallet(oldData.sol_wallet); setPlayerWallet(oldData.sol_wallet); }
+        } else {
+          // Brand new user — use email prefix as default username
+          const defaultName = user.email?.split("@")[0] || "Degen_"+authId.slice(-6);
+          setUsername(defaultName); setPlayerName(defaultName);
+        }
+      }
     });
   },[user?.id]);
 
