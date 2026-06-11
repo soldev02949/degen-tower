@@ -25,9 +25,15 @@ function getRank(level: number): { name: string; color: string; emoji: string } 
 }
 
 function formatNum(n: number): string {
-  if (n >= 1e15) return (n / 1e15).toFixed(2) + "Q";
-  if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
-  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e15) {
+    return (n / 1e15).toPrecision(5).replace(/\.?0+$/, "") + " Quadrillion";
+  }
+  if (n >= 1e12) {
+    return (n / 1e12).toPrecision(5).replace(/\.?0+$/, "") + " Trillion";
+  }
+  if (n >= 1e9) {
+    return (n / 1e9).toPrecision(5).replace(/\.?0+$/, "") + " Billion";
+  }
   if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
   if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
   return Math.floor(n).toString();

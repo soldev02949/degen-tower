@@ -28,10 +28,20 @@ export function maxBigInt(a: number | bigint, b: number | bigint): bigint {
 
 export function formatBigInt(n: number | bigint): string {
   const num = typeof n === 'bigint' ? bigIntToNumber(n) : n;
-  if (num >= 1e15) return (num / 1e15).toFixed(2) + 'Q';
-  if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+  
+  if (num >= 1e15) {
+    const q = num / 1e15;
+    return q.toPrecision(5).replace(/\.?0+$/, "") + " Quadrillion";
+  }
+  if (num >= 1e12) {
+    const t = num / 1e12;
+    return t.toPrecision(5).replace(/\.?0+$/, "") + " Trillion";
+  }
+  if (num >= 1e9) {
+    const b = num / 1e9;
+    return b.toPrecision(5).replace(/\.?0+$/, "") + " Billion";
+  }
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + "K";
   return Math.floor(num).toString();
 }
