@@ -76,7 +76,7 @@ export default function Leaderboard() {
       const SUPA_URL = "https://paxtohwiycuhwmlziwrr.supabase.co";
       const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
       try {
-        const resp = await fetch(`${SUPA_URL}/rest/v1/dt_players?select=*&order=games_played.desc&limit=100`, {
+        const resp = await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,username,character,games_played,total_score,avatar_url&order=games_played.desc&limit=100`, {
           headers: {
             "apikey": SUPA_KEY,
             "Authorization": `Bearer ${SUPA_KEY}`,
@@ -198,7 +198,7 @@ export default function Leaderboard() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <span style={{ fontSize: 16 }}>{CHARS[p.character] || "🎮"}</span>
-                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{p.username || p.wallet_address?.slice(0,8) || "Anonymous"}</span>
+                      <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{p.username || "Degen"}</span>
                       <span style={{ marginLeft: 4, background: `${rank.color}22`, border: `1px solid ${rank.color}55`, borderRadius: 5, padding: "1px 7px", fontSize: 10, color: rank.color, fontWeight: 700 }}>
                         {rank.emoji} {rank.name}
                       </span>

@@ -16,8 +16,14 @@ function fmt(n: number) {
   return Math.floor(n).toString();
 }
 function shortWallet(w: string) {
-  if (!w || w.length < 12) return w||"—";
-  return w.slice(0,6)+"…"+w.slice(-4);
+  if (!w) return "—";
+  if (w.includes("@")) {
+    const [name, domain] = w.split("@");
+    if (name.length <= 3) return w;
+    return `${name.slice(0, 3)}...${name.slice(-1)}@${domain}`;
+  }
+  if (w.length < 12) return w;
+  return w.slice(0, 6) + "…" + w.slice(-4);
 }
 function ago(ts: string) {
   const d = Date.now() - new Date(ts).getTime();
