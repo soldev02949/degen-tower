@@ -1463,18 +1463,22 @@ export default function TapGame() {
             const globalLocal=getGlobalTaps(authId);
             const localTaps=globalLocal.totalTaps||0;
             const localEarned=globalLocal.totalEarned||0;
-            if(true){
-              const pushedTaps=Math.max(localTaps,dbTaps);
-              const pushedEarned=Math.max(localEarned,dbEarned);
+            // Also scan all character saves for highest tap count
+            const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${authId}_`));
+            let bestTaps=localTaps;let bestEarned=localEarned;let bestCoins=dbCoins;
+            for(const sk of saves){
+              try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");
+                if((sv.totalTaps||0)>bestTaps)bestTaps=sv.totalTaps;
+                if((sv.totalEarned||0)>bestEarned)bestEarned=sv.totalEarned;
+                if((sv.coins||0)>bestCoins)bestCoins=sv.coins;
+              }catch{}
+            }
+            {
+              const pushedTaps=Math.max(bestTaps,dbTaps);
+              const pushedEarned=Math.max(bestEarned,dbEarned);
+              const pushedCoins=Math.max(bestCoins,dbCoins);
               const uname=existing.username as string||getPlayerName(authId);
               const charId=existing.character as string||"pepe";
-              // Load character-specific coins too
-              const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${authId}_`));
-              let bestCoins=dbCoins;
-              for(const sk of saves){
-                try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");if((sv.coins||0)>bestCoins)bestCoins=sv.coins;}catch{}
-              }
-              const pushedCoins=Math.max(bestCoins,dbCoins);
               syncDB(authId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
               dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
             }
