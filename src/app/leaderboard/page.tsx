@@ -88,7 +88,8 @@ export default function Leaderboard() {
       }
     };
     fetchLB();
-    const id = setInterval(fetchLB, 2000);
+    // Ultra-aggressive polling (300ms) for instant real-time updates
+    const id = setInterval(fetchLB, 300);
     return () => clearInterval(id);
   }, []);
 

@@ -1007,7 +1007,8 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
   },[]);
   useEffect(()=>{
     load();
-    const id=setInterval(load,1500);
+    // Ultra-aggressive polling (300ms) for instant leaderboard updates
+    const id=setInterval(load,300);
     return()=>clearInterval(id);
   },[load]);
 
@@ -1624,10 +1625,17 @@ export default function TapGame() {
     const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:safeUpgrades};
     saveRef.current=mergedSave;
     persistSave(uid,mergedSave);
-    // Only syncDB if we have meaningful data — don't overwrite DB with zeros
+    // IMMEDIATE SYNC: Push stats to DB right away when starting game so other players see the update instantly
     if(safeTaps>0||safeCoins>0||Object.keys(safeUpgrades).length>0){
       syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
     }
+    // Force another sync after a short delay to ensure it reaches the database and all clients
+    setTimeout(()=>{
+      const d=liveRef.current;
+      if(d.charId===id){
+        syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
+      }
+    },150);
   }
 
   // Stable doSave — reads from liveRef so deps never change, interval never restarts
@@ -1650,6 +1658,8 @@ export default function TapGame() {
   // Save every 5s during play; save immediately on exit (cleanup)
   useEffect(()=>{
     if(screen!=="game"||!charId)return;
+    // IMMEDIATE SYNC: Sync immediately when entering game screen so other players see you right away
+    doSave();
     const id=setInterval(doSave,1000);
     return()=>{clearInterval(id);doSave();};// save on screen/char change
   },[screen,charId]);// eslint-disable-line react-hooks/exhaustive-deps
@@ -1660,7 +1670,7 @@ export default function TapGame() {
     if(rate<=0)return;
     const id=setInterval(()=>{const pt=rate/20;setCoins(c=>c+pt);setTotalEarned(t=>t+pt);setTotalTaps(t=>t+pt);
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
-      dbDebounceRef.current=setTimeout(()=>{const d=liveRef.current;if(d.charId&&d.uid){const gl=getGlobalTaps(d.uid);const st=Math.max(d.totalTaps,gl.totalTaps);const se=Math.max(d.totalEarned,gl.totalEarned);syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);}},400);
+      dbDebounceRef.current=setTimeout(()=>{const d=liveRef.current;if(d.charId&&d.uid){const gl=getGlobalTaps(d.uid);const st=Math.max(d.totalTaps,gl.totalTaps);const se=Math.max(d.totalEarned,gl.totalEarned);syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);}},100);
     },50);
     return()=>clearInterval(id);
   },[autoRate,screen,char,specialActive]);
@@ -1751,7 +1761,7 @@ export default function TapGame() {
         // Always update global tap counter so character switches preserve total
         setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
       }
-      // Fast DB write — debounced 400ms after last tap; leaderboard polls every 3s
+      // Fast DB write — debounced 100ms after last tap for instant updates
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
       dbDebounceRef.current=setTimeout(()=>{
         const d=liveRef.current;
@@ -1759,7 +1769,7 @@ export default function TapGame() {
           dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
           syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
         }
-      },400);
+      },100);
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
