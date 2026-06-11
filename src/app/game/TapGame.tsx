@@ -792,7 +792,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
   const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
 
   return(
-    <div style={{minHeight:"100vh",background:G.bg,paddingBottom:90,overflowY:"auto"}}>
+    <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
 
       {/* Sticky header */}
