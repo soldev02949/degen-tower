@@ -90,14 +90,20 @@ export default function Leaderboard() {
           const text = await resp.text();
           // Custom regex-based parser to preserve BigInt precision for games_played and total_score
           // This prevents the browser from rounding the 89Q score during JSON.parse()
-          const data = JSON.parse(text, (key, value) => {
-            if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'number') {
-              const match = text.match(new RegExp(`"${key}":\\s*(\\d+)`));
-              if (match && match[1].length > 15) return BigInt(match[1]);
+          // High-precision parser that handles each player's large numbers individually
+          const data = JSON.parse(text.replace(/:(\d{16,})/g, ':"$1"'), (key, value) => {
+            if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'string' && /^\d+$/.test(value)) {
+              return BigInt(value);
             }
             return value;
           });
-          setPlayers(data || []);
+          setPlayers((data || []).sort((a: any, b: any) => {
+            const ag = typeof a.games_played === 'bigint' ? a.games_played : BigInt(String(a.games_played || 0));
+            const bg = typeof b.games_played === 'bigint' ? b.games_played : BigInt(String(b.games_played || 0));
+            if (bg > ag) return 1;
+            if (bg < ag) return -1;
+            return 0;
+          }));
         }
       } catch (e) {
         console.error("LB fetch error", e);

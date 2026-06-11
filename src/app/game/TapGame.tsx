@@ -1014,11 +1014,10 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       });
       if(!resp.ok)throw new Error(`LB fetch ${resp.status}`);
       const text=await resp.text();
-      // Custom high-precision parser for massive scores
-      const data = JSON.parse(text, (key, value) => {
-        if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'number') {
-          const match = text.match(new RegExp(`"${key}":\\s*(\\d+)`));
-          if (match && match[1].length > 15) return BigInt(match[1]);
+      // High-precision parser that handles each player's large numbers individually
+      const data = JSON.parse(text.replace(/:(\d{16,})/g, ':"$1"'), (key, value) => {
+        if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'string' && /^\d+$/.test(value)) {
+          return BigInt(value);
         }
         return value;
       }) as LBEntry[];
@@ -1027,7 +1026,13 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       if(seq!==loadRef.current)return; // stale response, discard
       // Remove deduplication by username which was causing the "stuck" stock number issue
       // when multiple records existed for the same name.
-      setPlayers((data || []).sort((a, b) => b.games_played - a.games_played));
+      setPlayers((data || []).sort((a, b) => {
+        const ag = safeBigInt(a.games_played);
+        const bg = safeBigInt(b.games_played);
+        if (bg > ag) return 1;
+        if (bg < ag) return -1;
+        return 0;
+      }));
     }catch(e){console.error("LB fetch error",e);}
     if(seq===loadRef.current)setLoading(false);
   },[]);
@@ -1044,7 +1049,13 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
     if(!players.length) return [];
     // No more local patching - we rely on the 1s DB polling and the GREATEST-based RPC
     // This ensures that what you see is what's actually in the database for everyone.
-    return [...players].sort((a,b) => (Number(b.games_played)||0) - (Number(a.games_played)||0));
+    return [...players].sort((a,b) => {
+      const ag = safeBigInt(a.games_played);
+      const bg = safeBigInt(b.games_played);
+      if (bg > ag) return 1;
+      if (bg < ag) return -1;
+      return 0;
+    });
   },[players]);
     return(
     <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
