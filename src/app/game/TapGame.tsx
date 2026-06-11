@@ -1078,6 +1078,8 @@ export default function TapGame() {
   const saveRef=useRef<SaveData|null>(null);
   // liveRef keeps current values in sync for use by stable doSave callback
   const liveRef=useRef({charId:"",coins:0,totalEarned:0,totalTaps:0,upgrades:{} as Record<string,number>,uid:"",username:"",solWallet:"",avatarUrl:""});
+  // Debounce timer ref — fires DB write 800ms after last tap
+  const dbDebounceRef=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
@@ -1275,6 +1277,14 @@ export default function TapGame() {
         const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
         persistSave(d.uid,s);saveRef.current=s;
       }
+      // Debounced DB write — fires 800ms after last tap so leaderboard stays current
+      if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
+      dbDebounceRef.current=setTimeout(()=>{
+        const d=liveRef.current;
+        if(d.charId&&d.uid){
+          syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+        }
+      },800);
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
