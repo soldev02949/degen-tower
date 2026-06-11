@@ -111,6 +111,12 @@ export default function AdminDashboard() {
 
   // UI state
   const [search, setSearch] = useState("");
+  const [lbSearch, setLbSearch] = useState("");
+  const [lbFilter, setLbFilter] = useState<"all"|"prize"|"active"|"banned">("all");
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [copiedId, setCopiedId] = useState<string|null>(null);
+  const [quickPayModal, setQuickPayModal] = useState<Player|null>(null);
+  const [quickPayNote, setQuickPayNote] = useState("");
   const [actionModal, setActionModal] = useState<Player|null>(null);
   const [rewardModal, setRewardModal] = useState<RewardEntry|null>(null);
   const [flagModal, setFlagModal] = useState<FlaggedAccount|null>(null);
@@ -158,6 +164,31 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => { if (authed) fetchAll(); }, [authed, fetchAll]);
+
+  // Auto-refresh every 15s
+  useEffect(() => {
+    if (!authed || !autoRefresh) return;
+    const id = setInterval(fetchAll, 15000);
+    return () => clearInterval(id);
+  }, [authed, autoRefresh, fetchAll]);
+
+  function copyToClipboard(text: string, id: string) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1800);
+    });
+  }
+
+  async function logQuickPay(p: Player, note: string) {
+    await supabase.from("dt_payout_logs").insert({
+      player_id: p.wallet_address, username: p.username,
+      sol_wallet: p.sol_wallet, amount_usdc: 0,
+      tx_signature: "", notes: note || "Manual pay note",
+    });
+    showMsg(`📝 Pay note logged for ${p.username}`);
+    setQuickPayModal(null); setQuickPayNote(""); fetchAll();
+  }
 
   // ── Actions ────────────────────────────────────────────────────────────────
   async function banPlayer(p: Player, reason: string) {
@@ -325,6 +356,9 @@ export default function AdminDashboard() {
         <span style={{color:"#443355",fontSize:12,fontWeight:700}}>Admin · Security Panel</span>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
           {loading&&<span style={{color:"#555",fontSize:12}}>⏳ Loading…</span>}
+          <button onClick={()=>setAutoRefresh(v=>!v)} style={{background:autoRefresh?"rgba(34,214,122,0.1)":"rgba(255,255,255,0.04)",border:`1px solid ${autoRefresh?"rgba(34,214,122,0.3)":BORDER}`,color:autoRefresh?GREEN:"#888",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:autoRefresh?700:400}}>
+            {autoRefresh?"🟢 Live":"⏸ Auto-Refresh"}
+          </button>
           <button onClick={fetchAll} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,color:"#888",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontSize:12}}>🔄 Refresh</button>
           <button onClick={()=>setAuthed(false)} style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#ef4444",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:700}}>Log out</button>
         </div>
@@ -470,7 +504,14 @@ export default function AdminDashboard() {
                           {p.disqualified&&!p.is_banned&&<span style={{marginLeft:4,fontSize:9,color:"#ff6600"}}>DISQ</span>}
                         </td>
                         <td style={{padding:"8px 12px",color:"#443355",fontSize:10,fontFamily:"monospace"}}>{p.ip_address||"—"}</td>
-                        <td style={{padding:"8px 12px",color:"#22d67a",fontSize:10,fontFamily:"monospace"}}>{shortWallet(p.sol_wallet)}</td>
+                        <td style={{padding:"8px 8px"}}>
+                          {p.sol_wallet?(
+                            <div style={{display:"flex",alignItems:"center",gap:3}}>
+                              <span style={{color:"#22d67a",fontSize:10,fontFamily:"monospace"}} title={p.sol_wallet}>{shortWallet(p.sol_wallet)}</span>
+                              <button onClick={()=>copyToClipboard(p.sol_wallet,p.id+"_pw")} style={{background:"none",border:"none",color:copiedId===p.id+"_pw"?GREEN:"#22d67a55",fontSize:10,cursor:"pointer",padding:"0 2px"}} title={p.sol_wallet}>{copiedId===p.id+"_pw"?"✅":"📋"}</button>
+                            </div>
+                          ):<span style={{color:"#333",fontSize:10}}>—</span>}
+                        </td>
                         <td style={{padding:"8px 12px",color:r.color,fontWeight:700}}>Lv.{lv}</td>
                         <td style={{padding:"8px 12px",color:"#888"}}>{fmt(p.games_played||0)}</td>
                         <td style={{padding:"8px 12px"}}>
@@ -570,8 +611,13 @@ export default function AdminDashboard() {
                       </td>
                       <td style={{padding:"8px 12px",color:"#fff",fontWeight:700}}>{r.username||"—"}</td>
                       <td style={{padding:"8px 12px",color:"#888"}}>{fmt(r.games_played||0)}</td>
-                      <td style={{padding:"8px 12px",color:r.sol_wallet?"#22d67a":"#ef4444",fontSize:10,fontFamily:"monospace"}}>
-                        {r.sol_wallet?shortWallet(r.sol_wallet):<span>⚠ No wallet</span>}
+                      <td style={{padding:"8px 8px"}}>
+                        {r.sol_wallet?(
+                          <div style={{display:"flex",alignItems:"center",gap:3}}>
+                            <span style={{color:"#22d67a",fontSize:10,fontFamily:"monospace"}} title={r.sol_wallet}>{shortWallet(r.sol_wallet)}</span>
+                            <button onClick={()=>copyToClipboard(r.sol_wallet,r.id+"_rw")} style={{background:"none",border:"none",color:copiedId===r.id+"_rw"?GREEN:"#22d67a55",fontSize:10,cursor:"pointer",padding:"0 2px"}} title={r.sol_wallet}>{copiedId===r.id+"_rw"?"✅":"📋"}</button>
+                          </div>
+                        ):<span style={{color:RED,fontSize:10}}>⚠ No wallet</span>}
                       </td>
                       <td style={{padding:"8px 12px",color:GOLD,fontWeight:900}}>{r.reward_amount_usdc>0?`$${r.reward_amount_usdc}`:"—"}</td>
                       <td style={{padding:"8px 12px",color:"#2a1540",fontSize:10}}>{r.period_end?new Date(r.period_end).toLocaleDateString():"—"}</td>
@@ -715,30 +761,59 @@ export default function AdminDashboard() {
         )}
 
         {/* ── LEADERBOARD ── */}
-        {tab==="leaderboard"&&(
+        {tab==="leaderboard"&&(()=>{
+          const lbPlayers=players.filter(p=>{
+            const matchSearch=!lbSearch||(p.username||"").toLowerCase().includes(lbSearch.toLowerCase())||(p.sol_wallet||"").toLowerCase().includes(lbSearch.toLowerCase());
+            const matchFilter=lbFilter==="all"||(lbFilter==="prize"&&players.indexOf(p)<20&&!p.is_banned&&!p.disqualified)||(lbFilter==="active"&&!p.is_banned&&!p.disqualified)||(lbFilter==="banned"&&(p.is_banned||p.disqualified));
+            return matchSearch&&matchFilter;
+          });
+          return(
           <>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
               <div>
                 <h3 style={{color:"#fff",fontWeight:900,margin:"0 0 2px",fontSize:16}}>🏆 Live Leaderboard</h3>
-                <p style={{color:"#2a1540",fontSize:12,margin:0}}>Ranked by total taps · Top 20 are prize eligible</p>
+                <p style={{color:"#2a1540",fontSize:12,margin:0}}>Ranked by total taps · Top 20 prize eligible · {lbPlayers.length} shown</p>
               </div>
-              <button onClick={fetchAll} style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.3)",color:PURPLE,borderRadius:10,padding:"7px 16px",cursor:"pointer",fontSize:12,fontWeight:700}}>🔄 Refresh</button>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                <button onClick={()=>exportCSV(lbPlayers,"leaderboard_export.csv")} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,color:"#888",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:11}}>⬇ Export</button>
+                <button onClick={fetchAll} style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.3)",color:PURPLE,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:11,fontWeight:700}}>🔄 Refresh</button>
+              </div>
             </div>
 
-            {players.length>=3&&(
+            {/* Search + Filter row */}
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+              <input value={lbSearch} onChange={e=>setLbSearch(e.target.value)} placeholder="Search username or wallet…"
+                style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:12,padding:"8px 14px",outline:"none",width:240}}/>
+              {(["all","prize","active","banned"] as const).map(f=>(
+                <button key={f} onClick={()=>setLbFilter(f)} style={{
+                  background:lbFilter===f?"rgba(168,85,247,0.15)":"rgba(255,255,255,0.03)",
+                  border:`1px solid ${lbFilter===f?"rgba(168,85,247,0.4)":BORDER}`,
+                  color:lbFilter===f?PURPLE:"#555",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:11,fontWeight:lbFilter===f?700:400,
+                }}>{f==="all"?"All":f==="prize"?"💰 Prize Eligible":f==="active"?"✅ Active":"🚫 Banned/Disq"}</button>
+              ))}
+            </div>
+
+            {/* Top 3 podium */}
+            {players.length>=3&&lbFilter==="all"&&!lbSearch&&(
               <div style={{display:"flex",gap:10,alignItems:"flex-end",justifyContent:"center",marginBottom:16,maxWidth:500,margin:"0 auto 16px"}}>
                 {[players[1],players[0],players[2]].map((p,pos)=>{
                   if(!p)return null;
                   const lv=getLevelFromXP(p.total_score||0);
                   const r=getRankFromLevel(lv);
                   const medals=["🥈","🥇","🥉"];
+                  const heights=["90%","100%","85%"];
                   return(
-                    <div key={p.id} style={{flex:1,background:CARD,border:`1px solid ${pos===1?"rgba(245,200,66,0.3)":BORDER}`,borderRadius:16,padding:"14px 10px",textAlign:"center"}}>
+                    <div key={p.id} style={{flex:1,background:CARD,border:`1px solid ${pos===1?"rgba(245,200,66,0.3)":BORDER}`,borderRadius:16,padding:"14px 10px",textAlign:"center",alignSelf:pos===1?"flex-start":"auto"}}>
                       <div style={{fontSize:26,marginBottom:4}}>{medals[pos]}</div>
                       <div style={{fontSize:22,marginBottom:4}}>{CE[p.character]||"🎮"}</div>
                       <div style={{color:"#fff",fontWeight:800,fontSize:12,marginBottom:2}}>{p.username||"Anon"}</div>
                       <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} {r.name}</div>
                       <div style={{color:GOLD,fontWeight:900,fontSize:13,marginTop:4}}>👆{fmt(p.games_played||0)}</div>
+                      {p.sol_wallet&&(
+                        <button onClick={()=>copyToClipboard(p.sol_wallet,p.id+"_top")} style={{marginTop:6,background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.2)",borderRadius:6,color:copiedId===p.id+"_top"?GREEN:"#22d67a88",fontSize:9,fontWeight:700,padding:"3px 8px",cursor:"pointer",width:"100%"}}>
+                          {copiedId===p.id+"_top"?"✅ Copied!":"📋 Copy Wallet"}
+                        </button>
+                      )}
                       {(p.is_banned||p.disqualified)&&<div style={{color:RED,fontSize:9,marginTop:2,fontWeight:700}}>{p.is_banned?"BANNED":"DISQ"}</div>}
                     </div>
                   );
@@ -750,45 +825,64 @@ export default function AdminDashboard() {
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                 <thead>
                   <tr style={{background:"rgba(255,255,255,0.03)"}}>
-                    {["Rank","","Username","Wallet","Level","Taps","Coins","Status","Actions"].map(h=>(
+                    {["Rank","","Username","Wallet (click to copy)","Level","Taps","Coins","Status","Actions"].map(h=>(
                       <th key={h} style={{padding:"10px 12px",textAlign:"left",color:"#2a1540",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {players.map((p,i)=>{
+                  {lbPlayers.map((p)=>{
+                    const i=players.indexOf(p);
                     const lv=getLevelFromXP(p.total_score||0);
                     const r=getRankFromLevel(lv);
                     const isPrize=i<20;
                     const isBad=p.is_banned||p.disqualified;
                     const medal=i===0?"👑":i===1?"🥈":i===2?"🥉":"";
+                    const walletCopied=copiedId===p.id+"_wallet";
                     return(
-                      <tr key={p.id} style={{borderBottom:i===19?`1px solid rgba(34,214,122,0.3)`:i<players.length-1?`1px solid ${BORDER}`:"none",background:isBad?"rgba(239,68,68,0.04)":isPrize?"rgba(34,214,122,0.01)":"transparent"}}
+                      <tr key={p.id} style={{borderBottom:i===19?`1px solid rgba(34,214,122,0.3)`:`1px solid ${BORDER}`,background:isBad?"rgba(239,68,68,0.04)":isPrize?"rgba(34,214,122,0.01)":"transparent"}}
                         onMouseEnter={e=>(e.currentTarget.style.background=isBad?"rgba(239,68,68,0.07)":isPrize?"rgba(34,214,122,0.03)":"rgba(255,255,255,0.02)")}
                         onMouseLeave={e=>(e.currentTarget.style.background=isBad?"rgba(239,68,68,0.04)":isPrize?"rgba(34,214,122,0.01)":"transparent")}>
                         <td style={{padding:"8px 12px",color:isPrize?GREEN:"#2a1540",fontWeight:900}}>{medal||`#${i+1}`}</td>
                         <td style={{padding:"8px 12px",fontSize:16}}>{CE[p.character]||"🎮"}</td>
                         <td style={{padding:"8px 12px",color:isBad?"#ef4444":"#fff",fontWeight:700}}>
                           {p.username||"—"}
-                          {isPrize&&!isBad&&<span style={{marginLeft:4,fontSize:9,color:GREEN,fontWeight:800}}>💰PRIZE</span>}
+                          {isPrize&&!isBad&&<span style={{marginLeft:4,fontSize:9,color:GREEN,fontWeight:800}}>💰</span>}
                           {isBad&&<span style={{marginLeft:4,fontSize:9,color:RED}}>{p.is_banned?"BANNED":"DISQ"}</span>}
                         </td>
-                        <td style={{padding:"8px 12px",color:p.sol_wallet?GREEN:RED,fontSize:10,fontFamily:"monospace"}}>{p.sol_wallet?shortWallet(p.sol_wallet):"⚠ None"}</td>
+                        <td style={{padding:"8px 8px"}}>
+                          {p.sol_wallet?(
+                            <div style={{display:"flex",alignItems:"center",gap:4}}>
+                              <span style={{color:"#22d67a",fontSize:10,fontFamily:"monospace"}} title={p.sol_wallet}>{shortWallet(p.sol_wallet)}</span>
+                              <button
+                                onClick={()=>copyToClipboard(p.sol_wallet,p.id+"_wallet")}
+                                title={p.sol_wallet}
+                                style={{background:walletCopied?"rgba(34,214,122,0.15)":"rgba(34,214,122,0.06)",border:`1px solid ${walletCopied?"rgba(34,214,122,0.4)":"rgba(34,214,122,0.15)"}`,borderRadius:6,color:walletCopied?GREEN:"#22d67a88",fontSize:9,fontWeight:800,padding:"2px 7px",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+                                {walletCopied?"✅ Copied!":"📋"}
+                              </button>
+                            </div>
+                          ):<span style={{color:RED,fontSize:10}}>⚠ None</span>}
+                        </td>
                         <td style={{padding:"8px 12px",color:r.color,fontWeight:700}}>{r.emoji} Lv.{lv}</td>
                         <td style={{padding:"8px 12px",color:GOLD,fontWeight:900}}>👆{fmt(p.games_played||0)}</td>
                         <td style={{padding:"8px 12px",color:"#888"}}>{fmt(p.total_score||0)}</td>
                         <td style={{padding:"8px 12px"}}>{isBad?<Pill status={p.is_banned?"banned":"disqualified"}/>:<Pill status="active"/>}</td>
-                        <td style={{padding:"8px 12px"}}>
-                          <button onClick={()=>setActionModal(p)} style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:7,color:PURPLE,fontSize:10,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>Actions ▼</button>
+                        <td style={{padding:"8px 8px"}}>
+                          <div style={{display:"flex",gap:4}}>
+                            <button onClick={()=>setActionModal(p)} style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:7,color:PURPLE,fontSize:10,fontWeight:700,padding:"5px 8px",cursor:"pointer"}}>⚙</button>
+                            {p.sol_wallet&&<button onClick={()=>{setQuickPayModal(p);setQuickPayNote("");}} style={{background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.2)",borderRadius:7,color:GREEN,fontSize:10,fontWeight:700,padding:"5px 8px",cursor:"pointer"}} title="Quick pay / log payment">💸</button>}
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
+                  {lbPlayers.length===0&&<tr><td colSpan={9} style={{padding:40,textAlign:"center",color:"#222"}}>No players match filter</td></tr>}
                 </tbody>
               </table>
             </div>
           </>
-        )}
+          );
+        })()}
       </div>
 
       {/* ── MODALS ── */}
@@ -919,6 +1013,45 @@ export default function AdminDashboard() {
               style={{width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:8,color:"#fff",fontSize:12,padding:"9px 12px",outline:"none",boxSizing:"border-box"}}/>
           </div>
           <button onClick={()=>clearFlag(flagModal)} style={{width:"100%",padding:"12px",background:"rgba(34,214,122,0.1)",border:"1px solid rgba(34,214,122,0.3)",borderRadius:12,color:GREEN,fontWeight:800,cursor:"pointer",fontSize:13}}>✅ Clear Flag</button>
+        </Modal>
+      )}
+
+      {/* Quick Pay modal */}
+      {quickPayModal&&(
+        <Modal title={`💸 Pay ${quickPayModal.username||"Player"}`} onClose={()=>setQuickPayModal(null)}>
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"12px 14px",background:"rgba(255,255,255,0.03)",borderRadius:12}}>
+              <span style={{fontSize:32}}>{CE[quickPayModal.character]||"🎮"}</span>
+              <div>
+                <div style={{color:"#fff",fontWeight:900,fontSize:15}}>{quickPayModal.username||"—"}</div>
+                <div style={{color:"#2a1540",fontSize:11}}>Rank #{players.indexOf(quickPayModal)+1} · 👆{fmt(quickPayModal.games_played||0)} taps</div>
+              </div>
+            </div>
+
+            <div style={{marginBottom:14}}>
+              <div style={{color:"#443355",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>SOL Wallet Address</div>
+              <div style={{display:"flex",gap:6,alignItems:"center",background:"rgba(0,0,0,0.3)",borderRadius:10,padding:"10px 12px"}}>
+                <span style={{color:GREEN,fontSize:11,fontFamily:"monospace",flex:1,wordBreak:"break-all"}}>{quickPayModal.sol_wallet}</span>
+                <button onClick={()=>copyToClipboard(quickPayModal.sol_wallet,quickPayModal.id+"_qp")} style={{
+                  background:copiedId===quickPayModal.id+"_qp"?"rgba(34,214,122,0.2)":"rgba(34,214,122,0.08)",
+                  border:`1px solid ${copiedId===quickPayModal.id+"_qp"?"rgba(34,214,122,0.5)":"rgba(34,214,122,0.2)"}`,
+                  borderRadius:8,color:GREEN,fontSize:11,fontWeight:800,padding:"6px 14px",cursor:"pointer",flexShrink:0,
+                }}>{copiedId===quickPayModal.id+"_qp"?"✅ Copied!":"📋 Copy"}</button>
+              </div>
+            </div>
+
+            <div>
+              <label style={{color:"#443355",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",display:"block",marginBottom:6}}>Payment Note (logged to payout history)</label>
+              <input value={quickPayNote} onChange={e=>setQuickPayNote(e.target.value)} placeholder="e.g. Week 1 prize — $10 USDC, TX: abc123…"
+                style={{width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:8,color:"#fff",fontSize:12,padding:"9px 12px",outline:"none",boxSizing:"border-box"}}/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <button onClick={()=>copyToClipboard(quickPayModal.sol_wallet,quickPayModal.id+"_qp2")} style={{padding:"12px",background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.25)",borderRadius:12,color:GREEN,fontWeight:800,cursor:"pointer",fontSize:13}}>
+              {copiedId===quickPayModal.id+"_qp2"?"✅ Copied!":"📋 Copy Wallet"}
+            </button>
+            <button onClick={()=>logQuickPay(quickPayModal,quickPayNote)} style={{padding:"12px",background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.3)",borderRadius:12,color:PURPLE,fontWeight:800,cursor:"pointer",fontSize:13}}>📝 Log to History</button>
+          </div>
         </Modal>
       )}
 
