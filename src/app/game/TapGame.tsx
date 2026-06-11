@@ -303,7 +303,42 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
       },
       body:JSON.stringify(rpcPayload),
     });
-  }catch(e){console.error("syncDB error",e);}
+  }catch(e){console.error("[syncDB] error",e);logSyncError(pid,"syncDB_exception",String(e),totalTaps);}
+}
+
+// ─── DEDICATED TAP SYNC (fully independent of earned/currency) ───────────────
+// This function ONLY writes games_played (taps). It never touches total_score.
+// Even if earned values overflow or have issues, taps still sync correctly.
+async function syncTaps(pid:string,uname:string,charId:string,taps:number){
+  if(!pid||taps<=0)return;
+  let authToken=SUPA_KEY_CONST;
+  try{const{supabase}=await import("@/lib/supabase");const{data:{session}}=await supabase.auth.getSession();if(session?.access_token)authToken=session.access_token;}catch{}
+  try{
+    const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/sync_taps_only`,{
+      method:"POST",
+      headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache"},
+      body:JSON.stringify({p_wallet_address:pid,p_username:uname||("Degen_"+pid.slice(-6)),p_character:charId||"pepe",p_games_played:Math.floor(taps),p_last_seen:new Date().toISOString()}),
+    });
+    if(!resp.ok){
+      const errText=await resp.text();
+      console.error("[syncTaps] DB rejected write — pid:",pid,"taps:",taps,"err:",errText);
+      logSyncError(pid,"syncTaps_http_error",errText,taps);
+    }
+  }catch(e){
+    console.error("[syncTaps] Network error — pid:",pid,"taps:",taps,"err:",e);
+    logSyncError(pid,"syncTaps_network_error",String(e),taps);
+  }
+}
+
+// Store sync errors to localStorage so they surface in admin / debugging
+function logSyncError(pid:string,type:string,msg:string,taps:number){
+  if(typeof window==="undefined")return;
+  try{
+    const key="degen_sync_errors";
+    const existing=JSON.parse(localStorage.getItem(key)||"[]");
+    existing.unshift({pid,type,msg:msg.slice(0,200),taps,ts:new Date().toISOString()});
+    localStorage.setItem(key,JSON.stringify(existing.slice(0,20)));// keep last 20
+  }catch{}
 }
 
 interface Particle { id:number; x:number; y:number; value:string; color:string; big:boolean; }
@@ -367,7 +402,7 @@ function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string
 }
 
 // ─── BOTTOM BAR (glass) ──────────────────────────────────────────────────────
-const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
+const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Submit",emoji:"📸"},{id:"settings",label:"Settings",emoji:"⚙️"}];
 
 function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
   const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="settings"?"#888":"#c084fc";
@@ -939,240 +974,23 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
   );
 }
 
-// ─── LEADERBOARD TAB (glass) ─────────────────────────────────────────────────
+// ─── LEADERBOARD TAB → SUBMIT SCORE (no player-facing leaderboard) ──────────────────
+// Leaderboard is admin-only. Players see the Submit Score screen here.
 function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveAvatarUrl?:string;liveCharId:string}){
-  const [players,setPlayers]=useState<LBEntry[]>([]);
-  const [loading,setLoading]=useState(true);
-  const cd=useCountdown();
-  const [view,setView]=useState<"top3"|"list">("top3");
-  const CE:Record<string,string>={pepe:"🐸",gigachad:"💪",trump:"🎩",troll:"🧌",bonk:"🐕"};
-
-  const loadRef=useRef(0);
-  const load=useCallback(async()=>{
-    const seq=++loadRef.current;
-    try{
-      const{supabase}=await import("@/lib/supabase");
-      // Bypass any client-side cache by querying with a timestamp condition that's always true
-      // Use raw fetch with no-cache to guarantee fresh data from Postgres
-      const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
-      const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
-      const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&order=games_played.desc&limit=200`,{
-        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
-        cache:"no-store",
-      });
-      if(!resp.ok)throw new Error(`LB fetch ${resp.status}`);
-      const data=await resp.json() as LBEntry[];
-      const error=null;
-      if(error){console.error("LB error",error);return;}
-      if(seq!==loadRef.current)return; // stale response, discard
-      // Remove deduplication by username which was causing the "stuck" stock number issue
-      // when multiple records existed for the same name.
-      setPlayers((data || []).sort((a, b) => b.games_played - a.games_played));
-    }catch(e){console.error("LB fetch error",e);}
-    if(seq===loadRef.current)setLoading(false);
-  },[]);
-  useEffect(()=>{
-    load();
-    const id=setInterval(load,1000);
-    return()=>clearInterval(id);
-  },[load]);
-
-    const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
-  // Read live taps directly from localStorage on a 500ms interval — completely independent
-  // of DB polls and game state. Works even when user is on leaderboard tab while playing in another tab.
-  const readLocalTaps=useCallback(()=>{
-    if(!myPlayerId)return{taps:0,earned:0};
-    try{
-      const raw=localStorage.getItem(`degen_global_${myPlayerId}`);
-      if(!raw)return{taps:0,earned:0};
-      const d=JSON.parse(raw);
-      return{taps:Number(d.totalTaps)||0,earned:Number(d.totalEarned)||0};
-    }catch{return{taps:0,earned:0};}
-  },[myPlayerId]);
-  const [localSnapshot,setLocalSnapshot]=useState(()=>readLocalTaps());
-  useEffect(()=>{
-    setLocalSnapshot(readLocalTaps());
-    const id=setInterval(()=>setLocalSnapshot(readLocalTaps()),500);
-    return()=>clearInterval(id);
-  },[readLocalTaps]);
-  const displayPlayers=useMemo(()=>{
-    if(!myPlayerId||!players.length)return players;
-    const effectiveTaps=Math.max(liveTaps,localSnapshot.taps);
-    const effectiveEarned=Math.max(liveEarned,localSnapshot.earned);
-    const patched=players.map(p=>{
-      // Use both id and wallet_address to ensure we match the current player correctly
-      if(p.wallet_address!==myPlayerId && p.id!==myPlayerId)return p;
-      return{...p,games_played:Math.max(p.games_played,effectiveTaps),total_score:Math.max(p.total_score,effectiveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
-    });
-    const exists=patched.some(p=>(p.wallet_address===myPlayerId || p.id===myPlayerId));
-    if(!exists&&effectiveTaps>0){
-      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:effectiveEarned,games_played:effectiveTaps,avatar_url:liveAvatarUrl});
-    }
-    return patched.sort((a,b)=>b.games_played-a.games_played);
-  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId,localSnapshot]);
-    return(
-    <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
-      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
-
-      {/* Sticky header */}
-      <div style={{position:"sticky",top:0,zIndex:10,background:"rgba(6,0,15,0.92)",borderBottom:`1px solid ${G.border}`,padding:"12px 16px",backdropFilter:G.blur}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-          <div>
-            <h2 style={{color:"#fff",fontWeight:900,fontSize:17,margin:0,letterSpacing:"-0.02em"}}>🏆 Leaderboard</h2>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:"#22d67a",boxShadow:"0 0 6px #22d67a",animation:"pulseDot 1.2s infinite"}}/>
-              <span style={{color:"#22d67a",fontSize:9,fontWeight:700}}>LIVE</span>
-              <span style={{color:"#2a1540",fontSize:9,marginLeft:4}}>Resets in</span>
-              <span style={{color:"#f5c842",fontWeight:900,fontSize:12,fontVariantNumeric:"tabular-nums"}}>{cd}</span>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <div style={{display:"flex",background:G.glass,border:`1px solid ${G.border}`,borderRadius:10,overflow:"hidden"}}>
-              {([["top3","🏅 Top 3"],["list","📋 List"]] as const).map(([v,label])=>(
-                <button key={v} onClick={()=>setView(v)} style={{background:view===v?G.purpleDim:"transparent",border:"none",color:view===v?"#a855f7":"#444",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer"}}>{label}</button>
-              ))}
-            </div>
-            <button onClick={load} style={{background:G.glass,border:`1px solid ${G.border}`,color:"#555",borderRadius:10,padding:"6px 10px",cursor:"pointer",fontSize:12}}>↻</button>
-          </div>
-        </div>
-        {/* Prize info */}
-        <div style={{background:"rgba(245,200,66,0.05)",border:"1px solid rgba(245,200,66,0.12)",borderRadius:10,padding:"6px 10px",display:"flex",gap:6,alignItems:"center"}}>
-          <span style={{fontSize:12}}>💰</span>
-          <span style={{color:"#7a6020",fontSize:10,fontWeight:700}}>Top 20 players receive USDC every 7 days. Must have a Solana wallet set in Settings.</span>
+  return(
+    <div style={{flex:1,overflowY:"auto",paddingTop:16}}>
+      <div style={{textAlign:"center",padding:"24px 16px 8px"}}>
+        <div style={{fontSize:36,marginBottom:8}}>🏆</div>
+        <div style={{color:"#c084fc",fontWeight:900,fontSize:18,marginBottom:6}}>Weekly Competition</div>
+        <div style={{color:"#888",fontSize:13,lineHeight:1.6,maxWidth:300,margin:"0 auto"}}>
+          Screenshot your best score from the <span style={{color:"#f5c842",fontWeight:700}}>Home tab</span> and submit it below.<br/>
+          <span style={{color:"#555",fontSize:11}}>Winners are verified by the admin team.</span>
         </div>
       </div>
-
-      {loading?(
-        <div style={{padding:64,textAlign:"center",color:"#2a1540"}}>
-          <div style={{fontSize:36,marginBottom:12,animation:"pulseDot 1s infinite"}}>⏳</div>
-          <div style={{fontWeight:700}}>Loading rankings...</div>
-        </div>
-      ):players.length===0?(
-        <div style={{padding:64,textAlign:"center"}}>
-          <div style={{fontSize:52,marginBottom:12}}>🏆</div>
-          <div style={{color:"#3a2255",fontSize:15,fontWeight:800}}>No players yet</div>
-          <div style={{color:"#2a1540",fontSize:12,marginTop:4}}>Be the first to claim the top spot!</div>
-        </div>
-      ):view==="top3"?(
-        <div style={{position:"relative",zIndex:1,padding:"20px 16px 0"}}>
-
-          {/* Top 3 podium */}
-          {players.length>=1&&(
-            <div style={{display:"flex",gap:10,alignItems:"flex-end",justifyContent:"center",marginBottom:20}}>
-              {/* 2nd */}
-              {displayPlayers[1]&&(()=>{const p=displayPlayers[1];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
-                return(
-                  <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(180,180,180,0.1)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
-                    <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px silver)"}}>🥈</div>
-                    <div style={{fontSize:28,marginBottom:6,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={36}/></div>
-                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}{p.username||"Anon"}{me&&" 👈"}</div>
-                    <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
-                    <div style={{color:"#aaa",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
-                  </div>
-                );
-              })()}
-              {/* 1st — taller */}
-              {displayPlayers[0]&&(()=>{const p=displayPlayers[0];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
-                return(
-                  <div style={{
-                    flex:1,
-                    background:me?"rgba(168,85,247,0.12)":"linear-gradient(145deg,rgba(245,200,66,0.08),rgba(245,200,66,0.03))",
-                    border:`2px solid ${me?"rgba(168,85,247,0.5)":"rgba(245,200,66,0.35)"}`,
-                    borderRadius:22,padding:"20px 12px",textAlign:"center",maxWidth:160,
-                    boxShadow:`0 0 40px rgba(245,200,66,0.12)`,
-                    marginBottom:14,
-                  }}>
-                    <div style={{fontSize:36,marginBottom:8,filter:"drop-shadow(0 0 12px gold)"}}>👑</div>
-                    <div style={{fontSize:36,marginBottom:8,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={44}/></div>
-                    <div style={{color:"#fff",fontWeight:900,fontSize:14,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{isOnline(p.last_seen)&&<span style={{width:8,height:8,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 6px #22d67a",display:"inline-block"}}/>}{p.username||"Anon"}{me&&" 👈"}</div>
-                    <div style={{background:`${r.color}20`,border:`1px solid ${r.color}40`,borderRadius:8,padding:"3px 10px",fontSize:9,color:r.color,fontWeight:800,marginBottom:8,display:"inline-block"}}>{r.emoji} Lv.{lv} {r.name}</div>
-                    <div style={{color:"#f5c842",fontWeight:900,fontSize:16,filter:"drop-shadow(0 0 6px rgba(245,200,66,0.5))"}}>👆 {fmt(p.games_played||0)}</div>
-                  </div>
-                );
-              })()}
-              {/* 3rd */}
-              {displayPlayers[2]&&(()=>{const p=displayPlayers[2];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
-                return(
-                  <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(205,127,50,0.15)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
-                    <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px #cd7f32)"}}>🥉</div>
-                    <div style={{fontSize:28,marginBottom:6,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={36}/></div>
-                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}{p.username||"Anon"}{me&&" 👈"}</div>
-                    <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
-                    <div style={{color:"#cd7f32",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* Rest of list (4-20+) */}
-          <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
-            {displayPlayers.slice(3).map((p,i)=>{
-              const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);
-              const me=p.wallet_address===myPlayerId;const isPrize=i+3<20;
-              return(
-                <div key={p.id} style={{
-                  display:"flex",alignItems:"center",gap:10,
-                  padding:"10px 14px",
-                  borderBottom:i+3===19?`1px solid rgba(34,214,122,0.3)`:`1px solid rgba(255,255,255,0.04)`,
-                  background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent",
-                }}>
-                  <div style={{color:isPrize?"#22d67a":"#2a1540",fontWeight:900,fontSize:13,width:26,textAlign:"center",flexShrink:0}}>#{i+4}</div>
-                  <div style={{fontSize:22,flexShrink:0,display:"flex",alignItems:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={28}/></div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:me?"#c084fc":"#ddd",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
-                      {isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}
-                      {p.username||"Anon"}{me&&" 👈"}
-                      {isPrize&&<span style={{marginLeft:6,fontSize:9,color:"#22d67a",fontWeight:800}}>💰PRIZE</span>}
-                    </div>
-                    <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
-                  </div>
-                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>👆 {fmt(p.games_played||0)}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ):(
-        <div style={{position:"relative",zIndex:1,padding:"16px"}}>
-          <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
-            {displayPlayers.map((p,i)=>{
-              const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);
-              const me=p.wallet_address===myPlayerId;const isPrize=i<20;
-              const medalEmoji=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
-              return(
-                <div key={p.id} style={{
-                  display:"flex",alignItems:"center",gap:10,
-                  padding:"11px 14px",
-                  borderBottom:i===19?`1px solid rgba(34,214,122,0.3)`:i<players.length-1?`1px solid rgba(255,255,255,0.04)`:"none",
-                  background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent",
-                }}>
-                  <div style={{width:26,textAlign:"center",flexShrink:0,fontWeight:900,fontSize:13,color:medalEmoji?undefined:isPrize?"#22d67a":"#2a1540"}}>
-                    {medalEmoji||`#${i+1}`}
-                  </div>
-                  <div style={{flexShrink:0,display:"flex",alignItems:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={28}/></div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:me?"#c084fc":"#ccc",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
-                      {isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}
-                      {p.username||"Anon"}{me&&" 👈"}
-                      {isPrize&&<span style={{marginLeft:5,fontSize:9,color:"#22d67a",fontWeight:800}}>💰</span>}
-                    </div>
-                    <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
-                  </div>
-                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>👆 {fmt(p.games_played||0)}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── SUBMIT SCORE SECTION ── */}
       <SubmitScoreSection myPlayerId={myPlayerId} liveTaps={liveTaps} liveEarned={liveEarned} liveUsername={liveUsername} liveCharId={liveCharId}/>
     </div>
   );
 }
-
 // ─── SUBMIT SCORE SECTION ─────────────────────────────────────────────────────
 function SubmitScoreSection({myPlayerId,liveTaps,liveEarned,liveUsername,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveCharId:string}){
   const SUPA_URL=SUPA_URL_CONST;
@@ -1506,6 +1324,9 @@ export default function TapGame() {
       const upgrades=liveRef.current.upgrades||{};
       const wallet=liveRef.current.solWallet||getPlayerWallet(uid)||undefined;
       const av=liveRef.current.avatarUrl||avatarUrl||undefined;
+      // TAPS: use dedicated independent RPC — never affected by earned overflow
+      syncTaps(uid,name,cid,bestTaps);
+      // Full sync (earned, coins, upgrades) separately — if it fails, taps already saved above
       syncDB(uid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
       setGlobalTaps(uid,bestTaps,bestEarned);
     },2000);
@@ -1707,6 +1528,9 @@ export default function TapGame() {
     persistSave(d.uid,s);saveRef.current=s;
     setGlobalTaps(d.uid,safeTaps,safeEarned);
     dbValuesRef.current={totalTaps:safeTaps,totalEarned:safeEarned,coins:d.coins,upgrades:d.upgrades};
+    // TAPS FIRST — independent, cannot fail due to earned overflow
+    syncTaps(d.uid,d.username||getPlayerName(d.uid),d.charId,safeTaps);
+    // Full sync (earned, coins, upgrades) — secondary, taps already safe above
     syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,safeEarned,safeTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
   },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
