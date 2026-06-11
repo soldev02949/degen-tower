@@ -85,6 +85,17 @@ function setPlayerWallet(w:string,uid:string=""){ const k=uid?`degen_sol_wallet_
 function getAvatar(uid:string=""){ const k=uid?`degen_avatar_${uid}`:"degen_avatar"; try{return localStorage.getItem(k)||"";}catch{return "";} }
 function setAvatarStore(a:string,uid:string=""){ const k=uid?`degen_avatar_${uid}`:"degen_avatar"; try{localStorage.setItem(k,a);}catch{} }
 
+// ── Global tap counter (shared across all characters) ────────────────────────
+function getGlobalTaps(uid:string):{totalTaps:number;totalEarned:number}{
+  if(typeof window==="undefined")return{totalTaps:0,totalEarned:0};
+  try{ const r=localStorage.getItem(uid?`degen_global_${uid}`:"degen_global"); if(r){ const d=JSON.parse(r); return{totalTaps:d.totalTaps||0,totalEarned:d.totalEarned||0}; } }catch{}
+  return{totalTaps:0,totalEarned:0};
+}
+function setGlobalTaps(uid:string,totalTaps:number,totalEarned:number){
+  if(typeof window==="undefined")return;
+  try{ localStorage.setItem(uid?`degen_global_${uid}`:"degen_global",JSON.stringify({totalTaps:Math.floor(totalTaps),totalEarned})); }catch{}
+}
+
 interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:number; upgrades:Record<string,number>; highScore:number; }
 
 function loadSave(uid:string,charId:string):SaveData{
@@ -1161,10 +1172,13 @@ export default function TapGame() {
   function startGame(id:string,name:string,wallet?:string){
     const uid=user?.id||playerId;
     const s=loadSave(uid,id);
-    // DB is source of truth — never load a value lower than what's in DB
-    const safeTaps=Math.max(s.totalTaps, dbValuesRef.current?.totalTaps||0);
-    const safeEarned=Math.max(s.totalEarned, dbValuesRef.current?.totalEarned||0);
-    const safeCoins=safeTaps>s.totalTaps ? safeEarned : s.coins;
+    // Taps are GLOBAL across all characters — take highest of: global local, per-char local, DB
+    const globalLocal=getGlobalTaps(uid);
+    const safeTaps=Math.max(globalLocal.totalTaps, s.totalTaps, dbValuesRef.current?.totalTaps||0);
+    const safeEarned=Math.max(globalLocal.totalEarned, s.totalEarned, dbValuesRef.current?.totalEarned||0);
+    // Update global store with the safe value so future character switches keep it
+    setGlobalTaps(uid,safeTaps,safeEarned);
+    const safeCoins=s.coins;// coins are character-specific
     setCharId(id);setCoins(safeCoins);setTotalEarned(safeEarned);setTotalTaps(safeTaps);
     setUpgrades(s.upgrades);
     const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;
@@ -1183,6 +1197,8 @@ export default function TapGame() {
     if(!d.charId)return;
     const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
     persistSave(d.uid,s);saveRef.current=s;
+    setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
+    dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned};
     syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
   },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1274,14 +1290,19 @@ export default function TapGame() {
     setTimeout(()=>{
       const d=liveRef.current;
       if(d.charId&&d.uid){
+        // Save character-specific data (coins, upgrades)
         const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
         persistSave(d.uid,s);saveRef.current=s;
+        // Always update global tap counter so character switches preserve total
+        setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
       }
       // Debounced DB write — fires 800ms after last tap so leaderboard stays current
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
       dbDebounceRef.current=setTimeout(()=>{
         const d=liveRef.current;
         if(d.charId&&d.uid){
+          // Update dbValuesRef so next character switch uses fresh values
+          dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned};
           syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
         }
       },800);
