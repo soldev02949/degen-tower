@@ -246,15 +246,25 @@ function setAvatarStore(a:string,uid:string=""){ const k=uid?`degen_avatar_${uid
 // ── Global tap counter (shared across all characters) ────────────────────────
 function getGlobalTaps(uid:string):{totalTaps:number;totalEarned:number}{
   if(typeof window==="undefined")return{totalTaps:0,totalEarned:0};
-  try{ const r=localStorage.getItem(uid?`degen_global_${uid}`:"degen_global"); if(r){ const d=JSON.parse(r); return{totalTaps:d.totalTaps||0,totalEarned:d.totalEarned||0}; } }catch{}
+  try{ 
+    const r=localStorage.getItem(uid?`degen_global_${uid}`:"degen_global"); 
+    if(r){ 
+      const d=JSON.parse(r); 
+      // Return as numbers for now, but parse carefully from strings if they exist
+      return{
+        totalTaps: Number(safeBigInt(String(d.totalTaps||0))),
+        totalEarned: Number(safeBigInt(String(d.totalEarned||0)))
+      }; 
+    } 
+  }catch{}
   return{totalTaps:0,totalEarned:0};
 }
 function setGlobalTaps(uid:string,totalTaps:number,totalEarned:number){
   if(typeof window==="undefined")return;
-  // Use a custom replacer for JSON.stringify to prevent scientific notation in localStorage
-  const data = JSON.stringify({totalTaps:Math.floor(totalTaps),totalEarned}, (key, val) => {
-    if (typeof val === 'number' && val >= 1e15) return val.toLocaleString('fullwide', {useGrouping:false});
-    return val;
+  // Always store as strings to preserve BigInt precision
+  const data = JSON.stringify({
+    totalTaps: safeBigInt(totalTaps).toString(),
+    totalEarned: safeBigInt(totalEarned).toString()
   });
   try{ localStorage.setItem(uid?`degen_global_${uid}`:"degen_global", data); }catch{}
 }
@@ -263,20 +273,31 @@ interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:
 
 function loadSave(uid:string,charId:string):SaveData{
   const scopedKey=uid?`degen_save_${uid}_${charId}`:`degen_save_${charId}`;
-  const legacyKey=`degen_save_${charId}`;
-  // Try scoped key first
-  try{ const r=localStorage.getItem(scopedKey); if(r){ const d=JSON.parse(r); return { charId:d.charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; } }catch{}
-  // Fall back to legacy global key (one-time migration for existing users)
-  if(uid&&scopedKey!==legacyKey){
-    try{ const r=localStorage.getItem(legacyKey); if(r){ const d=JSON.parse(r); const save={ charId:d.charId||charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; localStorage.setItem(scopedKey,JSON.stringify(save)); localStorage.removeItem(legacyKey); return save; } }catch{}
-  }
+  try{
+    const r=localStorage.getItem(scopedKey);
+    if(r){
+      const d=JSON.parse(r);
+      return{
+        charId:d.charId||charId,
+        coins:Number(safeBigInt(String(d.coins||0))),
+        totalEarned:Number(safeBigInt(String(d.totalEarned||0))),
+        totalTaps:Number(safeBigInt(String(d.totalTaps||0))),
+        upgrades:d.upgrades||{},
+        highScore:Number(safeBigInt(String(d.highScore||0)))
+      };
+    }
+  }catch{}
   return { charId, coins:0, totalEarned:0, totalTaps:0, upgrades:{}, highScore:0 };
 }
 function persistSave(uid:string,d:SaveData){
   const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`;
-  const data = JSON.stringify(d, (key, val) => {
-    if (typeof val === 'number' && val >= 1e15) return val.toLocaleString('fullwide', {useGrouping:false});
-    return val;
+  // Always store numbers as strings in JSON to preserve BigInt precision
+  const data = JSON.stringify({
+    ...d,
+    coins: safeBigInt(d.coins).toString(),
+    totalEarned: safeBigInt(d.totalEarned).toString(),
+    totalTaps: safeBigInt(d.totalTaps).toString(),
+    highScore: safeBigInt(d.highScore).toString()
   });
   try{ localStorage.setItem(k,data); }catch{}
 }
@@ -321,15 +342,19 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
     // to remove the quotes around the large numbers so they are treated as numeric/bigint.
     const fixedBody = body.replace(/:\"(\d{1,})\"/g, ':$1');
 
-    await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
+    const resp = await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
       method:"POST",
       headers:{
         "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,
         "Content-Type":"application/json",
-        "Cache-Control":"no-cache",
+        "Cache-Control":"no-cache, no-store, must-revalidate",
       },
       body: fixedBody,
     });
+    if (!resp.ok) {
+      const errTxt = await resp.text();
+      console.error("syncDB failed:", resp.status, errTxt);
+    }
   }catch(e){console.error("syncDB error",e);}
 }
 
