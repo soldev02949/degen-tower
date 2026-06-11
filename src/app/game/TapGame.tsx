@@ -272,6 +272,14 @@ const SUPA_KEY_CONST="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,coins:number,upgrades?:Record<string,number>,solWallet?:string,avatarUrl?:string){
   if(!pid)return;
   try{
+    // Try to get fresh auth token for RLS if possible
+    let authToken = SUPA_KEY_CONST;
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) authToken = session.access_token;
+    } catch {}
+
     // Use the GREATEST-based RPC so no browser can ever lower tap/coin counts in DB
     const rpcPayload:Record<string,unknown>={
       p_wallet_address:pid,
@@ -289,7 +297,7 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
     await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
       method:"POST",
       headers:{
-        "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${SUPA_KEY_CONST}`,
+        "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,
         "Content-Type":"application/json",
         "Cache-Control":"no-cache",
       },
@@ -958,12 +966,9 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       const error=null;
       if(error){console.error("LB error",error);return;}
       if(seq!==loadRef.current)return; // stale response, discard
-      const seen=new Map<string,LBEntry>();
-      for(const p of (data||[]) as LBEntry[]){
-        const key=(p.username||"").toLowerCase();
-        if(!seen.has(key)||(p.games_played>(seen.get(key)!.games_played))){ seen.set(key,p); }
-      }
-      setPlayers(Array.from(seen.values()).sort((a,b)=>b.games_played-a.games_played));
+      // Remove deduplication by username which was causing the "stuck" stock number issue
+      // when multiple records existed for the same name.
+      setPlayers((data || []).sort((a, b) => b.games_played - a.games_played));
     }catch(e){console.error("LB fetch error",e);}
     if(seq===loadRef.current)setLoading(false);
   },[]);
@@ -996,10 +1001,11 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
     const effectiveTaps=Math.max(liveTaps,localSnapshot.taps);
     const effectiveEarned=Math.max(liveEarned,localSnapshot.earned);
     const patched=players.map(p=>{
-      if(p.wallet_address!==myPlayerId)return p;
+      // Use both id and wallet_address to ensure we match the current player correctly
+      if(p.wallet_address!==myPlayerId && p.id!==myPlayerId)return p;
       return{...p,games_played:Math.max(p.games_played,effectiveTaps),total_score:Math.max(p.total_score,effectiveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
     });
-    const exists=patched.some(p=>p.wallet_address===myPlayerId);
+    const exists=patched.some(p=>(p.wallet_address===myPlayerId || p.id===myPlayerId));
     if(!exists&&effectiveTaps>0){
       patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:effectiveEarned,games_played:effectiveTaps,avatar_url:liveAvatarUrl});
     }

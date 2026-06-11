@@ -66,9 +66,10 @@ export default function Leaderboard() {
     supabase
       .from("dt_players")
       .select("*")
-      .order("total_score", { ascending: false })
+      .order("games_played", { ascending: false })
       .limit(100)
       .then(({ data }) => {
+        // No deduplication here either to avoid the "stuck" number issue
         setPlayers(data || []);
         setLoading(false);
       });
