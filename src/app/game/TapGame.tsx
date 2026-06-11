@@ -337,9 +337,6 @@ async function syncPlayerDirect(p:DirectSyncPayload,authToken?:string):Promise<n
     games_played:localTaps,
     last_seen:new Date().toISOString(),
   };
-  // If pid is an email, we still want to link it to the actual auth UUID if possible
-  // We'll rely on the existing record's ID or the one passed in from the session
-  // But for now, the primary identifier for matching is wallet_address (the email)
 
   if(typeof p.totalEarned==="number")payload.total_score=localScore;
   if(typeof p.coins==="number")payload.token_balance=localCoins;
@@ -1433,7 +1430,7 @@ export default function TapGame() {
   // 4. Drains any queued retries from previous failures
   // 5. Full syncDB (earned/coins/upgrades) runs in parallel — won't block tap sync
   useEffect(()=>{
-    const uid=user?.email || user?.id;
+    const uid=user?.id;
     if(!uid)return;
     const safeUid:string=uid;
 
@@ -1494,9 +1491,7 @@ export default function TapGame() {
         const gl=getGlobalTaps(d.uid);
         const st=Math.max(d.totalTaps,gl.totalTaps);
         const se=Math.max(d.totalEarned,gl.totalEarned);
-        // Ensure we use the email-based playerId for sync
-        const pid = user?.email || user?.id || d.uid;
-        syncDB(pid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+        syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,se,st,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
       }
     };
     window.addEventListener("beforeunload",handleBeforeUnload);
@@ -1504,7 +1499,7 @@ export default function TapGame() {
       clearInterval(interval);
       window.removeEventListener("beforeunload",handleBeforeUnload);
     };
-  },[user?.email, user?.id]);// eslint-disable-line react-hooks/exhaustive-deps
+  },[user?.id]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
@@ -1517,12 +1512,11 @@ export default function TapGame() {
     return sum+lvl*(u.tapsPerSec!)*autoBoostMult;
   },0);
   // Keep liveRef in sync so stable doSave always reads fresh values
-  const currentUid = user?.email || user?.id || playerId;
-  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:currentUid,username,solWallet,avatarUrl};
+  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.id||playerId,username,solWallet,avatarUrl};
 
   useEffect(()=>{
     if(!user?.id)return;
-    const authId=user.email || user.id;
+    const authId=user.id;
     setPlayerId(authId);
     // Device fingerprinting — runs silently in background
     import("@/lib/security").then(async({getDeviceFingerprint,registerDeviceFingerprint,checkPlayerStatus})=>{
@@ -1550,8 +1544,7 @@ export default function TapGame() {
           const{data:{session}}=await supabase.auth.getSession();
           if(session?.access_token)authToken=session.access_token;
         }catch{}
-        // Try to fetch by email (stored in wallet_address) or by auth ID
-        const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?or=(wallet_address.eq.${encodeURIComponent(authId)},id.eq.${encodeURIComponent(user.id)})&limit=1`,{
+        const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(authId)}&limit=1`,{
           headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
           cache:"no-store",
         });
