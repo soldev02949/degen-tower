@@ -215,7 +215,7 @@ export default function Leaderboard() {
                   {/* Score */}
                   <div style={{ textAlign: "right" }}>
                     <div style={{ color: "#f5c842", fontWeight: 900, fontSize: 16 }}>💰 {formatNum(p.total_score || 0)}</div>
-                    <div style={{ color: "#445", fontSize: 10 }}>{(p.games_played||0).toLocaleString()} taps</div>
+                    <div style={{ color: "#445", fontSize: 10 }}>{formatNum(p.games_played || 0)} taps</div>
                   </div>
                 </div>
               );

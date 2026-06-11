@@ -1008,7 +1008,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       // Use raw fetch with no-cache to guarantee fresh data from Postgres
       const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
       const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
-      const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&order=games_played.desc&limit=200`,{
+      const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&order=total_score.desc&limit=200`,{
         headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
         cache:"no-store",
       });
@@ -1027,8 +1027,8 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       // Remove deduplication by username which was causing the "stuck" stock number issue
       // when multiple records existed for the same name.
       setPlayers((data || []).sort((a, b) => {
-        const ag = safeBigInt(a.games_played);
-        const bg = safeBigInt(b.games_played);
+        const ag = safeBigInt(a.total_score);
+        const bg = safeBigInt(b.total_score);
         if (bg > ag) return 1;
         if (bg < ag) return -1;
         return 0;
@@ -1050,8 +1050,8 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
     // No more local patching - we rely on the 1s DB polling and the GREATEST-based RPC
     // This ensures that what you see is what's actually in the database for everyone.
     return [...players].sort((a,b) => {
-      const ag = safeBigInt(a.games_played);
-      const bg = safeBigInt(b.games_played);
+      const ag = safeBigInt(a.total_score);
+      const bg = safeBigInt(b.total_score);
       if (bg > ag) return 1;
       if (bg < ag) return -1;
       return 0;
@@ -1174,7 +1174,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
                     </div>
                     <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
                   </div>
-                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>👆 {fmt(p.games_played||0)}</div>
+                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>💰 {fmt(p.total_score||0)}</div>
                 </div>
               );
             })}
@@ -1206,7 +1206,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
                     </div>
                     <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
                   </div>
-                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>👆 {fmt(p.games_played||0)}</div>
+                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>💰 {fmt(p.total_score||0)}</div>
                 </div>
               );
             })}
