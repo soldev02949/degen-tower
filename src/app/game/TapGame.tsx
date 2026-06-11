@@ -782,7 +782,12 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
     }catch{}
     setLoading(false);
   },[]);
-  useEffect(()=>{load();},[load]);
+  useEffect(()=>{
+    load();
+    // Auto-refresh every 20s so leaderboard stays live
+    const id=setInterval(load,20000);
+    return()=>clearInterval(id);
+  },[load]);
 
   const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
 
@@ -1471,7 +1476,7 @@ export default function TapGame() {
 
       {/* Tab content */}
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
-      {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId}/>}
+      {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} key="lb"/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
       {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} currentAvatarUrl={avatarUrl} onSave={handleSettingsSave}/>}
 
