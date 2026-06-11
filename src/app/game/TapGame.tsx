@@ -115,8 +115,9 @@ function TopBar({username,avatar,onSettings,onLogout}:{username:string;avatar:st
     <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(6,0,14,0.96)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"8px 14px",display:"flex",alignItems:"center",gap:8}}>
       <img src="/logo.png" alt="" onError={e=>{(e.target as HTMLImageElement).style.display="none";}} style={{width:22,height:22,objectFit:"contain",filter:"drop-shadow(0 0 6px rgba(168,85,247,0.6))"}}/>
       <span style={{color:"#fff",fontWeight:900,fontSize:13,letterSpacing:"-0.02em",flex:1}}>DEGEN CLICKER</span>
+      <a href="/whitepaper" target="_blank" rel="noopener noreferrer" style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:8,color:"#c084fc",fontSize:11,fontWeight:700,padding:"5px 9px",cursor:"pointer",textDecoration:"none",whiteSpace:"nowrap"}}>📄 Whitepaper</a>
       <span style={{fontSize:18,lineHeight:1}}>{avatar||"🐸"}</span>
-      <span style={{color:"#888",fontSize:12,fontWeight:700,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
+      <span style={{color:"#888",fontSize:12,fontWeight:700,maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
       <button onClick={onSettings} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,color:"#888",fontSize:13,padding:"5px 9px",cursor:"pointer"}}>⚙️</button>
       <button onClick={onLogout} style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,color:"#ef4444",fontSize:11,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>Log out</button>
     </div>
