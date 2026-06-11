@@ -115,7 +115,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [lbSearch, setLbSearch] = useState("");
   const [lbFilter, setLbFilter] = useState<"all"|"prize"|"active"|"banned">("all");
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);// default ON — live data
   const [copiedId, setCopiedId] = useState<string|null>(null);
   const [quickPayModal, setQuickPayModal] = useState<Player|null>(null);
   const [quickPayNote, setQuickPayNote] = useState("");
@@ -179,7 +179,7 @@ export default function AdminDashboard() {
   // Auto-refresh every 15s
   useEffect(() => {
     if (!authed || !autoRefresh) return;
-    const id = setInterval(fetchAll, 15000);
+    const id = setInterval(fetchAll, 5000);// refresh every 5s for near-live data
     return () => clearInterval(id);
   }, [authed, autoRefresh, fetchAll]);
 
