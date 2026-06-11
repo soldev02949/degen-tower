@@ -53,8 +53,163 @@ const UPGRADES: Array<{id:string;name:string;emoji:string;desc:string;baseCost:n
   { id:"special_cd", name:"Special Charger",    emoji:"⏩", desc:"Special charges 50% faster",  baseCost:300,       costMult:2.2,  category:"special" },
   { id:"special_cd2",name:"Quick Special",      emoji:"⚡⏩",desc:"Special charges 100% faster",baseCost:2000,      costMult:2.5,  category:"special" },
   { id:"special_cd3",name:"Instant Special",    emoji:"💫", desc:"Special charges 200% faster", baseCost:15000,     costMult:2.8,  category:"special" },
-  { id:"lucky_strike",name:"Lucky Strike",      emoji:"🎰", desc:"+5% lucky tap chance",        baseCost:500,       costMult:2.8,  category:"bonus" },
-  { id:"coin_aura",  name:"Coin Aura",          emoji:"💰", desc:"All coins +50%",              baseCost:10000,     costMult:3.2,  category:"bonus" },
+  // ── Bonus / Lucky ───────────────────────────────────────────────────────────
+  { id:"lucky_strike", name:"Lucky Strike",      emoji:"🎰", desc:"+5% lucky tap chance",          baseCost:500,        costMult:2.8, category:"bonus" },
+  { id:"lucky_str2",   name:"Fortune Tap",        emoji:"🍀", desc:"+10% lucky tap chance",         baseCost:3000,       costMult:2.9, category:"bonus" },
+  { id:"lucky_str3",   name:"Jackpot Fingers",    emoji:"🎲", desc:"+15% lucky tap chance",         baseCost:20000,      costMult:3.1, category:"bonus" },
+  { id:"lucky_str4",   name:"Casino Lord",        emoji:"🃏", desc:"+25% lucky tap chance",         baseCost:200000,     costMult:3.4, minLevel:15, category:"bonus" },
+  { id:"coin_aura",    name:"Coin Aura",           emoji:"💰", desc:"All coins +50%",                baseCost:10000,      costMult:3.2, category:"bonus" },
+  { id:"coin_aura2",   name:"Gold Aura",           emoji:"💎", desc:"All coins +100%",               baseCost:80000,      costMult:3.5, category:"bonus" },
+  { id:"coin_aura3",   name:"Diamond Aura",        emoji:"💠", desc:"All coins +250%",               baseCost:700000,     costMult:3.8, category:"bonus" },
+  { id:"coin_aura4",   name:"Singularity Aura",    emoji:"🌌", desc:"All coins +1000%",              baseCost:10000000,   costMult:4.2, minLevel:25, category:"bonus" },
+  { id:"double_coins", name:"Double Dip",          emoji:"2️⃣", desc:"25% chance to double coins",   baseCost:5000,       costMult:3.0, category:"bonus" },
+  { id:"triple_coins", name:"Triple Threat",       emoji:"3️⃣", desc:"10% chance to triple coins",   baseCost:50000,      costMult:3.4, category:"bonus" },
+  { id:"rainbow_tap",  name:"Rainbow Tap",         emoji:"🌈", desc:"Random +50-500% on tap",        baseCost:15000,      costMult:3.0, category:"bonus" },
+  { id:"moon_shot",    name:"Moon Shot",           emoji:"🚀", desc:"1% chance for 100x tap",        baseCost:500000,     costMult:4.0, minLevel:20, category:"bonus" },
+  // ── More Auto Tiers ──────────────────────────────────────────────────────────
+  { id:"helper_10",    name:"Degen Swarm",         emoji:"🐝", desc:"2000 auto-taps/sec",            baseCost:80000000,   costMult:5.2, tapsPerSec:2000,  minLevel:32, category:"auto" },
+  { id:"helper_11",    name:"Mega Mine",           emoji:"⛏️", desc:"4000 auto-taps/sec",            baseCost:350000000,  costMult:5.5, tapsPerSec:4000,  minLevel:35, category:"auto" },
+  { id:"helper_12",    name:"Galactic Tap",        emoji:"🌠", desc:"8000 auto-taps/sec",            baseCost:1500000000, costMult:5.8, tapsPerSec:8000,  minLevel:40, category:"auto" },
+  { id:"helper_13",    name:"God Mode Farm",       emoji:"👑", desc:"20000 auto-taps/sec",           baseCost:8000000000, costMult:6.0, tapsPerSec:20000, minLevel:45, category:"auto" },
+  { id:"auto_boost",   name:"Auto Overdrive",      emoji:"🔧", desc:"All auto +10%",                 baseCost:50000,      costMult:2.8, category:"auto" },
+  { id:"auto_boost2",  name:"Overclock",           emoji:"🔩", desc:"All auto +25%",                 baseCost:400000,     costMult:3.0, category:"auto" },
+  { id:"auto_boost3",  name:"Hyper Overclock",     emoji:"⚙️", desc:"All auto +50%",                 baseCost:3000000,    costMult:3.3, category:"auto" },
+  { id:"auto_boost4",  name:"God Clock",           emoji:"⏱️", desc:"All auto +150%",               baseCost:25000000,   costMult:3.8, minLevel:25, category:"auto" },
+  { id:"auto_mult",    name:"Auto Multiplier",     emoji:"🤖", desc:"x2 all auto income",            baseCost:200000,     costMult:3.5, category:"auto" },
+  { id:"auto_mult2",   name:"Auto Turbo",          emoji:"🌀", desc:"x3 all auto income",            baseCost:2000000,    costMult:4.0, minLevel:20, category:"auto" },
+  { id:"auto_mult3",   name:"Auto God",            emoji:"🌟", desc:"x5 all auto income",            baseCost:20000000,   costMult:4.5, minLevel:30, category:"auto" },
+  { id:"idle_bonus",   name:"Idle Hustle",         emoji:"😴", desc:"Auto earns 20% more while idle",baseCost:8000,       costMult:2.5, category:"auto" },
+  { id:"idle_bonus2",  name:"AFK King",            emoji:"🛌", desc:"Auto earns 50% more while idle",baseCost:60000,      costMult:2.8, category:"auto" },
+  // ── More Tap Power ───────────────────────────────────────────────────────────
+  { id:"tap_pow7",     name:"Nova Tap",            emoji:"💥", desc:"+600 coins per tap",           baseCost:20000000,   costMult:3.2, minLevel:25, category:"tap" },
+  { id:"tap_pow8",     name:"Black Hole Tap",      emoji:"🕳️", desc:"+2000 coins per tap",          baseCost:200000000,  costMult:3.5, minLevel:30, category:"tap" },
+  { id:"tap_pow9",     name:"Singularity Tap",     emoji:"🌌", desc:"+8000 coins per tap",          baseCost:2000000000, costMult:3.8, minLevel:40, category:"tap" },
+  { id:"tap_spd",      name:"Quick Hands",         emoji:"👋", desc:"Taps cost 10% less energy",    baseCost:200,        costMult:2.0, category:"tap" },
+  { id:"tap_spd2",     name:"Lightning Hands",     emoji:"⚡", desc:"Taps cost 25% less energy",    baseCost:2000,       costMult:2.3, category:"tap" },
+  { id:"tap_spd3",     name:"Phantom Hands",       emoji:"👻", desc:"Taps cost 50% less energy",    baseCost:20000,      costMult:2.6, category:"tap" },
+  { id:"tap_spd4",     name:"Zero Energy Tap",     emoji:"🔮", desc:"Taps cost 80% less energy",    baseCost:200000,     costMult:3.0, minLevel:20, category:"tap" },
+  { id:"multi_tap5",   name:"Ultra Tap",           emoji:"✖️", desc:"x3 more multiplier",           baseCost:2000000,    costMult:3.8, minLevel:20, category:"tap" },
+  { id:"multi_tap6",   name:"Sigma Tap",           emoji:"∑",  desc:"x5 more multiplier",           baseCost:20000000,   costMult:4.2, minLevel:28, category:"tap" },
+  { id:"multi_tap7",   name:"God Multiplier",      emoji:"∞",  desc:"x10 more multiplier",          baseCost:200000000,  costMult:4.8, minLevel:35, category:"tap" },
+  { id:"tap_chain",    name:"Chain Tap",           emoji:"⛓️", desc:"+1 bonus tap per click",       baseCost:10000,      costMult:3.0, category:"tap" },
+  { id:"tap_chain2",   name:"Double Chain",        emoji:"🔗", desc:"+2 bonus taps per click",      baseCost:100000,     costMult:3.3, category:"tap" },
+  { id:"tap_chain3",   name:"Tap Storm",           emoji:"🌪️", desc:"+5 bonus taps per click",      baseCost:1000000,    costMult:3.6, minLevel:15, category:"tap" },
+  // ── More Crit ────────────────────────────────────────────────────────────────
+  { id:"crit_chan4",    name:"Sniper Eye",          emoji:"🔭", desc:"+10% more crit chance",        baseCost:80000,      costMult:3.0, category:"crit" },
+  { id:"crit_chan5",    name:"God Eye",             emoji:"👁️", desc:"+15% more crit chance",        baseCost:800000,     costMult:3.5, minLevel:20, category:"crit" },
+  { id:"crit_pow3",     name:"Crit Omega",          emoji:"💀", desc:"Crit = 25x instead",           baseCost:500000,     costMult:3.5, minLevel:15, category:"crit" },
+  { id:"crit_pow4",     name:"Crit Godmode",        emoji:"👑", desc:"Crit = 50x instead",           baseCost:5000000,    costMult:4.0, minLevel:25, category:"crit" },
+  { id:"crit_pow5",     name:"Crit Singularity",    emoji:"🌋", desc:"Crit = 100x instead",          baseCost:50000000,   costMult:4.5, minLevel:35, category:"crit" },
+  { id:"crit_aura",     name:"Crit Aura",           emoji:"💢", desc:"+25% crit damage bonus",        baseCost:20000,      costMult:2.8, category:"crit" },
+  { id:"crit_aura2",    name:"Crit Storm",          emoji:"⚡", desc:"+75% crit damage bonus",       baseCost:200000,     costMult:3.2, minLevel:15, category:"crit" },
+  { id:"crit_chain",    name:"Crit Chain",          emoji:"💫", desc:"Crits can chain (20% chance)", baseCost:100000,     costMult:3.5, minLevel:15, category:"crit" },
+  { id:"crit_chain2",   name:"Crit Cascade",        emoji:"🌊", desc:"Crit chains more often (+30%)",baseCost:1000000,    costMult:4.0, minLevel:22, category:"crit" },
+  // ── More Energy ──────────────────────────────────────────────────────────────
+  { id:"energy_max4",   name:"Ultra Battery",       emoji:"🔋", desc:"+2000 max energy",             baseCost:40000,      costMult:2.8, minLevel:15, category:"energy" },
+  { id:"energy_max5",   name:"God Battery",         emoji:"⚡", desc:"+5000 max energy",             baseCost:300000,     costMult:3.2, minLevel:20, category:"energy" },
+  { id:"energy_max6",   name:"Infinite Cell",       emoji:"♾️", desc:"+15000 max energy",            baseCost:2000000,    costMult:3.6, minLevel:28, category:"energy" },
+  { id:"energy_reg4",   name:"Ultra Charge",        emoji:"🌩️", desc:"Energy regen +4x",             baseCost:60000,      costMult:2.7, minLevel:15, category:"energy" },
+  { id:"energy_reg5",   name:"Infinite Charge",     emoji:"🌀", desc:"Energy regen +8x",             baseCost:500000,     costMult:3.0, minLevel:22, category:"energy" },
+  { id:"energy_saver",  name:"Energy Saver",        emoji:"🍃", desc:"Taps use 1 less energy",       baseCost:500,        costMult:2.0, category:"energy" },
+  { id:"energy_saver2", name:"Eco Mode",            emoji:"🌿", desc:"Taps use 3 less energy",       baseCost:5000,       costMult:2.3, category:"energy" },
+  { id:"overflow_tap",  name:"Overflow Tap",        emoji:"💥", desc:"+coins when energy is full",   baseCost:30000,      costMult:2.8, category:"energy" },
+  // ── More Combo ───────────────────────────────────────────────────────────────
+  { id:"combo_max4",    name:"Combo Legend",        emoji:"👑", desc:"+60 max combo",                baseCost:200000,     costMult:3.3, minLevel:15, category:"combo" },
+  { id:"combo_max5",    name:"Combo Sigma",         emoji:"∑",  desc:"+120 max combo",               baseCost:2000000,    costMult:3.8, minLevel:22, category:"combo" },
+  { id:"combo_max6",    name:"Infinite Combo",      emoji:"∞",  desc:"+300 max combo",               baseCost:20000000,   costMult:4.2, minLevel:30, category:"combo" },
+  { id:"combo_hold",    name:"Combo Hold",          emoji:"🤝", desc:"Combo decays 30% slower",      baseCost:200,        costMult:2.0, category:"combo" },
+  { id:"combo_hold2",   name:"Combo Lock",          emoji:"🔒", desc:"Combo decays 60% slower",      baseCost:2000,       costMult:2.3, category:"combo" },
+  { id:"combo_hold3",   name:"Combo Freeze",        emoji:"❄️", desc:"Combo decays 90% slower",      baseCost:20000,      costMult:2.6, category:"combo" },
+  { id:"combo_hold4",   name:"Eternal Combo",       emoji:"🕊️", desc:"Combo never decays",           baseCost:1000000,    costMult:3.5, minLevel:20, category:"combo" },
+  { id:"combo_spd4",    name:"Warp Combo",          emoji:"🌀", desc:"Combo builds 200% faster",     baseCost:30000,      costMult:2.8, minLevel:12, category:"combo" },
+  { id:"combo_spd5",    name:"God Combo Speed",     emoji:"⚡", desc:"Combo builds 500% faster",     baseCost:300000,     costMult:3.2, minLevel:20, category:"combo" },
+  // ── More Special ─────────────────────────────────────────────────────────────
+  { id:"special_cd4",   name:"Hyper Special",       emoji:"💫", desc:"Special charges 400% faster",  baseCost:100000,     costMult:3.2, minLevel:12, category:"special" },
+  { id:"special_cd5",   name:"Ultra Special",       emoji:"🌟", desc:"Special charges 800% faster",  baseCost:1000000,    costMult:3.8, minLevel:20, category:"special" },
+  { id:"special_cd6",   name:"God Special",         emoji:"👑", desc:"Special charges 2000% faster", baseCost:10000000,   costMult:4.2, minLevel:28, category:"special" },
+  { id:"special_dur",   name:"Extended Special",    emoji:"⏳", desc:"Special lasts 20% longer",     baseCost:800,        costMult:2.2, category:"special" },
+  { id:"special_dur2",  name:"Power Special",       emoji:"⚡", desc:"Special lasts 50% longer",     baseCost:8000,       costMult:2.5, category:"special" },
+  { id:"special_dur3",  name:"Eternal Special",     emoji:"🌠", desc:"Special lasts 100% longer",    baseCost:80000,      costMult:2.8, minLevel:12, category:"special" },
+  { id:"special_pow",   name:"Special Force",       emoji:"💥", desc:"Special multiplier +50%",      baseCost:5000,       costMult:2.8, category:"special" },
+  { id:"special_pow2",  name:"Special Nuke",        emoji:"☢️", desc:"Special multiplier +150%",     baseCost:50000,      costMult:3.2, minLevel:12, category:"special" },
+  { id:"special_pow3",  name:"Special God",         emoji:"🔱", desc:"Special multiplier +500%",     baseCost:500000,     costMult:3.8, minLevel:20, category:"special" },
+  // ── Prestige ─────────────────────────────────────────────────────────────────
+  { id:"prestige_tap",  name:"Prestige Power",      emoji:"🏅", desc:"All tap gains +20%",           baseCost:100000,     costMult:2.8, minLevel:15, category:"prestige" },
+  { id:"prestige_tap2", name:"Elite Tap",           emoji:"🥇", desc:"All tap gains +50%",           baseCost:800000,     costMult:3.0, minLevel:20, category:"prestige" },
+  { id:"prestige_tap3", name:"Legendary Tap",       emoji:"🏆", desc:"All tap gains +100%",          baseCost:6000000,    costMult:3.3, minLevel:25, category:"prestige" },
+  { id:"prestige_auto", name:"Prestige Auto",       emoji:"🤖", desc:"All auto gains +20%",          baseCost:150000,     costMult:2.8, minLevel:15, category:"prestige" },
+  { id:"prestige_auto2",name:"Elite Auto",          emoji:"🌐", desc:"All auto gains +60%",          baseCost:1200000,    costMult:3.0, minLevel:20, category:"prestige" },
+  { id:"prestige_auto3",name:"Legendary Auto",      emoji:"🌟", desc:"All auto gains +150%",         baseCost:10000000,   costMult:3.4, minLevel:28, category:"prestige" },
+  { id:"prestige_all",  name:"Total Prestige",      emoji:"💎", desc:"ALL gains +25%",               baseCost:500000,     costMult:3.2, minLevel:20, category:"prestige" },
+  { id:"prestige_all2", name:"Diamond Prestige",    emoji:"🔷", desc:"ALL gains +75%",               baseCost:5000000,    costMult:3.6, minLevel:28, category:"prestige" },
+  { id:"prestige_all3", name:"Sigma Prestige",      emoji:"⚜️", desc:"ALL gains +200%",              baseCost:50000000,   costMult:4.0, minLevel:35, category:"prestige" },
+  { id:"prestige_all4", name:"God Prestige",        emoji:"👑", desc:"ALL gains +500%",              baseCost:500000000,  costMult:4.5, minLevel:42, category:"prestige" },
+  // ── Degen ────────────────────────────────────────────────────────────────────
+  { id:"degen_lore",    name:"Degen Lore",          emoji:"📖", desc:"+5% all income",               baseCost:100,        costMult:1.7, category:"degen" },
+  { id:"degen_lore2",   name:"Deep Lore",           emoji:"📚", desc:"+15% all income",              baseCost:800,        costMult:1.9, category:"degen" },
+  { id:"degen_lore3",   name:"Galaxy Brain",        emoji:"🧠", desc:"+35% all income",              baseCost:6000,       costMult:2.2, category:"degen" },
+  { id:"degen_lore4",   name:"Sigma Brain",         emoji:"🔮", desc:"+80% all income",              baseCost:50000,      costMult:2.5, category:"degen" },
+  { id:"degen_lore5",   name:"Omniscient",          emoji:"👁️", desc:"+200% all income",             baseCost:500000,     costMult:3.0, minLevel:18, category:"degen" },
+  { id:"ngmi_tax",      name:"NGMI Tax",            emoji:"📉", desc:"Earn from the weak +10%",      baseCost:2000,       costMult:2.2, category:"degen" },
+  { id:"wagmi_boost",   name:"WAGMI Boost",         emoji:"📈", desc:"+20% all income",              baseCost:15000,      costMult:2.5, category:"degen" },
+  { id:"ape_in",        name:"Ape In",              emoji:"🦍", desc:"+15% global multiplier",       baseCost:5000,       costMult:2.8, category:"degen" },
+  { id:"ape_in2",       name:"Full Ape",            emoji:"🦧", desc:"+40% global multiplier",       baseCost:50000,      costMult:3.2, minLevel:10, category:"degen" },
+  { id:"diamond_hands", name:"Diamond Hands",       emoji:"💎", desc:"+25% all income",              baseCost:3000,       costMult:2.3, category:"degen" },
+  { id:"diamond_hands2",name:"Unbreakable",         emoji:"🙌", desc:"+60% all income",              baseCost:30000,      costMult:2.7, minLevel:10, category:"degen" },
+  { id:"hype_train",    name:"Hype Train",          emoji:"🚂", desc:"+30% all income",              baseCost:20000,      costMult:2.5, category:"degen" },
+  { id:"degen_grind",   name:"Degen Grind",         emoji:"⚒️", desc:"+20% tap income",              baseCost:8000,       costMult:2.4, category:"degen" },
+  { id:"degen_grind2",  name:"Chad Grind",          emoji:"💪", desc:"+50% tap income",              baseCost:80000,      costMult:2.7, minLevel:12, category:"degen" },
+  { id:"alpha_call",    name:"Alpha Call",          emoji:"📣", desc:"+25% all income",              baseCost:20000,      costMult:2.8, category:"degen" },
+  { id:"alpha_call2",   name:"God Alpha",           emoji:"📢", desc:"+75% all income",              baseCost:200000,     costMult:3.2, minLevel:15, category:"degen" },
+  { id:"nft_flex",      name:"NFT Flex",            emoji:"🖼️", desc:"+20% when avatar is set",      baseCost:5000,       costMult:2.5, category:"degen" },
+  { id:"whitelist",     name:"WL Secured",          emoji:"📋", desc:"+15% all income",              baseCost:3000,       costMult:2.2, category:"degen" },
+  // ── Passive income ───────────────────────────────────────────────────────────
+  { id:"passive_1",     name:"Staking Yield",       emoji:"🏦", desc:"+0.1 coins/sec passively",     baseCost:500,        costMult:2.0, category:"passive" },
+  { id:"passive_2",     name:"LP Farm",             emoji:"🌾", desc:"+0.5 coins/sec passively",     baseCost:3000,       costMult:2.2, category:"passive" },
+  { id:"passive_3",     name:"Yield Farm",          emoji:"🌻", desc:"+2 coins/sec passively",       baseCost:15000,      costMult:2.4, category:"passive" },
+  { id:"passive_4",     name:"Degen Vault",         emoji:"🏛️", desc:"+8 coins/sec passively",      baseCost:80000,      costMult:2.6, category:"passive" },
+  { id:"passive_5",     name:"DAO Treasury",        emoji:"🌐", desc:"+30 coins/sec passively",      baseCost:500000,     costMult:2.8, minLevel:15, category:"passive" },
+  { id:"passive_6",     name:"Protocol Fees",       emoji:"⚙️", desc:"+100 coins/sec passively",     baseCost:3000000,    costMult:3.0, minLevel:22, category:"passive" },
+  { id:"passive_7",     name:"Whale Staking",       emoji:"🐋", desc:"+400 coins/sec passively",     baseCost:20000000,   costMult:3.3, minLevel:30, category:"passive" },
+  { id:"passive_8",     name:"God Yield",           emoji:"🌟", desc:"+2000 coins/sec passively",    baseCost:200000000,  costMult:3.8, minLevel:38, category:"passive" },
+  { id:"passive_boost", name:"Compound Effect",     emoji:"📊", desc:"Passive income +20%",          baseCost:30000,      costMult:2.5, category:"passive" },
+  { id:"passive_boost2",name:"Exponential Growth",  emoji:"📈", desc:"Passive income +60%",          baseCost:300000,     costMult:2.8, minLevel:15, category:"passive" },
+  { id:"passive_boost3",name:"Hyperbolic Yield",    emoji:"🌀", desc:"Passive income +200%",         baseCost:3000000,    costMult:3.2, minLevel:22, category:"passive" },
+  // ── Tower upgrades ───────────────────────────────────────────────────────────
+  { id:"tower_1",       name:"Tower Floor 1",       emoji:"🏗️", desc:"+5% all income",               baseCost:1000,       costMult:2.0, category:"tower" },
+  { id:"tower_2",       name:"Tower Floor 2",       emoji:"🏠", desc:"+12% all income",              baseCost:8000,       costMult:2.2, category:"tower" },
+  { id:"tower_3",       name:"Tower Floor 3",       emoji:"🏢", desc:"+25% all income",              baseCost:60000,      costMult:2.4, minLevel:8, category:"tower" },
+  { id:"tower_4",       name:"Tower Floor 4",       emoji:"🏬", desc:"+50% all income",              baseCost:500000,     costMult:2.6, minLevel:12, category:"tower" },
+  { id:"tower_5",       name:"Tower Floor 5",       emoji:"🌆", desc:"+100% all income",             baseCost:4000000,    costMult:2.8, minLevel:18, category:"tower" },
+  { id:"tower_6",       name:"Tower Floor 6",       emoji:"🌇", desc:"+200% all income",             baseCost:30000000,   costMult:3.0, minLevel:25, category:"tower" },
+  { id:"tower_7",       name:"Tower Floor 7",       emoji:"🌃", desc:"+500% all income",             baseCost:250000000,  costMult:3.4, minLevel:32, category:"tower" },
+  { id:"tower_8",       name:"Tower Penthouse",     emoji:"🌌", desc:"+1500% all income",            baseCost:2000000000, costMult:3.8, minLevel:40, category:"tower" },
+  { id:"tower_guard",   name:"Tower Guard",         emoji:"💂", desc:"+8% income while online",      baseCost:20000,      costMult:2.3, category:"tower" },
+  { id:"tower_skin",    name:"Tower Glow",          emoji:"✨", desc:"+3% per tower floor owned",    baseCost:50000,      costMult:2.5, category:"tower" },
+  { id:"tower_lord",    name:"Tower Lord",          emoji:"👑", desc:"+50% all income",              baseCost:5000000,    costMult:3.2, minLevel:20, category:"tower" },
+  // ── Meme Upgrades ────────────────────────────────────────────────────────────
+  { id:"meme_1",        name:"Pepe Blessing",       emoji:"🐸", desc:"+10% all income",              baseCost:500,        costMult:2.2, category:"meme" },
+  { id:"meme_2",        name:"Gigachad Aura",       emoji:"💪", desc:"+12% all income",              baseCost:1500,       costMult:2.3, category:"meme" },
+  { id:"meme_3",        name:"Trump Deal",          emoji:"🎩", desc:"+15% all income",              baseCost:3000,       costMult:2.3, category:"meme" },
+  { id:"meme_4",        name:"Troll Chaos",         emoji:"🧌", desc:"+18% all income",              baseCost:5000,       costMult:2.4, category:"meme" },
+  { id:"meme_5",        name:"Bonk Energy",         emoji:"🐕", desc:"+12% all income",              baseCost:2000,       costMult:2.3, category:"meme" },
+  { id:"meme_6",        name:"Sigma Energy",        emoji:"⚡", desc:"+20% all income",              baseCost:10000,      costMult:2.5, category:"meme" },
+  { id:"meme_7",        name:"Diamond Meme",        emoji:"💎", desc:"+30% all income",              baseCost:50000,      costMult:2.7, category:"meme" },
+  { id:"meme_8",        name:"Galaxy Meme",         emoji:"🌌", desc:"+50% all income",              baseCost:300000,     costMult:3.0, minLevel:12, category:"meme" },
+  { id:"meme_combo",    name:"Meme Synergy",        emoji:"🌐", desc:"+25% all income",              baseCost:25000,      costMult:2.8, category:"meme" },
+  { id:"meme_legend",   name:"Meme Legend",         emoji:"🌟", desc:"+100% all income",             baseCost:1000000,    costMult:3.5, minLevel:20, category:"meme" },
+  { id:"viral_tap",     name:"Go Viral",            emoji:"📱", desc:"+20% all income",              baseCost:10000,      costMult:2.8, category:"meme" },
+  { id:"viral_tap2",    name:"Full Send",           emoji:"📲", desc:"+50% all income",              baseCost:100000,     costMult:3.2, minLevel:12, category:"meme" },
+  { id:"rug_pull",      name:"Rug Insurance",       emoji:"🛡️", desc:"+15% all income",              baseCost:8000,       costMult:2.5, category:"meme" },
+  { id:"pump_it",       name:"Pump It",             emoji:"🔥", desc:"+35% all income",              baseCost:40000,      costMult:2.9, category:"meme" },
+  { id:"to_da_moon",    name:"To Da Moon",          emoji:"🌙", desc:"+60% all income",              baseCost:250000,     costMult:3.3, minLevel:15, category:"meme" },
+  // ── Galaxy end-game ──────────────────────────────────────────────────────────
+  { id:"galaxy_1",      name:"Galaxy Tap",          emoji:"🌌", desc:"ALL gains x2",                 baseCost:50000000,   costMult:4.0, minLevel:30, category:"galaxy" },
+  { id:"galaxy_2",      name:"Universe Tap",        emoji:"🌠", desc:"ALL gains x3",                 baseCost:500000000,  costMult:4.5, minLevel:38, category:"galaxy" },
+  { id:"galaxy_3",      name:"Multiverse Tap",      emoji:"🌀", desc:"ALL gains x5",                 baseCost:5000000000, costMult:5.0, minLevel:45, category:"galaxy" },
+  { id:"dark_energy",   name:"Dark Energy",         emoji:"🌑", desc:"+100% auto & passive",          baseCost:300000000,  costMult:4.8, minLevel:40, category:"galaxy" },
+  { id:"big_bang",      name:"Big Bang",            emoji:"💥", desc:"ALL gains x1.5 permanent",     baseCost:200000000,  costMult:5.0, minLevel:38, category:"galaxy" },
+  { id:"galaxy_forge",  name:"Galaxy Forge",        emoji:"⚒️", desc:"ALL gains x10",               baseCost:50000000000,costMult:6.0, minLevel:50, category:"galaxy" },
 ];
 
 // ─── Glass UI helpers ─────────────────────────────────────────────────────────
@@ -769,7 +924,6 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
   const CE:Record<string,string>={pepe:"🐸",gigachad:"💪",trump:"🎩",troll:"🧌",bonk:"🐕"};
 
   const load=useCallback(async()=>{
-    setLoading(true);
     try{
       const{supabase}=await import("@/lib/supabase");
       const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen").order("games_played",{ascending:false}).limit(200);
@@ -785,7 +939,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
   useEffect(()=>{
     load();
     // Auto-refresh every 20s so leaderboard stays live
-    const id=setInterval(load,20000);
+    const id=setInterval(load,3000);
     return()=>clearInterval(id);
   },[load]);
 
@@ -953,13 +1107,19 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
 
 // ─── SHOP TAB (glass) ────────────────────────────────────────────────────────
 const SHOP_CATEGORIES=[
-  {id:"auto",   label:"🤖",short:"Auto",     desc:"Earn taps automatically — counts on leaderboard"},
-  {id:"tap",    label:"⚡",short:"Tap Power",  desc:"More coins per manual tap"},
-  {id:"crit",   label:"💥",short:"Crit Hit",   desc:"Chance to massively multiply earnings"},
-  {id:"energy", label:"🔋",short:"Energy",     desc:"Bigger energy pool and faster regen"},
-  {id:"combo",  label:"🔥",short:"Combo",      desc:"Build and maintain combo multiplier"},
-  {id:"special",label:"💫",short:"Special",    desc:"Charge your special ability faster"},
-  {id:"bonus",  label:"🎰",short:"Bonus",      desc:"Global multipliers and lucky effects"},
+  {id:"auto",     label:"🤖",short:"Auto",      desc:"Earn taps automatically — counts on leaderboard"},
+  {id:"tap",      label:"⚡",short:"Tap Power",  desc:"More coins per manual tap"},
+  {id:"crit",     label:"💥",short:"Crit Hit",   desc:"Chance to massively multiply earnings"},
+  {id:"energy",   label:"🔋",short:"Energy",     desc:"Bigger energy pool and faster regen"},
+  {id:"combo",    label:"🔥",short:"Combo",      desc:"Build and maintain combo multiplier"},
+  {id:"special",  label:"💫",short:"Special",    desc:"Charge your special ability faster"},
+  {id:"bonus",    label:"🎰",short:"Bonus",      desc:"Global multipliers and lucky effects"},
+  {id:"prestige", label:"🏆",short:"Prestige",   desc:"Elite multipliers that scale everything"},
+  {id:"degen",    label:"🦍",short:"Degen",      desc:"Degen-culture power ups and buffs"},
+  {id:"passive",  label:"🏦",short:"Passive",    desc:"Earn coins even while away"},
+  {id:"tower",    label:"🏙️",short:"Tower",     desc:"Build your Degen Tower for massive bonuses"},
+  {id:"meme",     label:"📱",short:"Meme",       desc:"Meme-powered upgrades and viral boosts"},
+  {id:"galaxy",   label:"🌌",short:"Galaxy",     desc:"End-game galaxy-tier multipliers"},
 ];
 const RANK_NAMES:Record<number,string>={5:"Normie",8:"Bronze Ape",11:"Silver Degen",15:"Gold Degen",20:"Diamond Hands",25:"Sigma",30:"Tower Lord"};
 
@@ -1182,9 +1342,10 @@ export default function TapGame() {
   const xpProgress=getLevelProgress(totalEarned);
   const rank=getRankFromLevel(level);
   const nextRank=getNextRank(level);
+  const autoBoostMult=1+(upgrades["auto_boost"]||0)*0.10+(upgrades["auto_boost2"]||0)*0.25+(upgrades["auto_boost3"]||0)*0.50+(upgrades["auto_boost4"]||0)*1.50+(upgrades["auto_mult"]?1:0)+(upgrades["auto_mult2"]?2:0)+(upgrades["auto_mult3"]?4:0)+(upgrades["prestige_auto"]||0)*0.20+(upgrades["prestige_auto2"]||0)*0.60+(upgrades["prestige_auto3"]||0)*1.50;
   const autoRate=UPGRADES.filter(u=>u.tapsPerSec).reduce((sum,u)=>{
     const lvl=upgrades[u.id]||0;
-    return sum+lvl*(u.tapsPerSec!);
+    return sum+lvl*(u.tapsPerSec!)*autoBoostMult;
   },0);
   // Keep liveRef in sync so stable doSave always reads fresh values
   liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.id||playerId,username,solWallet,avatarUrl};
@@ -1206,7 +1367,7 @@ export default function TapGame() {
       }
     }).catch(()=>{});
     // Safety timeout — unblock game if DB takes too long or errors
-    const dbTimeout=setTimeout(()=>setDbLoaded(true),5000);
+    const dbTimeout=setTimeout(()=>setDbLoaded(true),15000); // 15s max wait for DB
     import("@/lib/supabase").then(async({supabase})=>{
       try{
         const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
@@ -1240,6 +1401,19 @@ export default function TapGame() {
       }catch(e){console.error("DB load error",e);}
       finally{clearTimeout(dbTimeout);setDbLoaded(true);}
     }).catch(()=>{clearTimeout(dbTimeout);setDbLoaded(true);});
+    // On page focus, re-fetch DB to catch any cloud updates (e.g. playing on another device)
+    const onFocus=()=>{
+      if(!user?.id)return;
+      import("@/lib/supabase").then(async({supabase})=>{
+        const{data}=await supabase.from("dt_players").select("games_played,total_score,token_balance,upgrades").eq("wallet_address",user.id).maybeSingle();
+        if(data){
+          const prev=dbValuesRef.current;
+          dbValuesRef.current={totalTaps:Math.max(prev?.totalTaps||0,data.games_played||0),totalEarned:Math.max(prev?.totalEarned||0,data.total_score||0),coins:Math.max(prev?.coins||0,data.token_balance||0),upgrades:data.upgrades||(prev?.upgrades||{})};
+        }
+      }).catch(()=>{});
+    };
+    window.addEventListener("focus",onFocus);
+    return()=>window.removeEventListener("focus",onFocus);
   },[user?.id]);
 
   function tryStart(id:string){
@@ -1257,30 +1431,33 @@ export default function TapGame() {
   function startGame(id:string,name:string,wallet?:string){
     const uid=user?.id||playerId;
     const s=loadSave(uid,id);
-    // Taps are GLOBAL across all characters — take highest of: global local, per-char local, DB
     const globalLocal=getGlobalTaps(uid);
-    const safeTaps=Math.max(globalLocal.totalTaps, s.totalTaps, dbValuesRef.current?.totalTaps||0);
-    const safeEarned=Math.max(globalLocal.totalEarned, s.totalEarned, dbValuesRef.current?.totalEarned||0);
-    // Update global store with the safe value so future character switches keep it
+    // DB is always the authoritative floor — local can only be HIGHER (new taps since last sync)
+    // This prevents a stale localStorage from ever resetting DB progress
+    const dbTaps=dbValuesRef.current?.totalTaps||0;
+    const dbEarned=dbValuesRef.current?.totalEarned||0;
+    const dbCoins=dbValuesRef.current?.coins||0;
+    const safeTaps=Math.max(globalLocal.totalTaps, s.totalTaps, dbTaps);
+    const safeEarned=Math.max(globalLocal.totalEarned, s.totalEarned, dbEarned);
     setGlobalTaps(uid,safeTaps,safeEarned);
-    // Coins are character-specific in localStorage but synced globally via DB
-    // On new browser/device, DB value is source of truth; on same device, take highest
-    const safeCoins=Math.max(s.coins, dbValuesRef.current?.coins||0);
-    // Merge upgrades: take MAX level per key across localStorage + DB (never lose purchased upgrades)
-    const dbUpgrades=dbValuesRef.current?.upgrades||{};
+    const safeCoins=Math.max(s.coins, dbCoins);
+    // Merge upgrades: always take MAX across localStorage + DB so purchases are never lost
+    const dbUpgrades=(dbValuesRef.current?.upgrades||{}) as Record<string,number>;
     const allUpgradeKeys=new Set([...Object.keys(s.upgrades),...Object.keys(dbUpgrades)]);
     const safeUpgrades:Record<string,number>={};
-    allUpgradeKeys.forEach(k=>{safeUpgrades[k]=Math.max(s.upgrades[k]||0,(dbUpgrades as Record<string,number>)[k]||0);});
+    allUpgradeKeys.forEach(k=>{safeUpgrades[k]=Math.max(s.upgrades[k]||0,dbUpgrades[k]||0);});
     setCharId(id);setCoins(safeCoins);setTotalEarned(safeEarned);setTotalTaps(safeTaps);
     setUpgrades(safeUpgrades);
-    const mx=1000+(safeUpgrades["energy_max"]||0)*200+(safeUpgrades["energy_max2"]||0)*500+(safeUpgrades["energy_max3"]||0)*1000;
+    const mx=1000+(safeUpgrades["energy_max"]||0)*200+(safeUpgrades["energy_max2"]||0)*500+(safeUpgrades["energy_max3"]||0)*1000+(safeUpgrades["energy_max4"]||0)*2000+(safeUpgrades["energy_max5"]||0)*5000+(safeUpgrades["energy_max6"]||0)*15000;
     setMaxEnergy(mx);setEnergy(mx);
     setScreen("game");setActiveTab("play");
     const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:safeUpgrades};
     saveRef.current=mergedSave;
     persistSave(uid,mergedSave);
-    // Sync to DB immediately on start — writes all current state including merged upgrades
-    syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
+    // Only syncDB if we have meaningful data — don't overwrite DB with zeros
+    if(safeTaps>0||safeCoins>0||Object.keys(safeUpgrades).length>0){
+      syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
+    }
   }
 
   // Stable doSave — reads from liveRef so deps never change, interval never restarts
@@ -1357,11 +1534,18 @@ export default function TapGame() {
     else if("clientX" in e){tx=(e as React.MouseEvent).clientX;ty=(e as React.MouseEvent).clientY;}
     if(energy<=0)return;
 
-    const tapPow=(upgrades["tap_power"]||0)*1+(upgrades["tap_pow2"]||0)*3+(upgrades["tap_pow3"]||0)*8+(upgrades["tap_pow4"]||0)*20+(upgrades["tap_pow5"]||0)*60+(upgrades["tap_pow6"]||0)*200;
-    const multiTap=1+(upgrades["multi_tap"]||0)*1+(upgrades["multi_tap2"]||0)*0.5+(upgrades["multi_tap3"]||0)*1+(upgrades["multi_tap4"]||0)*2;
-    const critChance=Math.min(0.9,((upgrades["crit_chance"]||0)+(upgrades["crit_chan2"]||0)+(upgrades["crit_chan3"]||0))*0.1);
-    const critMult=(upgrades["crit_pow2"]?15:upgrades["crit_pow"]?8:5);
-    const coinAura=1+((upgrades["coin_aura"]||0)*0.5);
+    const tapPow=(upgrades["tap_power"]||0)*1+(upgrades["tap_pow2"]||0)*3+(upgrades["tap_pow3"]||0)*8+(upgrades["tap_pow4"]||0)*20+(upgrades["tap_pow5"]||0)*60+(upgrades["tap_pow6"]||0)*200+(upgrades["tap_pow7"]||0)*600+(upgrades["tap_pow8"]||0)*2000+(upgrades["tap_pow9"]||0)*8000;
+    const chainBonus=1+(upgrades["tap_chain"]||0)*1+(upgrades["tap_chain2"]||0)*2+(upgrades["tap_chain3"]||0)*5;
+    const multiTap=(1+(upgrades["multi_tap"]||0)*1+(upgrades["multi_tap2"]||0)*0.5+(upgrades["multi_tap3"]||0)*1+(upgrades["multi_tap4"]||0)*2+(upgrades["multi_tap5"]||0)*3+(upgrades["multi_tap6"]||0)*5+(upgrades["multi_tap7"]||0)*10)*chainBonus;
+    const critChance=Math.min(0.95,((upgrades["crit_chance"]||0)+(upgrades["crit_chan2"]||0)+(upgrades["crit_chan3"]||0)+(upgrades["crit_chan4"]||0)+(upgrades["crit_chan5"]||0))*0.1);
+    const critMult=(upgrades["crit_pow5"]?100:upgrades["crit_pow4"]?50:upgrades["crit_pow3"]?25:upgrades["crit_pow2"]?15:upgrades["crit_pow"]?8:5)*(1+(upgrades["crit_aura"]||0)*0.25+(upgrades["crit_aura2"]||0)*0.75);
+    // Coin aura from multiple upgrade categories stacked
+    const degenMult=1+(upgrades["degen_lore"]||0)*0.05+(upgrades["degen_lore2"]||0)*0.15+(upgrades["degen_lore3"]||0)*0.35+(upgrades["degen_lore4"]||0)*0.80+(upgrades["degen_lore5"]||0)*2.0+(upgrades["ngmi_tax"]||0)*0.10+(upgrades["wagmi_boost"]||0)*0.20+(upgrades["ape_in"]||0)*0.15+(upgrades["ape_in2"]||0)*0.40+(upgrades["diamond_hands"]||0)*0.25+(upgrades["diamond_hands2"]||0)*0.60+(upgrades["hype_train"]||0)*0.30+(upgrades["degen_grind"]||0)*0.20+(upgrades["degen_grind2"]||0)*0.50+(upgrades["alpha_call"]||0)*0.25+(upgrades["alpha_call2"]||0)*0.75+(upgrades["nft_flex"]||0)*0.20+(upgrades["whitelist"]||0)*0.15;
+    const memeMult=1+(upgrades["meme_1"]||0)*0.10+(upgrades["meme_2"]||0)*0.12+(upgrades["meme_3"]||0)*0.15+(upgrades["meme_4"]||0)*0.18+(upgrades["meme_5"]||0)*0.12+(upgrades["meme_6"]||0)*0.20+(upgrades["meme_7"]||0)*0.30+(upgrades["meme_8"]||0)*0.50+(upgrades["meme_combo"]||0)*0.25+(upgrades["meme_legend"]||0)*1.0+(upgrades["viral_tap"]||0)*0.20+(upgrades["viral_tap2"]||0)*0.50+(upgrades["rug_pull"]||0)*0.15+(upgrades["pump_it"]||0)*0.35+(upgrades["to_da_moon"]||0)*0.60;
+    const towerMult=1+(upgrades["tower_1"]||0)*0.05+(upgrades["tower_2"]||0)*0.12+(upgrades["tower_3"]||0)*0.25+(upgrades["tower_4"]||0)*0.50+(upgrades["tower_5"]||0)*1.0+(upgrades["tower_6"]||0)*2.0+(upgrades["tower_7"]||0)*5.0+(upgrades["tower_8"]||0)*15.0+(upgrades["tower_guard"]||0)*0.08+(upgrades["tower_lord"]||0)*0.50;
+    const prestigeMult=1+(upgrades["prestige_tap"]||0)*0.20+(upgrades["prestige_tap2"]||0)*0.50+(upgrades["prestige_tap3"]||0)*1.0+(upgrades["prestige_all"]||0)*0.25+(upgrades["prestige_all2"]||0)*0.75+(upgrades["prestige_all3"]||0)*2.0+(upgrades["prestige_all4"]||0)*5.0;
+    const galaxyMult=(upgrades["galaxy_3"]?5:upgrades["galaxy_2"]?3:upgrades["galaxy_1"]?2:1)*(1+(upgrades["big_bang"]||0)*0.5+(upgrades["dark_energy"]||0)*1.0+(upgrades["galaxy_forge"]?10:0));
+    const coinAura=(1+((upgrades["coin_aura"]||0)*0.5)+((upgrades["coin_aura2"]||0)*1.0)+((upgrades["coin_aura3"]||0)*2.5)+((upgrades["coin_aura4"]||0)*10.0)+(upgrades["lucky_str2"]||0)*0.10+(upgrades["lucky_str3"]||0)*0.15+(upgrades["lucky_str4"]||0)*0.25+(upgrades["double_coins"]||0)*0.25+(upgrades["triple_coins"]||0)*0.10+(upgrades["rainbow_tap"]||0)*0.20+(upgrades["moon_shot"]||0)*0.10)*degenMult*memeMult*towerMult*prestigeMult*galaxyMult;
     const tapBase=(char.baseCoins+tapPow)*multiTap*coinAura;
     const specMult=specialActive?char.specialMultiplier:1;
     const isCrit=Math.random()<critChance;
@@ -1388,25 +1572,24 @@ export default function TapGame() {
         // Always update global tap counter so character switches preserve total
         setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
       }
-      // Debounced DB write — fires 800ms after last tap so leaderboard stays current
+      // Fast DB write — debounced 400ms after last tap; leaderboard polls every 3s
       if(dbDebounceRef.current)clearTimeout(dbDebounceRef.current);
       dbDebounceRef.current=setTimeout(()=>{
         const d=liveRef.current;
         if(d.charId&&d.uid){
-          // Update dbValuesRef so next character switch uses fresh values
           dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
           syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
         }
-      },800);
+      },400);
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
-    const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1;
+    const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1+(upgrades["combo_spd4"]||0)*2+(upgrades["combo_spd5"]||0)*5;
     const gcBonus=char.id==="gigachad"?2:1;
-    const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30;
+    const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30+(upgrades["combo_max4"]||0)*60+(upgrades["combo_max5"]||0)*120+(upgrades["combo_max6"]||0)*300;
     setCombo(c=>Math.min(maxCombo,c+0.3*cspeed*gcBonus));
     setComboTimer(0.8);
-    const spCharge=2+(upgrades["special_cd"]||0)*1+(upgrades["special_cd2"]||0)*2+(upgrades["special_cd3"]||0)*4;
+    const spCharge=2+(upgrades["special_cd"]||0)*1+(upgrades["special_cd2"]||0)*2+(upgrades["special_cd3"]||0)*4+(upgrades["special_cd4"]||0)*8+(upgrades["special_cd5"]||0)*16+(upgrades["special_cd6"]||0)*40;
     setSpecialCharge(s=>Math.min(100,s+spCharge));
     setCharPulse(true);setTimeout(()=>setCharPulse(false),90);
     if(earned>tapBase*5){setShaking(true);setTimeout(()=>setShaking(false),180);}
@@ -1425,9 +1608,9 @@ export default function TapGame() {
     if(coins<cost)return;
     setCoins(c=>c-cost);
     setUpgrades(u=>({...u,[id]:(u[id]||0)+1}));
-    if(id==="energy_max"||id==="energy_max2"||id==="energy_max3"){
+    if(id==="energy_max"||id==="energy_max2"||id==="energy_max3"||id==="energy_max4"||id==="energy_max5"||id==="energy_max6"){
       const nu={...upgrades,[id]:(upgrades[id]||0)+1};
-      setMaxEnergy(1000+(nu["energy_max"]||0)*200+(nu["energy_max2"]||0)*500+(nu["energy_max3"]||0)*1000);
+      setMaxEnergy(1000+(nu["energy_max"]||0)*200+(nu["energy_max2"]||0)*500+(nu["energy_max3"]||0)*1000+(nu["energy_max4"]||0)*2000+(nu["energy_max5"]||0)*5000+(nu["energy_max6"]||0)*15000);
     }
     showToast(`${u.emoji} ${u.name} Lv.${lv+1}!`);
   },[coins,upgrades]);
