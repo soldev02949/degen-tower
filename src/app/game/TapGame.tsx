@@ -1041,8 +1041,23 @@ export default function TapGame() {
         const savedAv=getAvatar(authId);
         if(savedAv){setAvatar(savedAv);}
       } else {
-        const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
-        setUsername(defaultName);setPlayerName(defaultName,authId);
+        // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
+        let migrated=false;
+        const oldId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
+        if(oldId&&oldId.startsWith("p_")){
+          const{data:oldRec}=await supabase.from("dt_players").select("*").eq("wallet_address",oldId).maybeSingle();
+          if(oldRec){
+            await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);
+            if(oldRec.username){setUsername(oldRec.username);setPlayerName(oldRec.username,authId);}
+            if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet);setPlayerWallet(oldRec.sol_wallet,authId);}
+            localStorage.removeItem("degen_player_id"); // clear so migration only runs once
+            migrated=true;
+          }
+        }
+        if(!migrated){
+          const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
+          setUsername(defaultName);setPlayerName(defaultName,authId);
+        }
       }
     });
   },[user?.id]);
