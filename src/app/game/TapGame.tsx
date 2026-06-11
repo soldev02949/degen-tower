@@ -306,7 +306,7 @@ function isOnline(last_seen?:string){if(!last_seen)return false;return(Date.now(
 function useCountdown(){
   const [t,setT]=useState("");
   useEffect(()=>{
-    function c(){ const now=Date.now(),p=48*3600000,next=Math.ceil(now/p)*p,d=next-now; const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000); setT(`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`); }
+    function c(){ const now=Date.now(),p=7*24*3600000,epoch=new Date("2026-06-09T00:00:00Z").getTime(),next=epoch+Math.ceil((now-epoch)/p)*p,d=next-now; const days=Math.floor(d/86400000),h=Math.floor((d%86400000)/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000); setT(days>0?`${days}d ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`); }
     c(); const id=setInterval(c,1000); return()=>clearInterval(id);
   },[]);
   return t;
