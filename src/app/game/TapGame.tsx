@@ -88,8 +88,14 @@ function setAvatarStore(a:string,uid:string=""){ const k=uid?`degen_avatar_${uid
 interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:number; upgrades:Record<string,number>; highScore:number; }
 
 function loadSave(uid:string,charId:string):SaveData{
-  const k=uid?`degen_save_${uid}_${charId}`:`degen_save_${charId}`;
-  try{ const r=localStorage.getItem(k); if(r){ const d=JSON.parse(r); return { charId:d.charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; } }catch{}
+  const scopedKey=uid?`degen_save_${uid}_${charId}`:`degen_save_${charId}`;
+  const legacyKey=`degen_save_${charId}`;
+  // Try scoped key first
+  try{ const r=localStorage.getItem(scopedKey); if(r){ const d=JSON.parse(r); return { charId:d.charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; } }catch{}
+  // Fall back to legacy global key (one-time migration for existing users)
+  if(uid&&scopedKey!==legacyKey){
+    try{ const r=localStorage.getItem(legacyKey); if(r){ const d=JSON.parse(r); const save={ charId:d.charId||charId, coins:d.coins||0, totalEarned:d.totalEarned||0, totalTaps:d.totalTaps||0, upgrades:d.upgrades||{}, highScore:d.highScore||0 }; localStorage.setItem(scopedKey,JSON.stringify(save)); localStorage.removeItem(legacyKey); return save; } }catch{}
+  }
   return { charId, coins:0, totalEarned:0, totalTaps:0, upgrades:{}, highScore:0 };
 }
 function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
@@ -977,6 +983,8 @@ export default function TapGame() {
   const [activeTab,setActiveTab]=useState<"home"|"play"|"shop"|"ranks"|"settings">("home");
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
+  // DB-loaded values — source of truth for taps/coins (never overwrite with local zeros)
+  const dbValuesRef=useRef<{totalEarned:number;totalTaps:number}|null>(null);
   const [showModal,setShowModal]=useState(false);
   const [pendingChar,setPendingChar]=useState<string|null>(null);
   const [playerId,setPlayerId]=useState("");
@@ -1040,6 +1048,8 @@ export default function TapGame() {
         if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet,authId);}
         const savedAv=getAvatar(authId);
         if(savedAv){setAvatar(savedAv);}
+        // Store DB values — these are the source of truth for taps/coins
+        dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0};
       } else {
         // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
         let migrated=false;
@@ -1077,13 +1087,21 @@ export default function TapGame() {
   function startGame(id:string,name:string,wallet?:string){
     const uid=user?.id||playerId;
     const s=loadSave(uid,id);
-    setCharId(id);setCoins(s.coins);setTotalEarned(s.totalEarned);setTotalTaps(s.totalTaps);
+    // Use whichever is higher: local save or DB — never go backwards
+    const safeTaps=Math.max(s.totalTaps, dbValuesRef.current?.totalTaps||0);
+    const safeEarned=Math.max(s.totalEarned, dbValuesRef.current?.totalEarned||0);
+    const safeCoins=safeTaps>s.totalTaps ? safeEarned : s.coins; // if DB ahead, use earned as balance
+    setCharId(id);setCoins(safeCoins);setTotalEarned(safeEarned);setTotalTaps(safeTaps);
     setUpgrades(s.upgrades);
     const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;
     setMaxEnergy(mx);setEnergy(mx);
-    setScreen("game");setActiveTab("play");saveRef.current=s;
+    setScreen("game");setActiveTab("play");
+    const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps};
+    saveRef.current=mergedSave;
+    persistSave(uid,mergedSave); // write merged values to local cache
     const w=wallet??getPlayerWallet(uid);
-    syncDB(uid,name,id,s.totalEarned,s.totalTaps,w||undefined);
+    // Only sync to DB if we have actual data to write (don't reset DB with zeros)
+    if(safeTaps>0||safeEarned>0||name){syncDB(uid,name,id,safeEarned,safeTaps,w||undefined);}
   }
 
   const doSave=useCallback(()=>{
