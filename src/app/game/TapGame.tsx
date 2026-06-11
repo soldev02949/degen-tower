@@ -100,7 +100,7 @@ function loadSave(uid:string,charId:string):SaveData{
 }
 function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
 
-async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,solWallet?:string){
+async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,solWallet?:string,avatarUrl?:string){
   try{
     const{supabase}=await import("@/lib/supabase");
     await supabase.from("dt_players").upsert({
@@ -108,12 +108,13 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
       total_score:Math.floor(totalEarned), games_played:Math.floor(totalTaps),
       is_verified:false,
       ...(solWallet?{sol_wallet:solWallet}:{}),
+      ...(avatarUrl?{avatar_url:avatarUrl}:{}),
     },{onConflict:"wallet_address"});
   }catch{}
 }
 
 interface Particle { id:number; x:number; y:number; value:string; color:string; big:boolean; }
-interface LBEntry { id:string; wallet_address:string; username:string; character:string; total_score:number; games_played:number; }
+interface LBEntry { id:string; wallet_address:string; username:string; character:string; total_score:number; games_played:number; avatar_url?:string; }
 
 // ─── Countdown ────────────────────────────────────────────────────────────────
 function useCountdown(){
@@ -126,7 +127,12 @@ function useCountdown(){
 }
 
 // ─── TOP BAR (glass) ─────────────────────────────────────────────────────────
-function TopBar({username,avatar,onSettings,onLogout}:{username:string;avatar:string;onSettings:()=>void;onLogout:()=>void}){
+function AvatarDisplay({emoji,url,size=28}:{emoji:string;url?:string;size?:number}){
+  if(url){return <img src={url} alt="" style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",border:"1.5px solid rgba(168,85,247,0.5)",flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>;}
+  return <span style={{fontSize:Math.round(size*0.65),lineHeight:1,flexShrink:0}}>{emoji||"🐸"}</span>;
+}
+
+function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string;avatar:string;avatarUrl?:string;onSettings:()=>void;onLogout:()=>void}){
   return(
     <div style={{
       position:"fixed",top:0,left:0,right:0,zIndex:200,
@@ -151,7 +157,7 @@ function TopBar({username,avatar,onSettings,onLogout}:{username:string;avatar:st
         background:G.glass,border:`1px solid ${G.glassBorder}`,
         borderRadius:20,padding:"4px 10px 4px 6px",
       }}>
-        <span style={{fontSize:18,lineHeight:1}}>{avatar||"🐸"}</span>
+        <AvatarDisplay emoji={avatar} url={avatarUrl} size={28}/>
         <span style={{color:"#ccc",fontSize:12,fontWeight:700,maxWidth:72,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
       </div>
       <button onClick={onSettings} style={{
@@ -326,11 +332,14 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
 // ─── SETTINGS TAB (glass) ────────────────────────────────────────────────────
 const AVATARS=["🐸","💪","🎩","🧌","🐕","💀","🦊","🐉","🤖","👾","🦁","🐺","🦂","🎭","🔥","💎"];
 
-function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:string;onSave:(u:string,w:string,av:string)=>void}){
+function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:string;solWallet:string;currentAvatarUrl?:string;onSave:(u:string,w:string,av:string,url?:string)=>void}){
   const {user,signOut}=useAuth();
   const [name,setName]=useState(username);
   const [wallet,setWallet]=useState(solWallet);
   const [avatar,setAvatar]=useState(()=>getAvatar(user?.id||"")||"🐸");
+  const [avatarUrl,setAvatarUrl]=useState(currentAvatarUrl||"");
+  const [uploading,setUploading]=useState(false);
+  const [uploadErr,setUploadErr]=useState("");
   const [pwMode,setPwMode]=useState(false);
   const [pwMsg,setPwMsg]=useState("");
   const [saving,setSaving]=useState(false);
@@ -338,10 +347,29 @@ function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:stri
   const [delConfirm,setDelConfirm]=useState(false);
   const [delText,setDelText]=useState("");
 
+  async function handleAvatarUpload(file:File){
+    if(!user?.id)return;
+    if(file.size>2*1024*1024){setUploadErr("Image must be under 2MB");return;}
+    setUploading(true);setUploadErr("");
+    try{
+      const{supabase}=await import("@/lib/supabase");
+      const ext=file.name.split(".").pop()||"jpg";
+      const path=`${user.id}/avatar.${ext}`;
+      const{error}=await supabase.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type});
+      if(error)throw error;
+      const{data}=supabase.storage.from("avatars").getPublicUrl(path);
+      const url=data.publicUrl+"?t="+Date.now(); // cache-bust
+      setAvatarUrl(url);
+      setUploadErr("✅ Photo uploaded!");
+      setTimeout(()=>setUploadErr(""),2500);
+    }catch(e:unknown){setUploadErr("Upload failed — try again");}
+    setUploading(false);
+  }
+
   async function handleSave(){
     setSaving(true);
     setAvatarStore(avatar, user?.id||"");
-    onSave(name.trim()||username, wallet.trim(), avatar);
+    onSave(name.trim()||username, wallet.trim(), avatar, avatarUrl||undefined);
     setTimeout(()=>{setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),2200);},600);
   }
   async function handleResetPw(){
@@ -377,16 +405,42 @@ function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:stri
             background:`linear-gradient(135deg,rgba(168,85,247,0.15),rgba(168,85,247,0.05))`,
             border:"2px solid rgba(168,85,247,0.3)",
             display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:52,lineHeight:1,
+            fontSize:52,lineHeight:1,overflow:"hidden",
             boxShadow:"0 0 30px rgba(168,85,247,0.2)",
-          }}>{avatar}</div>
+          }}>
+            {avatarUrl
+              ?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>setAvatarUrl("")}/>
+              :<span>{avatar}</span>
+            }
+          </div>
           <div style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:4}}>{name||"Degen"}</div>
           {user?.email&&<div style={{color:"#3a2255",fontSize:11}}>{user.email}</div>}
         </div>
 
+        {/* Profile picture upload */}
+        <div style={card}>
+          <label style={label}>Profile Picture</label>
+          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <label style={{
+              display:"inline-flex",alignItems:"center",gap:8,
+              background:"linear-gradient(135deg,rgba(168,85,247,0.15),rgba(168,85,247,0.05))",
+              border:"1.5px dashed rgba(168,85,247,0.4)",borderRadius:14,
+              padding:"10px 16px",cursor:"pointer",color:"#c084fc",fontSize:13,fontWeight:700,
+              transition:"all 0.2s",
+            }}>
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style={{display:"none"}}
+                onChange={e=>{const f=e.target.files?.[0];if(f)handleAvatarUpload(f);e.target.value="";}}/>
+              {uploading?"⏳ Uploading…":"📷 Upload Photo"}
+            </label>
+            {avatarUrl&&<button onClick={()=>setAvatarUrl("")} style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,color:"#ef4444",fontSize:11,fontWeight:700,padding:"8px 12px",cursor:"pointer"}}>✕ Remove</button>}
+          </div>
+          {uploadErr&&<div style={{color:uploadErr.startsWith("✅")?"#22d67a":"#ef4444",fontSize:12,marginTop:8}}>{uploadErr}</div>}
+          <div style={{color:"#3a2255",fontSize:10,marginTop:6}}>Max 2MB · JPG, PNG, GIF, WEBP</div>
+        </div>
+
         {/* Avatar picker */}
         <div style={card}>
-          <label style={label}>Choose Avatar</label>
+          <label style={label}>{avatarUrl?"Emoji (used when no photo)":"Choose Emoji Avatar"}</label>
           <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:7}}>
             {AVATARS.map(a=>(
               <button key={a} onClick={()=>setAvatar(a)} style={{
@@ -638,7 +692,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
     setLoading(true);
     try{
       const{supabase}=await import("@/lib/supabase");
-      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played").order("games_played",{ascending:false}).limit(200);
+      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played,avatar_url").order("games_played",{ascending:false}).limit(200);
       const seen=new Map<string,LBEntry>();
       for(const p of (data||[]) as LBEntry[]){
         const key=(p.username||"").toLowerCase();
@@ -706,7 +760,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                 return(
                   <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(180,180,180,0.1)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
                     <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px silver)"}}>🥈</div>
-                    <div style={{fontSize:28,marginBottom:6}}>{CE[p.character]||"🎮"}</div>
+                    <div style={{fontSize:28,marginBottom:6,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={36}/></div>
                     <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
                     <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
                     <div style={{color:"#aaa",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
@@ -725,7 +779,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                     marginBottom:14,
                   }}>
                     <div style={{fontSize:36,marginBottom:8,filter:"drop-shadow(0 0 12px gold)"}}>👑</div>
-                    <div style={{fontSize:36,marginBottom:8}}>{CE[p.character]||"🎮"}</div>
+                    <div style={{fontSize:36,marginBottom:8,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={44}/></div>
                     <div style={{color:"#fff",fontWeight:900,fontSize:14,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
                     <div style={{background:`${r.color}20`,border:`1px solid ${r.color}40`,borderRadius:8,padding:"3px 10px",fontSize:9,color:r.color,fontWeight:800,marginBottom:8,display:"inline-block"}}>{r.emoji} Lv.{lv} {r.name}</div>
                     <div style={{color:"#f5c842",fontWeight:900,fontSize:16,filter:"drop-shadow(0 0 6px rgba(245,200,66,0.5))"}}>👆 {fmt(p.games_played||0)}</div>
@@ -737,7 +791,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                 return(
                   <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(205,127,50,0.15)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
                     <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px #cd7f32)"}}>🥉</div>
-                    <div style={{fontSize:28,marginBottom:6}}>{CE[p.character]||"🎮"}</div>
+                    <div style={{fontSize:28,marginBottom:6,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={36}/></div>
                     <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
                     <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
                     <div style={{color:"#cd7f32",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
@@ -760,7 +814,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent",
                 }}>
                   <div style={{color:isPrize?"#22d67a":"#2a1540",fontWeight:900,fontSize:13,width:26,textAlign:"center",flexShrink:0}}>#{i+4}</div>
-                  <div style={{fontSize:22,flexShrink:0}}>{CE[p.character]||"🎮"}</div>
+                  <div style={{fontSize:22,flexShrink:0,display:"flex",alignItems:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={28}/></div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{color:me?"#c084fc":"#ddd",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {p.username||"Anon"}{me&&" 👈"}
@@ -991,6 +1045,7 @@ export default function TapGame() {
   const [username,setUsername]=useState("");
   const [solWallet,setSolWallet]=useState("");
   const [avatar,setAvatar]=useState("🐸");
+  const [avatarUrl,setAvatarUrl]=useState(""); // custom profile picture URL
   const [dbLoaded,setDbLoaded]=useState(false);
 
   const [coins,setCoins]=useState(0);
@@ -1042,38 +1097,41 @@ export default function TapGame() {
         import("@/lib/auth").then(()=>window.location.href="/");
       }
     }).catch(()=>{});
+    // Safety timeout — unblock game if DB takes too long or errors
+    const dbTimeout=setTimeout(()=>setDbLoaded(true),5000);
     import("@/lib/supabase").then(async({supabase})=>{
-      const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
-      if(existing){
-        if(existing.username){setUsername(existing.username);setPlayerName(existing.username,authId);}
-        if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet,authId);}
-        const savedAv=getAvatar(authId);
-        if(savedAv){setAvatar(savedAv);}
-        // Store DB values — these are the source of truth for taps/coins
-        dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0};
-        setDbLoaded(true); // unblock character select
-      } else {
-        // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
-        let migrated=false;
-        const oldId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
-        if(oldId&&oldId.startsWith("p_")){
-          const{data:oldRec}=await supabase.from("dt_players").select("*").eq("wallet_address",oldId).maybeSingle();
-          if(oldRec){
-            await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);
-            if(oldRec.username){setUsername(oldRec.username);setPlayerName(oldRec.username,authId);}
-            if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet);setPlayerWallet(oldRec.sol_wallet,authId);}
-            dbValuesRef.current={totalEarned:oldRec.total_score||0,totalTaps:oldRec.games_played||0};
-            localStorage.removeItem("degen_player_id"); // clear so migration only runs once
-            migrated=true;
+      try{
+        const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
+        if(existing){
+          if(existing.username){setUsername(existing.username);setPlayerName(existing.username,authId);}
+          if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet,authId);}
+          const savedAv=getAvatar(authId);
+          if(savedAv){setAvatar(savedAv);}
+          if(existing.avatar_url){setAvatarUrl(existing.avatar_url);}
+          dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0};
+        } else {
+          // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
+          let migrated=false;
+          const oldId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
+          if(oldId&&oldId.startsWith("p_")){
+            const{data:oldRec}=await supabase.from("dt_players").select("*").eq("wallet_address",oldId).maybeSingle();
+            if(oldRec){
+              await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);
+              if(oldRec.username){setUsername(oldRec.username);setPlayerName(oldRec.username,authId);}
+              if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet);setPlayerWallet(oldRec.sol_wallet,authId);}
+              dbValuesRef.current={totalEarned:oldRec.total_score||0,totalTaps:oldRec.games_played||0};
+              localStorage.removeItem("degen_player_id");
+              migrated=true;
+            }
+          }
+          if(!migrated){
+            const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
+            setUsername(defaultName);setPlayerName(defaultName,authId);
           }
         }
-        if(!migrated){
-          const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
-          setUsername(defaultName);setPlayerName(defaultName,authId);
-        }
-        setDbLoaded(true); // unblock character select
-      }
-    });
+      }catch(e){console.error("DB load error",e);}
+      finally{clearTimeout(dbTimeout);setDbLoaded(true);}
+    }).catch(()=>{clearTimeout(dbTimeout);setDbLoaded(true);});
   },[user?.id]);
 
   function tryStart(id:string){
@@ -1112,8 +1170,8 @@ export default function TapGame() {
     const uid=user?.id||playerId;
     const s:SaveData={charId:charId!,coins,totalEarned,totalTaps,upgrades,highScore:Math.max(coins,saveRef.current?.highScore||0)};
     persistSave(uid,s);saveRef.current=s;
-    syncDB(uid,username||getPlayerName(uid),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet(uid)||undefined);
-  },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet,user?.id]);
+    syncDB(uid,username||getPlayerName(uid),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
+  },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet,avatarUrl,user?.id]);
 
   useEffect(()=>{if(screen!=="game"||!charId)return;const id=setInterval(doSave,8000);return()=>clearInterval(id);},[screen,charId,doSave]);
 
@@ -1228,18 +1286,19 @@ export default function TapGame() {
 
   void comboTimer;
 
-  function handleSettingsSave(u:string,w:string,av:string){
+  function handleSettingsSave(u:string,w:string,av:string,url?:string){
     const uid=user?.id||playerId;
     setUsername(u);setPlayerName(u,uid);
     setSolWallet(w);setPlayerWallet(w,uid);
     setAvatar(av);setAvatarStore(av,uid);
-    syncDB(uid,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
+    if(url!==undefined)setAvatarUrl(url);
+    syncDB(uid,u,charId||"pepe",totalEarned,totalTaps,w||undefined,url||avatarUrl||undefined);
   }
 
   // ─── RENDER ─────────────────────────────────────────────────────────────────
   return(
     <div style={{background:G.bg,minHeight:"100vh",position:"relative"}}>
-      <TopBar username={username} avatar={avatar} onSettings={()=>setActiveTab("settings")} onLogout={signOut}/>
+      <TopBar username={username} avatar={avatar} avatarUrl={avatarUrl} onSettings={()=>setActiveTab("settings")} onLogout={signOut}/>
       {showModal&&<UsernameModal onConfirm={onUsername}/>}
 
       {/* Achievement toast */}
@@ -1271,7 +1330,7 @@ export default function TapGame() {
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
-      {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} onSave={handleSettingsSave}/>}
+      {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} currentAvatarUrl={avatarUrl} onSave={handleSettingsSave}/>}
 
       {activeTab==="play"&&(
         <>
