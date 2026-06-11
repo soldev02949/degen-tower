@@ -104,13 +104,9 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
   if(!pid)return;
   try{
     const{supabase}=await import("@/lib/supabase");
-    // Use DB-safe update: only write taps/score if new value is higher than stored
-    const{data:cur}=await supabase.from("dt_players").select("games_played,total_score").eq("wallet_address",pid).maybeSingle();
-    const safeTaps=Math.max(Math.floor(totalTaps),cur?.games_played||0);
-    const safeScore=Math.max(Math.floor(totalEarned),cur?.total_score||0);
     await supabase.from("dt_players").upsert({
       wallet_address:pid, username:uname||("Degen_"+pid.slice(-6)), character:charId,
-      total_score:safeScore, games_played:safeTaps,
+      total_score:Math.floor(totalEarned), games_played:Math.floor(totalTaps),
       is_verified:false,
       ...(solWallet?{sol_wallet:solWallet}:{}),
       ...(avatarUrl?{avatar_url:avatarUrl}:{}),
@@ -1270,16 +1266,16 @@ export default function TapGame() {
     spawn(tx,ty,`+${fmt(Math.round(earned*10)/10)}`,coinColors(earned),false);
     setCoins(c=>c+earned);
     setTotalEarned(t=>{const nt=t+earned;checkAchievements(newTapCount,nt);return nt;});
-    setTotalTaps(t=>{
-      const nt=t+1;
-      // Persist to localStorage immediately on every tap (cheap, keeps progress safe)
+    setTotalTaps(t=>t+1);
+    // Persist to localStorage immediately on every tap (cheap, keeps progress safe)
+    // Use timeout 0 so React has flushed state before we read liveRef
+    setTimeout(()=>{
       const d=liveRef.current;
-      if(d.charId){
-        const s:SaveData={charId:d.charId,coins:d.coins+earned,totalEarned:d.totalEarned+earned,totalTaps:nt,upgrades:d.upgrades,highScore:Math.max(d.coins+earned,saveRef.current?.highScore||0)};
+      if(d.charId&&d.uid){
+        const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
         persistSave(d.uid,s);saveRef.current=s;
       }
-      return nt;
-    });
+    },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
     const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1;
