@@ -1578,11 +1578,17 @@ export default function TapGame() {
   const doSave=useCallback(()=>{
     const d=liveRef.current;
     if(!d.charId)return;
-    const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
+    // Always use the MAX of current session taps and localStorage global taps.
+    // This ensures previous-session taps (stored in degen_global_${uid}) are never lost
+    // even if this session started from a lower DB value.
+    const globalLocal=getGlobalTaps(d.uid);
+    const safeTaps=Math.max(d.totalTaps,globalLocal.totalTaps);
+    const safeEarned=Math.max(d.totalEarned,globalLocal.totalEarned);
+    const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
     persistSave(d.uid,s);saveRef.current=s;
-    setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
-    dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
-    syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+    setGlobalTaps(d.uid,safeTaps,safeEarned);
+    dbValuesRef.current={totalTaps:safeTaps,totalEarned:safeEarned,coins:d.coins,upgrades:d.upgrades};
+    syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,safeEarned,safeTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
   },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
   // Save every 5s during play; save immediately on exit (cleanup)
