@@ -13,10 +13,7 @@ export const CHARACTERS = [
 ];
 
 // ─── Upgrades (40 items) ──────────────────────────────────────────────────────
-// tapsPerSec: auto-tappers that add to both coins AND tap counter
-// minLevel: rank gate (uses player level)
 const UPGRADES: Array<{id:string;name:string;emoji:string;desc:string;baseCost:number;costMult:number;tapsPerSec?:number;minLevel?:number;category:string}> = [
-  // ── AUTO-TAPPERS (rank-gated, also count as taps on leaderboard) ──────────
   { id:"helper_1",   name:"FUD Bear",         emoji:"🐻", desc:"5 auto-taps/sec",              baseCost:200,       costMult:2.8,  tapsPerSec:5,    minLevel:1,  category:"auto" },
   { id:"helper_2",   name:"Bot Army",         emoji:"🤖", desc:"10 auto-taps/sec",             baseCost:1000,      costMult:3.0,  tapsPerSec:10,   minLevel:1,  category:"auto" },
   { id:"helper_3",   name:"Click Farm",       emoji:"🏭", desc:"25 auto-taps/sec",             baseCost:5000,      costMult:3.2,  tapsPerSec:25,   minLevel:5,  category:"auto" },
@@ -26,55 +23,67 @@ const UPGRADES: Array<{id:string;name:string;emoji:string;desc:string;baseCost:n
   { id:"helper_7",   name:"Quantum Farm",     emoji:"⚛️", desc:"250 auto-taps/sec",            baseCost:1200000,   costMult:4.2,  tapsPerSec:250,  minLevel:20, category:"auto" },
   { id:"helper_8",   name:"Sigma Mine",       emoji:"💪", desc:"500 auto-taps/sec",            baseCost:5000000,   costMult:4.5,  tapsPerSec:500,  minLevel:25, category:"auto" },
   { id:"helper_9",   name:"Tower Lord Farm",  emoji:"🏆", desc:"1000 auto-taps/sec 👑",        baseCost:20000000,  costMult:5.0,  tapsPerSec:1000, minLevel:30, category:"auto" },
-  // ── TAP POWER (coins per manual tap) ─────────────────────────────────────
   { id:"tap_power",  name:"Power Tap",        emoji:"⚡", desc:"+1 coin per tap",              baseCost:50,        costMult:1.8,  category:"tap"  },
   { id:"tap_pow2",   name:"Double Strike",    emoji:"⚡⚡",desc:"+3 coins per tap",             baseCost:400,       costMult:2.0,  category:"tap"  },
   { id:"tap_pow3",   name:"Force Tap",        emoji:"🔥", desc:"+8 coins per tap",             baseCost:3000,      costMult:2.2,  category:"tap"  },
   { id:"tap_pow4",   name:"Mega Strike",      emoji:"💣", desc:"+20 coins per tap",            baseCost:25000,     costMult:2.5,  category:"tap"  },
   { id:"tap_pow5",   name:"God Tap",          emoji:"🌋", desc:"+60 coins per tap",            baseCost:200000,    costMult:2.8,  category:"tap"  },
   { id:"tap_pow6",   name:"Void Tap",         emoji:"🌌", desc:"+200 coins per tap",           baseCost:2000000,   costMult:3.0,  category:"tap"  },
-  // ── COIN MULTIPLIER ───────────────────────────────────────────────────────
   { id:"multi_tap",  name:"Multi Tap",        emoji:"✖️", desc:"×2 coins per tap",             baseCost:500,       costMult:2.5,  category:"tap"  },
   { id:"multi_tap2", name:"Triple Tap",       emoji:"✖️✖️",desc:"×0.5 more multiplier",        baseCost:3000,      costMult:2.8,  category:"tap"  },
   { id:"multi_tap3", name:"Quad Tap",         emoji:"🔱", desc:"×1 more multiplier",           baseCost:20000,     costMult:3.0,  category:"tap"  },
   { id:"multi_tap4", name:"Omega Tap",        emoji:"♾️", desc:"×2 more multiplier",           baseCost:200000,    costMult:3.5,  category:"tap"  },
-  // ── CRITICAL HIT ─────────────────────────────────────────────────────────
   { id:"crit_chance",name:"Crit Hit",         emoji:"💥", desc:"+10% crit chance",             baseCost:300,       costMult:2.2,  category:"crit" },
   { id:"crit_chan2", name:"Eagle Eye",         emoji:"🦅", desc:"+10% more crit chance",        baseCost:1500,      costMult:2.4,  category:"crit" },
   { id:"crit_chan3", name:"Laser Focus",       emoji:"🎯", desc:"+10% more crit chance",        baseCost:8000,      costMult:2.8,  category:"crit" },
   { id:"crit_pow",   name:"Crit Force",        emoji:"💢", desc:"Crit = 8× instead of 5×",     baseCost:5000,      costMult:2.5,  category:"crit" },
   { id:"crit_pow2",  name:"Crit Nuke",         emoji:"☢️", desc:"Crit = 15× instead",          baseCost:50000,     costMult:3.0,  category:"crit" },
-  // ── ENERGY ───────────────────────────────────────────────────────────────
   { id:"energy_max", name:"Energy Tank",       emoji:"🔋", desc:"+200 max energy",              baseCost:100,       costMult:2.0,  category:"energy" },
   { id:"energy_max2",name:"Power Cell",        emoji:"⚡🔋",desc:"+500 max energy",             baseCost:700,       costMult:2.2,  category:"energy" },
   { id:"energy_max3",name:"Mega Battery",      emoji:"🏋️", desc:"+1000 max energy",            baseCost:5000,      costMult:2.5,  category:"energy" },
   { id:"energy_reg", name:"Quick Charge",      emoji:"⚡", desc:"Energy regen +0.5×",           baseCost:150,       costMult:1.9,  category:"energy" },
   { id:"energy_reg2",name:"Fast Charge",       emoji:"⚡⚡",desc:"Energy regen +1×",            baseCost:1000,      costMult:2.1,  category:"energy" },
   { id:"energy_reg3",name:"Turbo Charge",      emoji:"🌩️", desc:"Energy regen +2×",            baseCost:8000,      costMult:2.4,  category:"energy" },
-  // ── COMBO ─────────────────────────────────────────────────────────────────
   { id:"combo_speed",name:"Combo Rush",        emoji:"🔥", desc:"Combo builds 20% faster",      baseCost:80,        costMult:1.9,  category:"combo" },
   { id:"combo_spd2", name:"Turbo Combo",        emoji:"🔥🔥",desc:"Combo builds 50% faster",   baseCost:600,       costMult:2.1,  category:"combo" },
   { id:"combo_spd3", name:"Lightning Combo",    emoji:"⚡🔥",desc:"Combo builds 100% faster",  baseCost:4000,      costMult:2.4,  category:"combo" },
   { id:"combo_max",  name:"Combo King",         emoji:"👑", desc:"+5 max combo",                baseCost:400,       costMult:2.3,  category:"combo" },
   { id:"combo_max2", name:"Combo God",          emoji:"👑👑",desc:"+15 max combo",             baseCost:3000,      costMult:2.6,  category:"combo" },
   { id:"combo_max3", name:"Infinite Combo",     emoji:"♾️🔥",desc:"+30 max combo",            baseCost:25000,     costMult:3.0,  category:"combo" },
-  // ── SPECIAL ───────────────────────────────────────────────────────────────
   { id:"special_cd", name:"Special Charger",    emoji:"⏩", desc:"Special charges 50% faster",  baseCost:300,       costMult:2.2,  category:"special" },
   { id:"special_cd2",name:"Quick Special",      emoji:"⚡⏩",desc:"Special charges 100% faster",baseCost:2000,      costMult:2.5,  category:"special" },
   { id:"special_cd3",name:"Instant Special",    emoji:"💫", desc:"Special charges 200% faster", baseCost:15000,     costMult:2.8,  category:"special" },
-  // ── BONUS ─────────────────────────────────────────────────────────────────
   { id:"lucky_strike",name:"Lucky Strike",      emoji:"🎰", desc:"+5% lucky tap chance",        baseCost:500,       costMult:2.8,  category:"bonus" },
   { id:"coin_aura",  name:"Coin Aura",          emoji:"💰", desc:"All coins +50%",              baseCost:10000,     costMult:3.2,  category:"bonus" },
 ];
 
+// ─── Glass UI helpers ─────────────────────────────────────────────────────────
+const G = {
+  bg: "#06000f",
+  surface: "rgba(255,255,255,0.035)",
+  surfaceHover: "rgba(255,255,255,0.065)",
+  border: "rgba(255,255,255,0.08)",
+  borderStrong: "rgba(168,85,247,0.35)",
+  glass: "rgba(255,255,255,0.04)",
+  glassBorder: "rgba(255,255,255,0.1)",
+  purple: "#a855f7",
+  purpleDim: "rgba(168,85,247,0.12)",
+  gold: "#f5c842",
+  goldDim: "rgba(245,200,66,0.1)",
+  green: "#22d67a",
+  red: "#ef4444",
+  blur: "blur(24px)",
+};
+
 // ─── Utils ────────────────────────────────────────────────────────────────────
 function fmt(n:number){ if(n>=1e9)return(n/1e9).toFixed(2)+"B"; if(n>=1e6)return(n/1e6).toFixed(2)+"M"; if(n>=1e3)return(n/1e3).toFixed(1)+"K"; return Math.floor(n).toString(); }
 function getUpgCost(u:typeof UPGRADES[0], lv:number){ return Math.floor(u.baseCost*Math.pow(u.costMult,lv)); }
-function getPlayerId(){ try{ let id=localStorage.getItem("degen_player_id"); if(!id){ id="p_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36); localStorage.setItem("degen_player_id",id); } return id; }catch{ return "anon_"+Math.random().toString(36).slice(2,8); } }
 function getPlayerName(){ try{ return localStorage.getItem("degen_username")||""; }catch{ return ""; } }
 function setPlayerName(n:string){ try{ localStorage.setItem("degen_username",n); }catch{} }
 function getPlayerWallet(){ try{ return localStorage.getItem("degen_sol_wallet")||""; }catch{ return ""; } }
 function setPlayerWallet(w:string){ try{ localStorage.setItem("degen_sol_wallet",w); }catch{} }
+function getAvatar(){ try{return localStorage.getItem("degen_avatar")||"";}catch{return "";} }
+function setAvatarStore(a:string){ try{localStorage.setItem("degen_avatar",a);}catch{} }
 
 interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:number; upgrades:Record<string,number>; highScore:number; }
 
@@ -109,177 +118,95 @@ function useCountdown(){
   return t;
 }
 
-// ─── Top Bar ─────────────────────────────────────────────────────────────────
+// ─── TOP BAR (glass) ─────────────────────────────────────────────────────────
 function TopBar({username,avatar,onSettings,onLogout}:{username:string;avatar:string;onSettings:()=>void;onLogout:()=>void}){
   return(
-    <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(6,0,14,0.96)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"8px 14px",display:"flex",alignItems:"center",gap:8}}>
-      <img src="/logo.png" alt="" onError={e=>{(e.target as HTMLImageElement).style.display="none";}} style={{width:22,height:22,objectFit:"contain",filter:"drop-shadow(0 0 6px rgba(168,85,247,0.6))"}}/>
-      <span style={{color:"#fff",fontWeight:900,fontSize:13,letterSpacing:"-0.02em",flex:1}}>DEGEN CLICKER</span>
-      <a href="/whitepaper" target="_blank" rel="noopener noreferrer" style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:8,color:"#c084fc",fontSize:11,fontWeight:700,padding:"5px 9px",cursor:"pointer",textDecoration:"none",whiteSpace:"nowrap"}}>📄 Whitepaper</a>
-      <span style={{fontSize:18,lineHeight:1}}>{avatar||"🐸"}</span>
-      <span style={{color:"#888",fontSize:12,fontWeight:700,maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
-      <button onClick={onSettings} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,color:"#888",fontSize:13,padding:"5px 9px",cursor:"pointer"}}>⚙️</button>
-      <button onClick={onLogout} style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,color:"#ef4444",fontSize:11,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>Log out</button>
-    </div>
-  );
-}
-
-// ─── Settings Tab ─────────────────────────────────────────────────────────────
-const AVATARS=["🐸","💪","🎩","🧌","🐕","💀","🦊","🐉","🤖","👾","🦁","🐺","🦂","🎭","🔥","💎"];
-function getAvatar(){ try{return localStorage.getItem("degen_avatar")||"";}catch{return "";} }
-function setAvatarStore(a:string){ try{localStorage.setItem("degen_avatar",a);}catch{} }
-
-function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:string;onSave:(u:string,w:string,av:string)=>void}){
-  const {user,signOut}=useAuth();
-  const [name,setName]=useState(username);
-  const [wallet,setWallet]=useState(solWallet);
-  const [avatar,setAvatar]=useState(()=>getAvatar()||"🐸");
-  const [pwMode,setPwMode]=useState(false);
-  const [pwMsg,setPwMsg]=useState("");
-  const [saving,setSaving]=useState(false);
-  const [saved,setSaved]=useState(false);
-  const [delConfirm,setDelConfirm]=useState(false);
-  const [delText,setDelText]=useState("");
-
-  async function handleSave(){
-    setSaving(true);
-    setAvatarStore(avatar);
-    onSave(name.trim()||username, wallet.trim(), avatar);
-    setTimeout(()=>{setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),2000);},600);
-  }
-
-  async function handleResetPw(){
-    if(!user?.email){setPwMsg("No email linked to account.");return;}
-    try{
-      const{supabase}=await import("@/lib/supabase");
-      await supabase.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+"/login"});
-      setPwMsg("✅ Password reset email sent to "+user.email);
-    }catch{setPwMsg("Failed to send reset email.");}
-  }
-
-  async function handleDeleteAccount(){
-    if(delText.toLowerCase()!=="delete"){return;}
-    try{
-      const{supabase}=await import("@/lib/supabase");
-      await supabase.from("dt_players").delete().eq("wallet_address",user?.id||"");
-      await supabase.auth.admin?.deleteUser?.(user?.id||"").catch(()=>{});
-      await signOut();
-    }catch{
-      await signOut();
-    }
-  }
-
-  return(
-    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:58,paddingBottom:100,overflowY:"auto"}}>
-      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(120,40,200,0.18) 0%,transparent 55%)",pointerEvents:"none",zIndex:0}}/>
-      <div style={{position:"relative",zIndex:1,maxWidth:440,margin:"0 auto",padding:"0 14px"}}>
-
-        {/* Profile Header */}
-        <div style={{textAlign:"center",padding:"24px 0 20px"}}>
-          <div style={{fontSize:64,lineHeight:1,marginBottom:8}}>{avatar}</div>
-          <div style={{color:"#fff",fontWeight:900,fontSize:18,marginBottom:2}}>{name||"Degen"}</div>
-          {user?.email&&<div style={{color:"#443355",fontSize:11}}>{user.email}</div>}
-        </div>
-
-        {/* Avatar picker */}
-        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
-          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Avatar</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:6}}>
-            {AVATARS.map(a=>(
-              <button key={a} onClick={()=>setAvatar(a)} style={{
-                fontSize:24,background:avatar===a?"rgba(168,85,247,0.2)":"rgba(255,255,255,0.03)",
-                border:avatar===a?"2px solid rgba(168,85,247,0.6)":"2px solid transparent",
-                borderRadius:10,padding:4,cursor:"pointer",lineHeight:1,
-              }}>{a}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Username */}
-        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
-          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Username</div>
-          <input value={name} onChange={e=>setName(e.target.value)} maxLength={24} placeholder="Your display name"
-            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
-        </div>
-
-        {/* Wallet */}
-        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
-          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Solana Wallet Address</div>
-          <div style={{color:"#443355",fontSize:10,marginBottom:8}}>Required for prize payouts</div>
-          <input value={wallet} onChange={e=>setWallet(e.target.value)} placeholder="Your Solana wallet address"
-            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#22d67a",fontSize:11,fontWeight:700,fontFamily:"monospace",padding:"10px 12px",outline:"none",boxSizing:"border-box"}}/>
-        </div>
-
-        {/* Save */}
-        <button onClick={handleSave} disabled={saving} style={{
-          width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",
-          color:"#fff",fontWeight:900,fontSize:15,border:"none",borderRadius:14,
-          padding:"14px",cursor:"pointer",marginBottom:10,
-          boxShadow:"0 0 30px rgba(168,85,247,0.3)",
-        }}>{saving?"Saving…":saved?"✅ Saved!":"Save Changes"}</button>
-
-        {/* Divider */}
-        <div style={{borderTop:"1px solid rgba(255,255,255,0.05)",margin:"12px 0"}}/>
-
-        {/* Change password */}
-        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:16,marginBottom:10}}>
-          <div style={{color:"#888",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Password</div>
-          {!pwMode
-            ?<button onClick={()=>setPwMode(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#ccc",fontSize:13,fontWeight:700,padding:"10px 16px",cursor:"pointer",width:"100%"}}>Change Password</button>
-            :<div>
-              <p style={{color:"#553366",fontSize:12,marginBottom:10}}>We'll send a password reset link to your email: <strong style={{color:"#888"}}>{user?.email||"—"}</strong></p>
-              <button onClick={handleResetPw} style={{background:"rgba(168,85,247,0.15)",border:"1px solid rgba(168,85,247,0.3)",borderRadius:10,color:"#c084fc",fontSize:13,fontWeight:700,padding:"10px 16px",cursor:"pointer",width:"100%"}}>Send Reset Email</button>
-              {pwMsg&&<div style={{color:pwMsg.startsWith("✅")?"#22d67a":"#ef4444",fontSize:12,marginTop:8,textAlign:"center"}}>{pwMsg}</div>}
-            </div>
-          }
-        </div>
-
-        {/* Log out */}
-        <button onClick={signOut} style={{
-          width:"100%",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",
-          color:"#888",fontWeight:700,fontSize:14,borderRadius:14,padding:"13px",cursor:"pointer",marginBottom:10,
-        }}>Log Out</button>
-
-        {/* Delete account */}
-        <div style={{background:"rgba(239,68,68,0.04)",border:"1px solid rgba(239,68,68,0.15)",borderRadius:18,padding:16,marginBottom:10}}>
-          <div style={{color:"#ef4444",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Danger Zone</div>
-          {!delConfirm
-            ?<button onClick={()=>setDelConfirm(true)} style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,color:"#ef4444",fontSize:13,fontWeight:700,padding:"10px 16px",cursor:"pointer",width:"100%"}}>Delete Account</button>
-            :<div>
-              <p style={{color:"#7a3333",fontSize:12,marginBottom:8}}>This will permanently delete your account and all game data. Type <strong>delete</strong> to confirm.</p>
-              <input value={delText} onChange={e=>setDelText(e.target.value)} placeholder="Type delete to confirm"
-                style={{width:"100%",background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,color:"#ef4444",fontSize:13,padding:"9px 12px",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>{setDelConfirm(false);setDelText("");}} style={{flex:1,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:"#888",fontSize:13,fontWeight:700,padding:"10px",cursor:"pointer"}}>Cancel</button>
-                <button onClick={handleDeleteAccount} disabled={delText.toLowerCase()!=="delete"} style={{flex:1,background:delText.toLowerCase()==="delete"?"rgba(239,68,68,0.8)":"rgba(239,68,68,0.15)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,padding:"10px",cursor:delText.toLowerCase()==="delete"?"pointer":"not-allowed"}}>Delete Forever</button>
-              </div>
-            </div>
-          }
-        </div>
-
+    <div style={{
+      position:"fixed",top:0,left:0,right:0,zIndex:200,
+      background:"rgba(6,0,15,0.85)",
+      backdropFilter:G.blur,
+      borderBottom:`1px solid ${G.border}`,
+      padding:"0 16px",height:52,
+      display:"flex",alignItems:"center",gap:10,
+    }}>
+      <img src="/logo.png" alt="" onError={e=>{(e.target as HTMLImageElement).style.display="none";}}
+        style={{width:28,height:28,objectFit:"contain",filter:"drop-shadow(0 0 8px rgba(168,85,247,0.7))"}}/>
+      <span style={{color:"#fff",fontWeight:900,fontSize:14,letterSpacing:"-0.03em",flex:1,background:"linear-gradient(90deg,#fff,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
+        DEGEN CLICKER
+      </span>
+      <a href="/whitepaper" target="_blank" rel="noopener noreferrer" style={{
+        background:G.purpleDim,border:`1px solid rgba(168,85,247,0.25)`,
+        borderRadius:20,color:"#c084fc",fontSize:10,fontWeight:700,
+        padding:"5px 10px",cursor:"pointer",textDecoration:"none",whiteSpace:"nowrap",
+      }}>📄 Whitepaper</a>
+      <div style={{
+        display:"flex",alignItems:"center",gap:6,
+        background:G.glass,border:`1px solid ${G.glassBorder}`,
+        borderRadius:20,padding:"4px 10px 4px 6px",
+      }}>
+        <span style={{fontSize:18,lineHeight:1}}>{avatar||"🐸"}</span>
+        <span style={{color:"#ccc",fontSize:12,fontWeight:700,maxWidth:72,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
       </div>
+      <button onClick={onSettings} style={{
+        background:G.glass,border:`1px solid ${G.glassBorder}`,
+        borderRadius:10,color:"#888",fontSize:13,padding:"6px 10px",cursor:"pointer",
+      }}>⚙️</button>
+      <button onClick={onLogout} style={{
+        background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
+        borderRadius:10,color:"#ef4444",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer",
+      }}>Log out</button>
     </div>
   );
 }
 
-// ─── Bottom Tab Bar ───────────────────────────────────────────────────────────
+// ─── BOTTOM BAR (glass) ──────────────────────────────────────────────────────
 const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
 
 function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
+  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="settings"?"#888":"#c084fc";
   return(
-    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"rgba(6,0,14,0.98)",borderTop:"1px solid rgba(255,255,255,0.07)",display:"flex",backdropFilter:"blur(20px)",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
-      {TABS.map(tab=>(
-        <button key={tab.id} onClick={()=>onTab(tab.id)} style={{flex:1,background:"none",border:"none",padding:"10px 0 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",opacity:active===tab.id?1:0.38,transition:"opacity 0.15s",position:"relative"}}>
-          {active===tab.id&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:`linear-gradient(90deg,transparent,${active==="play"?"#a855f7":active==="ranks"?"#f5c842":active==="shop"?"#22d67a":"#888"},transparent)`,borderRadius:"0 0 2px 2px"}}/>}
-          <span style={{fontSize:18}}>{tab.emoji}</span>
-          <span style={{fontSize:9,fontWeight:active===tab.id?800:500,color:active===tab.id?"#fff":"#666",textTransform:"uppercase",letterSpacing:"0.05em"}}>{tab.label}</span>
-        </button>
-      ))}
+    <div style={{
+      position:"fixed",bottom:0,left:0,right:0,zIndex:100,
+      background:"rgba(6,0,15,0.92)",
+      borderTop:`1px solid ${G.border}`,
+      backdropFilter:G.blur,
+      display:"flex",
+      paddingBottom:"env(safe-area-inset-bottom,0px)",
+    }}>
+      {TABS.map(tab=>{
+        const ac=accentFor(tab.id);
+        const isActive=active===tab.id;
+        return(
+          <button key={tab.id} onClick={()=>onTab(tab.id)} style={{
+            flex:1,background:"none",border:"none",padding:"10px 0 8px",
+            display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+            cursor:"pointer",position:"relative",
+          }}>
+            {isActive&&(
+              <div style={{
+                position:"absolute",top:0,left:"25%",right:"25%",height:2,
+                background:ac,borderRadius:"0 0 3px 3px",
+                boxShadow:`0 0 8px ${ac}`,
+              }}/>
+            )}
+            <span style={{
+              fontSize:20,filter:isActive?`drop-shadow(0 0 6px ${ac})`:"none",
+              transition:"filter 0.2s",
+            }}>{tab.emoji}</span>
+            <span style={{
+              fontSize:9,fontWeight:isActive?800:500,
+              color:isActive?ac:"#444",
+              textTransform:"uppercase",letterSpacing:"0.05em",
+              transition:"color 0.2s",
+            }}>{tab.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-// ─── Username Modal ───────────────────────────────────────────────────────────
+// ─── USERNAME MODAL (glass) ───────────────────────────────────────────────────
 function UsernameModal({onConfirm}:{onConfirm:(name:string,wallet:string)=>void}){
   const [name,setName]=useState("");
   const [wallet,setWallet]=useState("");
@@ -297,29 +224,45 @@ function UsernameModal({onConfirm}:{onConfirm:(name:string,wallet:string)=>void}
   }
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(16px)"}}>
-      <div style={{background:"linear-gradient(145deg,#120828,#08001a)",border:"1px solid rgba(168,85,247,0.4)",borderRadius:24,padding:"28px 22px",width:"100%",maxWidth:340,textAlign:"center",boxShadow:"0 0 80px rgba(168,85,247,0.25)"}}>
-        <div style={{fontSize:44,marginBottom:10}}>🎮</div>
-        <h2 style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:4}}>Set Up Your Profile</h2>
-        <p style={{color:"#553366",fontSize:12,marginBottom:18,lineHeight:1.5}}>Choose a name for the leaderboard.<br/>Add your Solana wallet to receive prize payouts.</p>
-        <div style={{marginBottom:10,textAlign:"left"}}>
-          <label style={{color:"#6644aa",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",display:"block",marginBottom:5}}>Name</label>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(20px)"}}>
+      <div style={{
+        background:"rgba(14,4,28,0.95)",
+        border:`1px solid rgba(168,85,247,0.35)`,
+        borderRadius:28,padding:"32px 24px",width:"100%",maxWidth:360,
+        textAlign:"center",
+        boxShadow:"0 0 80px rgba(168,85,247,0.2), 0 40px 80px rgba(0,0,0,0.6)",
+        backdropFilter:"blur(24px)",
+      }}>
+        <div style={{fontSize:52,marginBottom:12,filter:"drop-shadow(0 0 20px rgba(168,85,247,0.6))"}}>🎮</div>
+        <h2 style={{color:"#fff",fontWeight:900,fontSize:22,marginBottom:6,letterSpacing:"-0.02em"}}>Set Up Your Profile</h2>
+        <p style={{color:"#5a3a7a",fontSize:13,marginBottom:24,lineHeight:1.6}}>Choose a name for the leaderboard.<br/>Add your Solana wallet to receive prize payouts.</p>
+
+        <div style={{marginBottom:14,textAlign:"left"}}>
+          <label style={{color:"#7844bb",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:6}}>Display Name</label>
           <input value={name} onChange={e=>setName(e.target.value.slice(0,18))} onKeyDown={e=>e.key==="Enter"&&validate()} placeholder={sug} autoFocus
-            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(168,85,247,0.3)",borderRadius:10,color:"#fff",fontSize:15,padding:"11px 14px",outline:"none",boxSizing:"border-box"}}/>
-          <div style={{color:"#332244",fontSize:10,marginTop:3}}>Leave blank → {sug}</div>
+            style={{width:"100%",background:"rgba(255,255,255,0.05)",border:`1px solid rgba(168,85,247,0.3)`,borderRadius:12,color:"#fff",fontSize:15,fontWeight:700,padding:"12px 14px",outline:"none",boxSizing:"border-box",transition:"border 0.2s"}}/>
+          <div style={{color:"#3a2255",fontSize:10,marginTop:4}}>Suggestion: {sug}</div>
         </div>
-        <div style={{marginBottom:16,textAlign:"left"}}>
-          <label style={{color:"#6644aa",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",display:"block",marginBottom:5}}>
-            Solana Wallet <span style={{color:"#332244",fontWeight:500,textTransform:"none"}}>— optional</span>
+
+        <div style={{marginBottom:24,textAlign:"left"}}>
+          <label style={{color:"#7844bb",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:6}}>
+            Solana Wallet <span style={{color:"#3a2255",fontWeight:500,textTransform:"none"}}>— optional</span>
           </label>
           <input value={wallet} onChange={e=>{setWallet(e.target.value);setWalletErr("");}} placeholder="e.g. 7xKXt…qF2P" onKeyDown={e=>e.key==="Enter"&&validate()}
-            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${walletErr?"rgba(255,60,60,0.6)":"rgba(168,85,247,0.2)"}`,borderRadius:10,color:"#fff",fontSize:12,padding:"11px 14px",outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
+            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${walletErr?"rgba(255,60,60,0.5)":"rgba(168,85,247,0.2)"}`,borderRadius:12,color:"#22d67a",fontSize:12,fontWeight:600,padding:"12px 14px",outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
           {walletErr
-            ?<div style={{color:"#ff6060",fontSize:10,marginTop:3}}>⚠ {walletErr}</div>
-            :<div style={{color:"#332244",fontSize:10,marginTop:3}}>Used to send USDC if you win 🏆 — no sign-in needed</div>
+            ?<div style={{color:"#ff6060",fontSize:10,marginTop:4}}>⚠ {walletErr}</div>
+            :<div style={{color:"#3a2255",fontSize:10,marginTop:4}}>Required to receive USDC prize payouts 🏆</div>
           }
         </div>
-        <button onClick={validate} style={{width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:13,color:"#fff",fontWeight:900,fontSize:15,padding:"13px",cursor:"pointer",boxShadow:"0 0 32px rgba(168,85,247,0.4)"}}>
+
+        <button onClick={validate} style={{
+          width:"100%",background:"linear-gradient(135deg,#6d28d9,#a855f7)",
+          border:"none",borderRadius:14,color:"#fff",fontWeight:900,fontSize:16,
+          padding:"15px",cursor:"pointer",
+          boxShadow:"0 0 40px rgba(168,85,247,0.4), 0 8px 24px rgba(0,0,0,0.4)",
+          letterSpacing:"-0.01em",
+        }}>
           Let&apos;s Go! 🚀
         </button>
       </div>
@@ -329,36 +272,43 @@ function UsernameModal({onConfirm}:{onConfirm:(name:string,wallet:string)=>void}
 
 // ─── Character Stage ──────────────────────────────────────────────────────────
 function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
-  char:typeof CHARACTERS[0]; specialActive:boolean; charPulse:boolean; onTap:(e:React.MouseEvent|React.TouchEvent)=>void; firstPlay:boolean;
+  char:typeof CHARACTERS[0]; specialActive:boolean; charPulse:boolean;
+  onTap:(e:React.MouseEvent|React.TouchEvent)=>void; firstPlay:boolean;
 }){
-  const SIZE = 240;
-  return (
-    <div style={{position:"relative", width:SIZE, height:SIZE, margin:"0 auto", flexShrink:0}}>
-      <div style={{position:"absolute",inset:-12,borderRadius:"50%",background:`radial-gradient(ellipse at 50% 80%,rgba(${char.glow},${specialActive?0.45:0.18}) 0%,transparent 65%)`,pointerEvents:"none",transition:"background 0.5s"}}/>
+  const SIZE=250;
+  return(
+    <div style={{position:"relative",width:SIZE,height:SIZE,margin:"0 auto",flexShrink:0}}>
+      {/* Ambient glow ring */}
+      <div style={{position:"absolute",inset:-20,borderRadius:"50%",background:`radial-gradient(ellipse at 50% 60%,rgba(${char.glow},${specialActive?0.5:0.2}) 0%,transparent 70%)`,pointerEvents:"none",transition:"background 0.6s"}}/>
+      {/* Orbit rings when special active */}
       {specialActive&&<>
-        <div style={{position:"absolute",inset:-8,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.5)`,animation:"orbit1 3s linear infinite",pointerEvents:"none"}}/>
-        <div style={{position:"absolute",inset:-16,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.25)`,animation:"orbit2 6s linear infinite reverse",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",inset:-10,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.6)`,animation:"orbit1 3s linear infinite",pointerEvents:"none",boxShadow:`0 0 12px rgba(${char.glow},0.3)`}}/>
+        <div style={{position:"absolute",inset:-20,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.25)`,animation:"orbit2 6s linear infinite reverse",pointerEvents:"none"}}/>
       </>}
+      {/* Main tap circle */}
       <div
         onMouseDown={onTap} onTouchStart={onTap}
         style={{
           position:"absolute",inset:0,borderRadius:"50%",overflow:"hidden",
           cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",
-          border:specialActive?`2px solid rgba(${char.glow},0.9)`:`2px solid rgba(${char.glow},0.3)`,
-          boxShadow:specialActive?`0 0 50px rgba(${char.glow},0.7),0 0 100px rgba(${char.glow},0.3),inset 0 0 30px rgba(${char.glow},0.1)`:`0 0 20px rgba(${char.glow},0.25)`,
-          transition:"box-shadow 0.4s,border 0.4s,transform 0.1s",
-          transform:charPulse?"scale(0.94)":"scale(1)",
-          background:`radial-gradient(ellipse at 50% 30%,rgba(${char.glow},0.08) 0%,#0a0016 100%)`,
+          border:specialActive?`2px solid rgba(${char.glow},1)`:`2px solid rgba(${char.glow},0.4)`,
+          boxShadow:specialActive
+            ?`0 0 60px rgba(${char.glow},0.8),0 0 120px rgba(${char.glow},0.4),inset 0 0 40px rgba(${char.glow},0.15)`
+            :`0 0 30px rgba(${char.glow},0.3),inset 0 0 20px rgba(${char.glow},0.05)`,
+          transition:"box-shadow 0.4s,border 0.4s,transform 0.08s",
+          transform:charPulse?"scale(0.92)":"scale(1)",
+          background:`radial-gradient(ellipse at 50% 30%,rgba(${char.glow},0.1) 0%,rgba(6,0,15,0.8) 100%)`,
+          backdropFilter:"blur(2px)",
         }}
       >
         <img src={char.image} alt={char.name} draggable={false}
           style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",display:"block",pointerEvents:"none",
-            filter:specialActive?`brightness(1.15) saturate(1.3) drop-shadow(0 0 12px rgba(${char.glow},0.5))`:"none",transition:"filter 0.4s"}}
-          onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:100px">${char.emoji}</div>`;}}
+            filter:specialActive?`brightness(1.2) saturate(1.4) drop-shadow(0 0 16px rgba(${char.glow},0.6))`:"none",transition:"filter 0.4s"}}
+          onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:110px;filter:drop-shadow(0 0 20px rgba(${char.glow},0.5))">${char.emoji}</div>`;}}
         />
       </div>
       {firstPlay&&(
-        <div style={{position:"absolute",bottom:-26,left:"50%",transform:"translateX(-50%)",fontSize:11,color:"#6644aa",fontWeight:600,whiteSpace:"nowrap",animation:"floatHint 1.5s ease-in-out infinite"}}>
+        <div style={{position:"absolute",bottom:-32,left:"50%",transform:"translateX(-50%)",fontSize:11,color:"#7c4ab0",fontWeight:700,whiteSpace:"nowrap",animation:"floatHint 1.5s ease-in-out infinite"}}>
           TAP TO EARN 👆
         </div>
       )}
@@ -366,7 +316,146 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
   );
 }
 
-// ─── HOME TAB ─────────────────────────────────────────────────────────────────
+// ─── SETTINGS TAB (glass) ────────────────────────────────────────────────────
+const AVATARS=["🐸","💪","🎩","🧌","🐕","💀","🦊","🐉","🤖","👾","🦁","🐺","🦂","🎭","🔥","💎"];
+
+function SettingsTab({username,solWallet,onSave}:{username:string;solWallet:string;onSave:(u:string,w:string,av:string)=>void}){
+  const {user,signOut}=useAuth();
+  const [name,setName]=useState(username);
+  const [wallet,setWallet]=useState(solWallet);
+  const [avatar,setAvatar]=useState(()=>getAvatar()||"🐸");
+  const [pwMode,setPwMode]=useState(false);
+  const [pwMsg,setPwMsg]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [delConfirm,setDelConfirm]=useState(false);
+  const [delText,setDelText]=useState("");
+
+  async function handleSave(){
+    setSaving(true);
+    setAvatarStore(avatar);
+    onSave(name.trim()||username, wallet.trim(), avatar);
+    setTimeout(()=>{setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),2200);},600);
+  }
+  async function handleResetPw(){
+    if(!user?.email){setPwMsg("No email linked.");return;}
+    try{
+      const{supabase}=await import("@/lib/supabase");
+      await supabase.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+"/login"});
+      setPwMsg("✅ Reset email sent to "+user.email);
+    }catch{setPwMsg("Failed to send reset email.");}
+  }
+  async function handleDeleteAccount(){
+    if(delText.toLowerCase()!=="delete")return;
+    try{
+      const{supabase}=await import("@/lib/supabase");
+      await supabase.from("dt_players").delete().eq("wallet_address",user?.id||"");
+      await signOut();
+    }catch{await signOut();}
+  }
+
+  const card = {background:G.glass,border:`1px solid ${G.border}`,borderRadius:18,padding:"18px 16px",marginBottom:12} as const;
+  const label = {color:"#5a3a7a",fontSize:10,fontWeight:700 as const,textTransform:"uppercase" as const,letterSpacing:"0.08em",display:"block" as const,marginBottom:8};
+  const input = {width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid rgba(255,255,255,0.1)`,borderRadius:12,color:"#fff",fontSize:14,fontWeight:700 as const,padding:"11px 14px",outline:"none",boxSizing:"border-box" as const,transition:"border 0.2s"};
+
+  return(
+    <div style={{minHeight:"100vh",background:G.bg,color:"#e8e8f0",paddingTop:52,paddingBottom:100,overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(100,30,180,0.15) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:440,margin:"0 auto",padding:"0 16px"}}>
+
+        {/* Header */}
+        <div style={{textAlign:"center",padding:"28px 0 24px"}}>
+          <div style={{
+            width:88,height:88,borderRadius:"50%",margin:"0 auto 12px",
+            background:`linear-gradient(135deg,rgba(168,85,247,0.15),rgba(168,85,247,0.05))`,
+            border:"2px solid rgba(168,85,247,0.3)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontSize:52,lineHeight:1,
+            boxShadow:"0 0 30px rgba(168,85,247,0.2)",
+          }}>{avatar}</div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:4}}>{name||"Degen"}</div>
+          {user?.email&&<div style={{color:"#3a2255",fontSize:11}}>{user.email}</div>}
+        </div>
+
+        {/* Avatar picker */}
+        <div style={card}>
+          <label style={label}>Choose Avatar</label>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:7}}>
+            {AVATARS.map(a=>(
+              <button key={a} onClick={()=>setAvatar(a)} style={{
+                fontSize:26,background:avatar===a?"rgba(168,85,247,0.2)":"rgba(255,255,255,0.03)",
+                border:avatar===a?"2px solid rgba(168,85,247,0.6)":"2px solid transparent",
+                borderRadius:10,padding:5,cursor:"pointer",lineHeight:1,
+                transition:"all 0.15s",boxShadow:avatar===a?"0 0 10px rgba(168,85,247,0.3)":"none",
+              }}>{a}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Username */}
+        <div style={card}>
+          <label style={label}>Username</label>
+          <input value={name} onChange={e=>setName(e.target.value)} maxLength={24} placeholder="Your display name" style={input}/>
+        </div>
+
+        {/* Wallet */}
+        <div style={card}>
+          <label style={label}>Solana Wallet Address</label>
+          <div style={{color:"#3a2255",fontSize:10,marginBottom:8}}>Required for prize payouts</div>
+          <input value={wallet} onChange={e=>setWallet(e.target.value)} placeholder="Your Solana wallet address"
+            style={{...input,color:"#22d67a",fontSize:12,fontFamily:"monospace"}}/>
+        </div>
+
+        {/* Save button */}
+        <button onClick={handleSave} disabled={saving} style={{
+          width:"100%",
+          background:saved?"linear-gradient(135deg,#166534,#22d67a)":"linear-gradient(135deg,#6d28d9,#a855f7)",
+          color:"#fff",fontWeight:900,fontSize:15,border:"none",borderRadius:16,
+          padding:"15px",cursor:"pointer",marginBottom:14,
+          boxShadow:saved?"0 0 30px rgba(34,214,122,0.3)":"0 0 30px rgba(168,85,247,0.3)",
+          transition:"background 0.3s,box-shadow 0.3s",
+        }}>{saving?"Saving…":saved?"✅ Saved!":"Save Changes"}</button>
+
+        <div style={{borderTop:`1px solid ${G.border}`,margin:"4px 0 14px"}}/>
+
+        {/* Password */}
+        <div style={card}>
+          <label style={label}>Password</label>
+          {!pwMode
+            ?<button onClick={()=>setPwMode(true)} style={{width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${G.border}`,borderRadius:12,color:"#ccc",fontSize:13,fontWeight:700,padding:"11px",cursor:"pointer"}}>Change Password</button>
+            :<div>
+              <p style={{color:"#4a2d68",fontSize:12,marginBottom:12,lineHeight:1.5}}>We'll send a reset link to:<br/><strong style={{color:"#7c4ab0"}}>{user?.email||"—"}</strong></p>
+              <button onClick={handleResetPw} style={{width:"100%",background:G.purpleDim,border:`1px solid rgba(168,85,247,0.3)`,borderRadius:12,color:"#c084fc",fontSize:13,fontWeight:700,padding:"11px",cursor:"pointer"}}>Send Reset Email</button>
+              {pwMsg&&<div style={{color:pwMsg.startsWith("✅")?"#22d67a":"#ef4444",fontSize:12,marginTop:8,textAlign:"center"}}>{pwMsg}</div>}
+            </div>
+          }
+        </div>
+
+        {/* Log out */}
+        <button onClick={signOut} style={{width:"100%",background:G.glass,border:`1px solid ${G.border}`,color:"#888",fontWeight:700,fontSize:14,borderRadius:16,padding:"14px",cursor:"pointer",marginBottom:12}}>Log Out</button>
+
+        {/* Danger zone */}
+        <div style={{background:"rgba(239,68,68,0.03)",border:"1px solid rgba(239,68,68,0.12)",borderRadius:18,padding:"18px 16px",marginBottom:16}}>
+          <div style={{color:"#ef4444",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>⚠️ Danger Zone</div>
+          {!delConfirm
+            ?<button onClick={()=>setDelConfirm(true)} style={{width:"100%",background:"rgba(239,68,68,0.07)",border:"1px solid rgba(239,68,68,0.18)",borderRadius:12,color:"#ef4444",fontSize:13,fontWeight:700,padding:"11px",cursor:"pointer"}}>Delete Account</button>
+            :<div>
+              <p style={{color:"#7a3333",fontSize:12,marginBottom:10,lineHeight:1.5}}>This permanently deletes your account and all data. Type <strong>delete</strong> to confirm.</p>
+              <input value={delText} onChange={e=>setDelText(e.target.value)} placeholder="Type delete to confirm"
+                style={{...input,color:"#ef4444",border:"1px solid rgba(239,68,68,0.25)",marginBottom:10}}/>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>{setDelConfirm(false);setDelText("");}} style={{flex:1,background:G.glass,border:`1px solid ${G.border}`,borderRadius:12,color:"#888",fontSize:13,fontWeight:700,padding:"10px",cursor:"pointer"}}>Cancel</button>
+                <button onClick={handleDeleteAccount} disabled={delText.toLowerCase()!=="delete"} style={{flex:1,background:delText.toLowerCase()==="delete"?"rgba(239,68,68,0.8)":"rgba(239,68,68,0.12)",border:"none",borderRadius:12,color:"#fff",fontSize:13,fontWeight:700,padding:"10px",cursor:delText.toLowerCase()==="delete"?"pointer":"not-allowed",transition:"background 0.2s"}}>Delete Forever</button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── HOME TAB (glass) ────────────────────────────────────────────────────────
 function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId}:{
   onPlay:()=>void;username:string;avatar:string;totalEarned:number;totalTaps:number;
   level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
@@ -375,104 +464,153 @@ function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProg
   const cd=useCountdown();
   const char=CHARACTERS.find(c=>c.id===charId);
   const [pulse,setPulse]=useState(false);
-  useEffect(()=>{const id=setInterval(()=>{setPulse(p=>!p);},2000);return()=>clearInterval(id);},[]);
+  useEffect(()=>{const id=setInterval(()=>{setPulse(p=>!p);},2500);return()=>clearInterval(id);},[]);
 
   return(
-    <div style={{minHeight:"100vh",background:"#080010",color:"#e8e8f0",paddingTop:46,paddingBottom:90,overflowY:"auto"}}>
-      <div style={{position:"fixed",inset:0,background:`radial-gradient(ellipse at 50% 20%,rgba(${char?char.glow:"120,40,200"},0.22) 0%,transparent 60%)`,pointerEvents:"none",zIndex:0,transition:"background 1s"}}/>
+    <div style={{minHeight:"100vh",background:G.bg,paddingTop:52,paddingBottom:96,overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,background:`radial-gradient(ellipse at 50% -10%,rgba(${char?char.glow:"100,30,180"},0.25) 0%,transparent 55%)`,pointerEvents:"none",zIndex:0,transition:"background 1.5s"}}/>
 
-      {/* Hero greeting */}
-      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"22px 16px 12px"}}>
-        <div style={{fontSize:56,lineHeight:1,marginBottom:6,filter:`drop-shadow(0 0 20px rgba(${char?char.glow:"168,85,247"},0.5))`,transform:pulse?"scale(1.06)":"scale(1)",transition:"transform 0.4s ease"}}>{avatar||"🐸"}</div>
-        <div style={{color:"#443355",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:2}}>Welcome back</div>
-        <h2 style={{color:"#fff",fontWeight:900,fontSize:22,marginBottom:6,letterSpacing:"-0.02em"}}>{username||"Degen"}</h2>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(168,85,247,0.1)",border:`1px solid ${rank.color}44`,borderRadius:20,padding:"5px 14px"}}>
-          <span style={{fontSize:14}}>{rank.emoji}</span>
-          <span style={{color:rank.color,fontWeight:800,fontSize:12}}>{rank.name}</span>
-          <span style={{color:"#443355",fontSize:11,marginLeft:2}}>Lv.{level}</span>
-        </div>
-      </div>
+      <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"0 auto",padding:"0 16px"}}>
 
-      {/* XP progress */}
-      <div style={{position:"relative",zIndex:1,padding:"10px 14px 12px"}}>
-        <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"12px 14px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-            <span style={{color:"#555",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>XP Progress</span>
-            {nextRank&&<span style={{color:nextRank.color,fontSize:10,fontWeight:700}}>{nextRank.emoji} {nextRank.name} →</span>}
+        {/* Hero greeting */}
+        <div style={{textAlign:"center",padding:"28px 0 20px"}}>
+          <div style={{
+            width:96,height:96,borderRadius:"50%",margin:"0 auto 16px",
+            background:`radial-gradient(ellipse,rgba(${char?char.glow:"168,85,247"},0.2),transparent 70%)`,
+            border:`2px solid rgba(${char?char.glow:"168,85,247"},0.3)`,
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontSize:56,lineHeight:1,
+            filter:`drop-shadow(0 0 20px rgba(${char?char.glow:"168,85,247"},0.5))`,
+            transform:pulse?"scale(1.07)":"scale(1)",transition:"transform 0.5s ease",
+            boxShadow:`0 0 40px rgba(${char?char.glow:"168,85,247"},0.2)`,
+          }}>{avatar||"🐸"}</div>
+          <div style={{color:"#4a2d68",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>Welcome back</div>
+          <h2 style={{color:"#fff",fontWeight:900,fontSize:26,marginBottom:10,letterSpacing:"-0.03em"}}>{username||"Degen"}</h2>
+
+          {/* Rank badge */}
+          <div style={{
+            display:"inline-flex",alignItems:"center",gap:8,
+            background:`linear-gradient(135deg,rgba(${char?char.glow:"168,85,247"},0.12),rgba(${char?char.glow:"168,85,247"},0.06))`,
+            border:`1px solid rgba(${char?char.glow:"168,85,247"},0.3)`,
+            borderRadius:24,padding:"8px 18px",
+            boxShadow:`0 0 20px rgba(${char?char.glow:"168,85,247"},0.1)`,
+          }}>
+            <span style={{fontSize:18}}>{rank.emoji}</span>
+            <span style={{color:rank.color,fontWeight:900,fontSize:14}}>{rank.name}</span>
+            <span style={{
+              background:"rgba(255,255,255,0.08)",borderRadius:12,
+              color:"#888",fontSize:11,fontWeight:700,padding:"2px 8px",
+            }}>Lv.{level}</span>
           </div>
-          <div style={{height:7,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}88,${rank.color})`,borderRadius:4,transition:"width 0.6s ease",boxShadow:`0 0 8px ${rank.color}88`}}/>
-          </div>
-          <div style={{color:"#333",fontSize:10,marginTop:4,textAlign:"right"}}>{fmt(xpProgress.current)} / {fmt(xpProgress.needed)} XP</div>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div style={{position:"relative",zIndex:1,padding:"0 14px 12px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {/* XP bar */}
+        <div style={{...{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"16px"},marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <span style={{color:"#4a2d68",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>XP Progress</span>
+            {nextRank&&<span style={{color:nextRank.color,fontSize:10,fontWeight:700}}>{nextRank.emoji} Next: {nextRank.name}</span>}
+          </div>
+          <div style={{height:8,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden",marginBottom:6}}>
+            <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}66,${rank.color})`,borderRadius:4,transition:"width 0.8s ease",boxShadow:`0 0 12px ${rank.color}66`}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <span style={{color:"#2a1540",fontSize:10}}>{fmt(xpProgress.current)} XP</span>
+            <span style={{color:"#2a1540",fontSize:10}}>{fmt(xpProgress.needed)} XP needed</span>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
           {[
-            {emoji:"💰",label:"Earned",value:fmt(totalEarned),color:"#f5c842"},
-            {emoji:"👆",label:"Taps",value:fmt(totalTaps),color:"#a855f7"},
-            {emoji:"⏱",label:"Reset In",value:cd,color:"#22d67a"},
+            {emoji:"💰",label:"Earned",value:fmt(totalEarned),color:G.gold},
+            {emoji:"👆",label:"Total Taps",value:fmt(totalTaps),color:G.purple},
+            {emoji:"⏱",label:"Next Reset",value:cd,color:G.green},
           ].map(s=>(
-            <div key={s.label} style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"12px 8px",textAlign:"center"}}>
-              <div style={{fontSize:20,marginBottom:4}}>{s.emoji}</div>
-              <div style={{color:s.color,fontWeight:900,fontSize:13,fontVariantNumeric:"tabular-nums"}}>{s.value}</div>
-              <div style={{color:"#333",fontSize:9,marginTop:2,textTransform:"uppercase",letterSpacing:"0.06em"}}>{s.label}</div>
+            <div key={s.label} style={{
+              background:G.glass,border:`1px solid ${G.border}`,
+              borderRadius:18,padding:"16px 10px",textAlign:"center",
+              boxShadow:`inset 0 1px 0 rgba(255,255,255,0.05)`,
+            }}>
+              <div style={{fontSize:24,marginBottom:6,filter:`drop-shadow(0 0 8px ${s.color}66)`}}>{s.emoji}</div>
+              <div style={{color:s.color,fontWeight:900,fontSize:14,fontVariantNumeric:"tabular-nums",marginBottom:2}}>{s.value}</div>
+              <div style={{color:"#2a1540",fontSize:9,textTransform:"uppercase",letterSpacing:"0.06em"}}>{s.label}</div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Current character card */}
-      {char?(
-        <div style={{position:"relative",zIndex:1,padding:"0 14px 12px"}}>
-          <div style={{background:`rgba(${char.glow},0.05)`,border:`1px solid rgba(${char.glow},0.2)`,borderRadius:16,padding:"14px 14px",display:"flex",alignItems:"center",gap:12}}>
-            <div style={{fontSize:42,filter:`drop-shadow(0 0 14px rgba(${char.glow},0.5))`}}>{char.emoji}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{color:"#555",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Active Legend</div>
-              <div style={{color:"#fff",fontWeight:900,fontSize:15,marginBottom:2}}>{char.name}</div>
-              <div style={{color:`rgb(${char.glow})`,fontSize:10}}>⚡ {char.ability}</div>
+        {/* Active character card */}
+        {char?(
+          <div style={{
+            background:`linear-gradient(135deg,rgba(${char.glow},0.08),rgba(${char.glow},0.03))`,
+            border:`1px solid rgba(${char.glow},0.25)`,
+            borderRadius:20,padding:"16px",marginBottom:12,
+            boxShadow:`0 0 30px rgba(${char.glow},0.08)`,
+          }}>
+            <div style={{display:"flex",alignItems:"center",gap:14}}>
+              <div style={{
+                width:60,height:60,borderRadius:"50%",flexShrink:0,
+                background:`radial-gradient(ellipse,rgba(${char.glow},0.2),rgba(6,0,15,0.8))`,
+                border:`1px solid rgba(${char.glow},0.4)`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,
+                boxShadow:`0 0 20px rgba(${char.glow},0.3)`,
+              }}>{char.emoji}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:"#3a2255",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Active Legend</div>
+                <div style={{color:"#fff",fontWeight:900,fontSize:17,marginBottom:4,letterSpacing:"-0.01em"}}>{char.name}</div>
+                <div style={{
+                  display:"inline-flex",gap:4,alignItems:"center",
+                  background:`rgba(${char.glow},0.1)`,
+                  border:`1px solid rgba(${char.glow},0.2)`,
+                  borderRadius:8,padding:"2px 8px",
+                }}>
+                  <span style={{fontSize:10}}>⚡</span>
+                  <span style={{color:`rgb(${char.glow})`,fontSize:10,fontWeight:700}}>{char.ability}</span>
+                </div>
+              </div>
+              <button onClick={onPlay} style={{
+                background:`rgba(${char.glow},0.12)`,
+                border:`1px solid rgba(${char.glow},0.3)`,
+                borderRadius:12,color:`rgb(${char.glow})`,
+                fontWeight:800,fontSize:11,padding:"9px 13px",cursor:"pointer",flexShrink:0,
+              }}>Switch</button>
             </div>
-            <button onClick={onPlay} style={{background:`rgba(${char.glow},0.18)`,border:`1px solid rgba(${char.glow},0.4)`,borderRadius:10,color:`rgb(${char.glow})`,fontWeight:800,fontSize:11,padding:"8px 12px",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Change</button>
           </div>
-        </div>
-      ):(
-        <div style={{position:"relative",zIndex:1,padding:"0 14px 12px"}}>
-          <div style={{background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.2)",borderRadius:16,padding:"14px",textAlign:"center"}}>
-            <div style={{color:"#553366",fontSize:12,marginBottom:4}}>No character selected</div>
-            <button onClick={onPlay} style={{background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.4)",borderRadius:10,color:"#a855f7",fontWeight:800,fontSize:12,padding:"8px 16px",cursor:"pointer"}}>Pick Your Legend →</button>
+        ):(
+          <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"20px",textAlign:"center",marginBottom:12}}>
+            <div style={{color:"#3a2255",fontSize:13,marginBottom:10}}>No character selected</div>
+            <button onClick={onPlay} style={{background:G.purpleDim,border:`1px solid rgba(168,85,247,0.35)`,borderRadius:12,color:"#a855f7",fontWeight:800,fontSize:13,padding:"10px 20px",cursor:"pointer"}}>Pick Your Legend →</button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Big play button */}
-      <div style={{position:"relative",zIndex:1,padding:"0 14px 14px"}}>
+        {/* Big play CTA */}
         <button onClick={onPlay} style={{
-          width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",
-          color:"#fff",fontWeight:900,fontSize:18,border:"none",borderRadius:18,
-          padding:"18px",cursor:"pointer",letterSpacing:"-0.01em",
-          boxShadow:"0 0 60px rgba(168,85,247,0.45),0 0 120px rgba(168,85,247,0.12)",
-          position:"relative",overflow:"hidden",
+          width:"100%",
+          background:"linear-gradient(135deg,#5b21b6,#7c3aed,#a855f7)",
+          color:"#fff",fontWeight:900,fontSize:18,border:"none",borderRadius:20,
+          padding:"20px",cursor:"pointer",letterSpacing:"-0.01em",
+          boxShadow:"0 0 60px rgba(168,85,247,0.5),0 12px 40px rgba(0,0,0,0.4)",
+          position:"relative",overflow:"hidden",marginBottom:16,
         }}>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.12),transparent 60%)",pointerEvents:"none"}}/>
           <span style={{position:"relative",zIndex:1}}>🎮 Play Now</span>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.1),transparent)",pointerEvents:"none"}}/>
         </button>
-      </div>
 
-      {/* Feature tiles */}
-      <div style={{position:"relative",zIndex:1,padding:"0 14px 8px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        {/* Feature grid */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {[
-            {emoji:"🔥",title:"Combo Multiplier",desc:"Tap fast — stack up to 20× coins"},
-            {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn while AFK"},
-            {emoji:"⚡",title:"Upgrades",desc:"Power up in the Shop tab"},
-            {emoji:"🏆",title:"Win USDC",desc:"Top 20 players paid every 48hrs"},
+            {emoji:"🔥",title:"Combo System",desc:"Tap fast to stack up to 20× coin multiplier"},
+            {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn taps while AFK"},
+            {emoji:"⚡",title:"40+ Upgrades",desc:"Power up every stat in the Shop"},
+            {emoji:"🏆",title:"Win USDC",desc:"Top 20 earn USDC every 48 hours"},
           ].map(f=>(
-            <div key={f.title} style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)",borderRadius:14,padding:"13px 11px"}}>
-              <div style={{fontSize:22,marginBottom:5}}>{f.emoji}</div>
-              <div style={{color:"#ccc",fontWeight:800,fontSize:12,marginBottom:3}}>{f.title}</div>
-              <div style={{color:"#333",fontSize:10,lineHeight:1.4}}>{f.desc}</div>
+            <div key={f.title} style={{
+              background:G.glass,border:`1px solid ${G.border}`,
+              borderRadius:16,padding:"16px 14px",
+              boxShadow:"inset 0 1px 0 rgba(255,255,255,0.04)",
+            }}>
+              <div style={{fontSize:26,marginBottom:8,filter:"drop-shadow(0 2px 8px rgba(168,85,247,0.3))"}}>{f.emoji}</div>
+              <div style={{color:"#ddd",fontWeight:800,fontSize:13,marginBottom:4}}>{f.title}</div>
+              <div style={{color:"#2a1540",fontSize:11,lineHeight:1.5}}>{f.desc}</div>
             </div>
           ))}
         </div>
@@ -481,12 +619,12 @@ function HomeTab({onPlay,username,avatar,totalEarned,totalTaps,level,rank,xpProg
   );
 }
 
-// ─── LEADERBOARD TAB ──────────────────────────────────────────────────────────
+// ─── LEADERBOARD TAB (glass) ─────────────────────────────────────────────────
 function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
   const [players,setPlayers]=useState<LBEntry[]>([]);
   const [loading,setLoading]=useState(true);
   const cd=useCountdown();
-  const [view,setView]=useState<"podium"|"list">("podium");
+  const [view,setView]=useState<"top3"|"list">("top3");
   const CE:Record<string,string>={pepe:"🐸",gigachad:"💪",trump:"🎩",troll:"🧌",bonk:"🐕"};
 
   const load=useCallback(async()=>{
@@ -494,172 +632,299 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
     try{
       const{supabase}=await import("@/lib/supabase");
       const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played").order("games_played",{ascending:false}).limit(200);
-      // Deduplicate by username — keep the record with highest taps per user
       const seen=new Map<string,LBEntry>();
       for(const p of (data||[]) as LBEntry[]){
         const key=(p.username||"").toLowerCase();
-        if(!seen.has(key)||( p.games_played>(seen.get(key)!.games_played))){ seen.set(key,p); }
+        if(!seen.has(key)||(p.games_played>(seen.get(key)!.games_played))){ seen.set(key,p); }
       }
       setPlayers(Array.from(seen.values()).sort((a,b)=>b.games_played-a.games_played));
     }catch{}
     setLoading(false);
   },[]);
-
   useEffect(()=>{load();},[load]);
 
-  const rank=(lv:number)=>getRankFromLevel(lv);
+  const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
 
   return(
-    <div style={{minHeight:"100vh",background:"#080010",paddingBottom:90,overflowY:"auto"}}>
-      <div style={{position:"sticky",top:0,zIndex:10,background:"rgba(8,0,20,0.98)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"10px 14px",backdropFilter:"blur(20px)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+    <div style={{minHeight:"100vh",background:G.bg,paddingBottom:90,overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
+
+      {/* Sticky header */}
+      <div style={{position:"sticky",top:0,zIndex:10,background:"rgba(6,0,15,0.92)",borderBottom:`1px solid ${G.border}`,padding:"12px 16px",backdropFilter:G.blur}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <div>
-            <h2 style={{color:"#fff",fontWeight:900,fontSize:16,margin:0}}>🏆 Leaderboard</h2>
-            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:1}}>
-              <div style={{width:5,height:5,borderRadius:"50%",background:"#22d67a",boxShadow:"0 0 5px #22d67a",animation:"pulseDot 1s infinite"}}/>
+            <h2 style={{color:"#fff",fontWeight:900,fontSize:17,margin:0,letterSpacing:"-0.02em"}}>🏆 Leaderboard</h2>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:"#22d67a",boxShadow:"0 0 6px #22d67a",animation:"pulseDot 1.2s infinite"}}/>
               <span style={{color:"#22d67a",fontSize:9,fontWeight:700}}>LIVE</span>
-              <span style={{color:"#443355",fontSize:9,marginLeft:3}}>Resets in</span>
-              <span style={{color:"#f5c842",fontWeight:900,fontSize:11,fontVariantNumeric:"tabular-nums"}}>{cd}</span>
+              <span style={{color:"#2a1540",fontSize:9,marginLeft:4}}>Resets in</span>
+              <span style={{color:"#f5c842",fontWeight:900,fontSize:12,fontVariantNumeric:"tabular-nums"}}>{cd}</span>
             </div>
           </div>
-          <div style={{display:"flex",gap:5,alignItems:"center"}}>
-            <div style={{display:"flex",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,overflow:"hidden"}}>
-              {(["podium","list"] as const).map(v=>(
-                <button key={v} onClick={()=>setView(v)} style={{background:view===v?"rgba(168,85,247,0.2)":"transparent",border:"none",color:view===v?"#a855f7":"#555",fontSize:11,fontWeight:700,padding:"5px 10px",cursor:"pointer",textTransform:"capitalize"}}>{v==="podium"?"🏅":"📋"} {v}</button>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <div style={{display:"flex",background:G.glass,border:`1px solid ${G.border}`,borderRadius:10,overflow:"hidden"}}>
+              {([["top3","🏅 Top 3"],["list","📋 List"]] as const).map(([v,label])=>(
+                <button key={v} onClick={()=>setView(v)} style={{background:view===v?G.purpleDim:"transparent",border:"none",color:view===v?"#a855f7":"#444",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer"}}>{label}</button>
               ))}
             </div>
-            <button onClick={load} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",color:"#666",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:11}}>↻</button>
+            <button onClick={load} style={{background:G.glass,border:`1px solid ${G.border}`,color:"#555",borderRadius:10,padding:"6px 10px",cursor:"pointer",fontSize:12}}>↻</button>
           </div>
         </div>
+        {/* Prize info */}
+        <div style={{background:"rgba(245,200,66,0.05)",border:"1px solid rgba(245,200,66,0.12)",borderRadius:10,padding:"6px 10px",display:"flex",gap:6,alignItems:"center"}}>
+          <span style={{fontSize:12}}>💰</span>
+          <span style={{color:"#7a6020",fontSize:10,fontWeight:700}}>Top 20 players receive USDC every 48 hours. Must have a Solana wallet set in Settings.</span>
+        </div>
       </div>
+
       {loading?(
-        <div style={{padding:56,textAlign:"center",color:"#333"}}>⏳ Loading...</div>
+        <div style={{padding:64,textAlign:"center",color:"#2a1540"}}>
+          <div style={{fontSize:36,marginBottom:12,animation:"pulseDot 1s infinite"}}>⏳</div>
+          <div style={{fontWeight:700}}>Loading rankings...</div>
+        </div>
       ):players.length===0?(
-        <div style={{padding:56,textAlign:"center"}}><div style={{fontSize:48,marginBottom:8}}>🏆</div><div style={{color:"#443355",fontSize:14,fontWeight:700}}>No players yet — be first!</div></div>
-      ):view==="podium"?(
-        <div style={{padding:"12px 10px 0"}}>
+        <div style={{padding:64,textAlign:"center"}}>
+          <div style={{fontSize:52,marginBottom:12}}>🏆</div>
+          <div style={{color:"#3a2255",fontSize:15,fontWeight:800}}>No players yet</div>
+          <div style={{color:"#2a1540",fontSize:12,marginTop:4}}>Be the first to claim the top spot!</div>
+        </div>
+      ):view==="top3"?(
+        <div style={{position:"relative",zIndex:1,padding:"20px 16px 0"}}>
+
+          {/* Top 3 podium */}
           {players.length>=1&&(
-            <div style={{display:"flex",gap:8,alignItems:"flex-end",justifyContent:"center",marginBottom:14}}>
-              {players[1]&&(()=>{const p=players[1];const lv=getLevelFromXP(p.total_score||0);const r=rank(lv);const xp=getLevelProgress(p.total_score||0);const me=p.wallet_address===myPlayerId;
-                return(<div style={{flex:1,background:me?"rgba(168,85,247,0.08)":"rgba(180,180,180,0.04)",border:`1px solid ${me?"rgba(168,85,247,0.35)":"rgba(180,180,180,0.15)"}`,borderRadius:14,padding:"10px 8px",textAlign:"center"}}>
-                  <div style={{fontSize:20,marginBottom:3}}>🥈</div>
-                  <div style={{fontSize:18,marginBottom:3}}>{CE[p.character]||"🎮"}</div>
-                  <div style={{color:"#ddd",fontWeight:700,fontSize:11,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}</div>
-                  <div style={{background:`${r.color}20`,border:`1px solid ${r.color}33`,borderRadius:4,padding:"1px 5px",fontSize:8,color:r.color,fontWeight:700,marginBottom:4,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
-                  <div style={{height:2,background:"rgba(255,255,255,0.05)",borderRadius:1,marginBottom:4,overflow:"hidden"}}><div style={{width:`${xp.pct}%`,height:"100%",background:r.color}}/></div>
-                  <div style={{color:"#aaa",fontWeight:800,fontSize:11}}>👆{fmt(p.games_played||0)} taps</div>
-                </div>);
+            <div style={{display:"flex",gap:10,alignItems:"flex-end",justifyContent:"center",marginBottom:20}}>
+              {/* 2nd */}
+              {players[1]&&(()=>{const p=players[1];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
+                return(
+                  <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(180,180,180,0.1)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
+                    <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px silver)"}}>🥈</div>
+                    <div style={{fontSize:28,marginBottom:6}}>{CE[p.character]||"🎮"}</div>
+                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
+                    <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
+                    <div style={{color:"#aaa",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
+                  </div>
+                );
               })()}
-              {players[0]&&(()=>{const p=players[0];const lv=getLevelFromXP(p.total_score||0);const r=rank(lv);const xp=getLevelProgress(p.total_score||0);const me=p.wallet_address===myPlayerId;
-                return(<div style={{flex:1,background:me?"rgba(168,85,247,0.1)":"rgba(245,200,66,0.06)",border:`2px solid ${me?"rgba(168,85,247,0.5)":"rgba(245,200,66,0.3)"}`,borderRadius:16,padding:"14px 10px",textAlign:"center",boxShadow:"0 0 30px rgba(245,200,66,0.15)",marginBottom:10}}>
-                  <div style={{fontSize:24,marginBottom:3}}>👑</div>
-                  <div style={{fontSize:22,marginBottom:3}}>{CE[p.character]||"🎮"}</div>
-                  <div style={{color:"#fff",fontWeight:800,fontSize:13,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" ← You"}</div>
-                  <div style={{background:`${r.color}22`,border:`1px solid ${r.color}44`,borderRadius:5,padding:"2px 7px",fontSize:9,color:r.color,fontWeight:800,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv} {r.name}</div>
-                  <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,marginBottom:5,overflow:"hidden"}}><div style={{width:`${xp.pct}%`,height:"100%",background:`linear-gradient(90deg,${r.color}66,${r.color})`,borderRadius:2}}/></div>
-                  <div style={{color:"#f5c842",fontWeight:900,fontSize:13}}>👆{fmt(p.games_played||0)} taps</div>
-                </div>);
+              {/* 1st — taller */}
+              {players[0]&&(()=>{const p=players[0];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
+                return(
+                  <div style={{
+                    flex:1,
+                    background:me?"rgba(168,85,247,0.12)":"linear-gradient(145deg,rgba(245,200,66,0.08),rgba(245,200,66,0.03))",
+                    border:`2px solid ${me?"rgba(168,85,247,0.5)":"rgba(245,200,66,0.35)"}`,
+                    borderRadius:22,padding:"20px 12px",textAlign:"center",maxWidth:160,
+                    boxShadow:`0 0 40px rgba(245,200,66,0.12)`,
+                    marginBottom:14,
+                  }}>
+                    <div style={{fontSize:36,marginBottom:8,filter:"drop-shadow(0 0 12px gold)"}}>👑</div>
+                    <div style={{fontSize:36,marginBottom:8}}>{CE[p.character]||"🎮"}</div>
+                    <div style={{color:"#fff",fontWeight:900,fontSize:14,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
+                    <div style={{background:`${r.color}20`,border:`1px solid ${r.color}40`,borderRadius:8,padding:"3px 10px",fontSize:9,color:r.color,fontWeight:800,marginBottom:8,display:"inline-block"}}>{r.emoji} Lv.{lv} {r.name}</div>
+                    <div style={{color:"#f5c842",fontWeight:900,fontSize:16,filter:"drop-shadow(0 0 6px rgba(245,200,66,0.5))"}}>👆 {fmt(p.games_played||0)}</div>
+                  </div>
+                );
               })()}
-              {players[2]&&(()=>{const p=players[2];const lv=getLevelFromXP(p.total_score||0);const r=rank(lv);const xp=getLevelProgress(p.total_score||0);const me=p.wallet_address===myPlayerId;
-                return(<div style={{flex:1,background:me?"rgba(168,85,247,0.08)":"rgba(205,127,50,0.04)",border:`1px solid ${me?"rgba(168,85,247,0.35)":"rgba(205,127,50,0.15)"}`,borderRadius:14,padding:"10px 8px",textAlign:"center"}}>
-                  <div style={{fontSize:20,marginBottom:3}}>🥉</div>
-                  <div style={{fontSize:18,marginBottom:3}}>{CE[p.character]||"🎮"}</div>
-                  <div style={{color:"#ddd",fontWeight:700,fontSize:11,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}</div>
-                  <div style={{background:`${r.color}20`,border:`1px solid ${r.color}33`,borderRadius:4,padding:"1px 5px",fontSize:8,color:r.color,fontWeight:700,marginBottom:4,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
-                  <div style={{height:2,background:"rgba(255,255,255,0.05)",borderRadius:1,marginBottom:4,overflow:"hidden"}}><div style={{width:`${xp.pct}%`,height:"100%",background:r.color}}/></div>
-                  <div style={{color:"#cd7f32",fontWeight:800,fontSize:11}}>👆{fmt(p.games_played||0)} taps</div>
-                </div>);
+              {/* 3rd */}
+              {players[2]&&(()=>{const p=players[2];const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);const me=p.wallet_address===myPlayerId;
+                return(
+                  <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(205,127,50,0.15)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
+                    <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px #cd7f32)"}}>🥉</div>
+                    <div style={{fontSize:28,marginBottom:6}}>{CE[p.character]||"🎮"}</div>
+                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
+                    <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
+                    <div style={{color:"#cd7f32",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
+                  </div>
+                );
               })()}
             </div>
           )}
-          {players.slice(3).map((p,i)=>{
-            const lv=getLevelFromXP(p.total_score||0);const r=rank(lv);const me=p.wallet_address===myPlayerId;const isPrize=i+3<20;
-            return(<div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderBottom:i+3===19?"2px solid rgba(34,214,122,0.3)":"1px solid rgba(255,255,255,0.04)",background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent"}}>
-              <div style={{color:isPrize?"#22d67a":"#333",fontWeight:900,fontSize:13,width:24,textAlign:"center"}}>#{i+4}</div>
-              <div style={{fontSize:20}}>{CE[p.character]||"🎮"}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{color:me?"#c084fc":"#ddd",fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" ← You"}{isPrize&&<span style={{marginLeft:5,fontSize:9,color:"#22d67a",fontWeight:800}}>💰PRIZE</span>}</div>
-                <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
-              </div>
-              <div style={{color:"#f5c842",fontWeight:800,fontSize:12}}>👆{fmt(p.games_played||0)}</div>
-            </div>);
-          })}
+
+          {/* Rest of list (4-20+) */}
+          <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
+            {players.slice(3).map((p,i)=>{
+              const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);
+              const me=p.wallet_address===myPlayerId;const isPrize=i+3<20;
+              return(
+                <div key={p.id} style={{
+                  display:"flex",alignItems:"center",gap:10,
+                  padding:"10px 14px",
+                  borderBottom:i+3===19?`1px solid rgba(34,214,122,0.3)`:`1px solid rgba(255,255,255,0.04)`,
+                  background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent",
+                }}>
+                  <div style={{color:isPrize?"#22d67a":"#2a1540",fontWeight:900,fontSize:13,width:26,textAlign:"center",flexShrink:0}}>#{i+4}</div>
+                  <div style={{fontSize:22,flexShrink:0}}>{CE[p.character]||"🎮"}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:me?"#c084fc":"#ddd",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {p.username||"Anon"}{me&&" 👈"}
+                      {isPrize&&<span style={{marginLeft:6,fontSize:9,color:"#22d67a",fontWeight:800}}>💰PRIZE</span>}
+                    </div>
+                    <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
+                  </div>
+                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>👆 {fmt(p.games_played||0)}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ):(
-        <div style={{padding:"8px 10px"}}>
-          {players.map((p,i)=>{
-            const lv=getLevelFromXP(p.total_score||0);const r=rank(lv);const me=p.wallet_address===myPlayerId;const isPrize=i<20;
-            return(<div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 8px",borderBottom:i===19?"2px solid rgba(34,214,122,0.3)":"1px solid rgba(255,255,255,0.04)",background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent",borderRadius:me?8:0}}>
-              <div style={{color:i===0?"#f5c842":i===1?"#aaa":i===2?"#cd7f32":isPrize?"#22d67a":"#333",fontWeight:900,fontSize:12,width:22,textAlign:"center"}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</div>
-              <div style={{fontSize:18}}>{CE[p.character]||"🎮"}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{color:me?"#c084fc":"#ccc",fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" ← You"}{isPrize&&<span style={{marginLeft:4,fontSize:9,color:"#22d67a",fontWeight:800}}>💰</span>}</div>
-                <div style={{color:r.color,fontSize:9}}>{r.emoji} Lv.{lv}</div>
-              </div>
-              <div style={{color:"#f5c842",fontWeight:800,fontSize:11}}>👆{fmt(p.games_played||0)}</div>
-            </div>);
-          })}
+        <div style={{position:"relative",zIndex:1,padding:"16px"}}>
+          <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
+            {players.map((p,i)=>{
+              const r=getRankForScore(p.total_score||0);const lv=getLevelFromXP(p.total_score||0);
+              const me=p.wallet_address===myPlayerId;const isPrize=i<20;
+              const medalEmoji=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+              return(
+                <div key={p.id} style={{
+                  display:"flex",alignItems:"center",gap:10,
+                  padding:"11px 14px",
+                  borderBottom:i===19?`1px solid rgba(34,214,122,0.3)`:i<players.length-1?`1px solid rgba(255,255,255,0.04)`:"none",
+                  background:me?"rgba(168,85,247,0.06)":isPrize?"rgba(34,214,122,0.015)":"transparent",
+                }}>
+                  <div style={{width:26,textAlign:"center",flexShrink:0,fontWeight:900,fontSize:13,color:medalEmoji?undefined:isPrize?"#22d67a":"#2a1540"}}>
+                    {medalEmoji||`#${i+1}`}
+                  </div>
+                  <div style={{fontSize:20,flexShrink:0}}>{CE[p.character]||"🎮"}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:me?"#c084fc":"#ccc",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {p.username||"Anon"}{me&&" 👈"}
+                      {isPrize&&<span style={{marginLeft:5,fontSize:9,color:"#22d67a",fontWeight:800}}>💰</span>}
+                    </div>
+                    <div style={{color:r.color,fontSize:9,fontWeight:700}}>{r.emoji} Lv.{lv} {r.name}</div>
+                  </div>
+                  <div style={{color:"#f5c842",fontWeight:900,fontSize:12,flexShrink:0}}>👆 {fmt(p.games_played||0)}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ─── SHOP TAB (upgrades only) ─────────────────────────────────────────────────
+// ─── SHOP TAB (glass) ────────────────────────────────────────────────────────
 const SHOP_CATEGORIES=[
-  {id:"auto",   label:"🤖 Auto-Tappers", desc:"Earn taps automatically — counts on leaderboard"},
-  {id:"tap",    label:"⚡ Tap Power",     desc:"More coins per manual tap"},
-  {id:"crit",   label:"💥 Critical Hit",  desc:"Chance to massively multiply earnings"},
-  {id:"energy", label:"🔋 Energy",        desc:"Bigger energy pool and faster regen"},
-  {id:"combo",  label:"🔥 Combo",         desc:"Build and maintain combo multiplier"},
-  {id:"special",label:"💫 Special",       desc:"Charge your special ability faster"},
-  {id:"bonus",  label:"🎰 Bonus",         desc:"Global multipliers and lucky effects"},
+  {id:"auto",   label:"🤖",short:"Auto",     desc:"Earn taps automatically — counts on leaderboard"},
+  {id:"tap",    label:"⚡",short:"Tap Power",  desc:"More coins per manual tap"},
+  {id:"crit",   label:"💥",short:"Crit Hit",   desc:"Chance to massively multiply earnings"},
+  {id:"energy", label:"🔋",short:"Energy",     desc:"Bigger energy pool and faster regen"},
+  {id:"combo",  label:"🔥",short:"Combo",      desc:"Build and maintain combo multiplier"},
+  {id:"special",label:"💫",short:"Special",    desc:"Charge your special ability faster"},
+  {id:"bonus",  label:"🎰",short:"Bonus",      desc:"Global multipliers and lucky effects"},
 ];
+const RANK_NAMES:Record<number,string>={5:"Normie",8:"Bronze Ape",11:"Silver Degen",15:"Gold Degen",20:"Diamond Hands",25:"Sigma",30:"Tower Lord"};
+
 function ShopTab({coins,charId,upgrades,onBuyUpgrade,playerLevel}:{
   coins:number;charId:string|null;upgrades:Record<string,number>;
   onBuyUpgrade:(id:string)=>void;playerLevel:number;
 }){
   const [cat,setCat]=useState<string>("auto");
   const catItems=UPGRADES.filter(u=>u.category===cat);
-  const RANK_NAMES:Record<number,string>={5:"Normie",8:"Bronze Ape",11:"Silver Degen",15:"Gold Degen",20:"Diamond Hands",25:"Sigma",30:"Tower Lord"};
+  const catInfo=SHOP_CATEGORIES.find(c=>c.id===cat);
+
   return(
-    <div style={{minHeight:"100vh",background:"#080010",color:"#fff",paddingBottom:80}}>
-      <div style={{background:"rgba(8,0,20,0.98)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"12px 14px 0",position:"sticky",top:0,zIndex:10,backdropFilter:"blur(20px)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          <h2 style={{fontWeight:900,fontSize:16,margin:0}}>🛒 Shop</h2>
-          <div style={{marginLeft:"auto",background:"rgba(245,200,66,0.08)",border:"1px solid rgba(245,200,66,0.25)",borderRadius:8,padding:"4px 10px",fontSize:13,fontWeight:800,color:"#f5c842"}}>💰 {fmt(coins)}</div>
+    <div style={{minHeight:"100vh",background:G.bg,color:"#fff",paddingBottom:88}}>
+      {/* Header */}
+      <div style={{background:"rgba(6,0,15,0.92)",borderBottom:`1px solid ${G.border}`,padding:"12px 16px 0",position:"sticky",top:0,zIndex:10,backdropFilter:G.blur}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <h2 style={{fontWeight:900,fontSize:17,margin:0,letterSpacing:"-0.02em"}}>⚡ Shop</h2>
+          <div style={{marginLeft:"auto",
+            background:"linear-gradient(135deg,rgba(245,200,66,0.1),rgba(245,200,66,0.05))",
+            border:"1px solid rgba(245,200,66,0.25)",
+            borderRadius:12,padding:"6px 14px",
+            display:"flex",alignItems:"center",gap:6,
+          }}>
+            <span style={{fontSize:16}}>💰</span>
+            <span style={{fontSize:14,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums"}}>{fmt(coins)}</span>
+          </div>
         </div>
-        <div style={{display:"flex",gap:4,overflowX:"auto",paddingBottom:10,WebkitOverflowScrolling:"touch" as any}}>
-          {SHOP_CATEGORIES.map(c=>(
-            <button key={c.id} onClick={()=>setCat(c.id)} style={{flex:"0 0 auto",background:cat===c.id?"rgba(168,85,247,0.2)":"rgba(255,255,255,0.03)",border:`1px solid ${cat===c.id?"rgba(168,85,247,0.5)":"rgba(255,255,255,0.06)"}`,color:cat===c.id?"#c084fc":"#666",borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{c.label}</button>
-          ))}
+        {/* Category pills */}
+        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:12,WebkitOverflowScrolling:"touch" as any}}>
+          {SHOP_CATEGORIES.map(c=>{
+            const active=cat===c.id;
+            const count=UPGRADES.filter(u=>u.category===c.id&&(upgrades[u.id]||0)>0).length;
+            return(
+              <button key={c.id} onClick={()=>setCat(c.id)} style={{
+                flex:"0 0 auto",
+                background:active?"rgba(168,85,247,0.18)":G.glass,
+                border:`1px solid ${active?"rgba(168,85,247,0.5)":G.border}`,
+                color:active?"#c084fc":"#555",
+                borderRadius:20,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",
+                whiteSpace:"nowrap",
+                boxShadow:active?"0 0 12px rgba(168,85,247,0.2)":"none",
+                transition:"all 0.15s",
+                position:"relative",
+              }}>
+                {c.label} {c.short}
+                {count>0&&<span style={{
+                  position:"absolute",top:-4,right:-4,
+                  background:G.purple,color:"#fff",
+                  width:14,height:14,borderRadius:"50%",
+                  fontSize:8,fontWeight:900,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                }}>{count}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
+
       {!charId?(
-        <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:10}}>🛒</div><div style={{color:"#443355",fontSize:14,fontWeight:700}}>Start a game first to access the shop</div></div>
+        <div style={{padding:60,textAlign:"center"}}>
+          <div style={{fontSize:52,marginBottom:12}}>🛒</div>
+          <div style={{color:"#3a2255",fontSize:15,fontWeight:800}}>Start a game first</div>
+          <div style={{color:"#2a1540",fontSize:12,marginTop:4}}>Head to the Play tab to pick your character</div>
+        </div>
       ):(
-        <div style={{padding:10}}>
-          <div style={{color:"#443355",fontSize:11,padding:"4px 4px 10px"}}>{SHOP_CATEGORIES.find(c=>c.id===cat)?.desc}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <div style={{padding:"10px 12px"}}>
+          {/* Category description */}
+          {catInfo&&<div style={{color:"#3a2255",fontSize:11,padding:"4px 4px 10px"}}>{catInfo.desc}</div>}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             {catItems.map(u=>{
               const lv=upgrades[u.id]||0,cost=getUpgCost(u,lv);
               const locked=(u.minLevel||0)>playerLevel;
               const can=!locked&&coins>=cost;
               const reqRank=u.minLevel?RANK_NAMES[u.minLevel]:"";
               return(
-                <button key={u.id} onClick={()=>!locked&&onBuyUpgrade(u.id)} disabled={locked||!can}
-                  style={{background:locked?"rgba(255,255,255,0.01)":can?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.02)",border:`1px solid ${locked?"rgba(255,0,0,0.1)":can?"rgba(245,200,66,0.2)":"rgba(255,255,255,0.06)"}`,borderRadius:14,padding:"12px 10px",cursor:can?"pointer":"not-allowed",textAlign:"left",opacity:locked?0.4:can?1:0.6,transition:"all 0.15s",position:"relative"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
-                    <span style={{fontSize:20}}>{locked?"🔒":u.emoji}</span>
-                    <span style={{fontWeight:800,fontSize:11,color:"#fff",flex:1,lineHeight:1.2}}>{u.name}</span>
-                    {lv>0&&<span style={{background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.35)",borderRadius:4,padding:"1px 5px",fontSize:9,color:"#a855f7",fontWeight:700}}>Lv{lv}</span>}
-                  </div>
-                  {u.tapsPerSec&&<div style={{fontSize:9,color:"#22d67a",fontWeight:700,marginBottom:2}}>👆 +{u.tapsPerSec}/sec auto-taps</div>}
-                  <div style={{color:"#555",fontSize:10,marginBottom:6}}>{u.desc}</div>
+                <button key={u.id} onClick={()=>!locked&&can&&onBuyUpgrade(u.id)} disabled={locked||!can}
+                  style={{
+                    background:locked?"rgba(255,255,255,0.01)":can
+                      ?"linear-gradient(145deg,rgba(245,200,66,0.06),rgba(245,200,66,0.02))"
+                      :G.glass,
+                    border:`1px solid ${locked?"rgba(255,60,60,0.1)":can?"rgba(245,200,66,0.2)":G.border}`,
+                    borderRadius:18,padding:"14px 12px",
+                    cursor:can?"pointer":"not-allowed",
+                    textAlign:"left",
+                    opacity:locked?0.4:can?1:0.55,
+                    transition:"all 0.15s",position:"relative",
+                    boxShadow:can?"0 0 20px rgba(245,200,66,0.04)":"none",
+                  }}>
+                  {/* Level badge */}
+                  {lv>0&&(
+                    <div style={{position:"absolute",top:8,right:8,background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.35)",borderRadius:8,padding:"2px 7px",fontSize:9,color:"#a855f7",fontWeight:800}}>
+                      Lv{lv}
+                    </div>
+                  )}
+                  <div style={{fontSize:28,marginBottom:8}}>{locked?"🔒":u.emoji}</div>
+                  <div style={{fontWeight:800,fontSize:12,color:"#fff",marginBottom:3,lineHeight:1.3,paddingRight:lv>0?28:0}}>{u.name}</div>
+                  {u.tapsPerSec&&<div style={{fontSize:9,color:"#22d67a",fontWeight:700,marginBottom:4}}>👆 +{u.tapsPerSec}/sec auto-taps</div>}
+                  <div style={{color:"#3a2255",fontSize:10,marginBottom:8,lineHeight:1.4}}>{u.desc}</div>
                   {locked?(
-                    <div style={{color:"#ff4466",fontSize:10,fontWeight:700}}>🔒 Requires {reqRank} rank (Lv.{u.minLevel})</div>
+                    <div style={{
+                      background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.15)",
+                      borderRadius:8,padding:"4px 8px",
+                      color:"#ef4444",fontSize:10,fontWeight:700,
+                    }}>🔒 Requires {reqRank} (Lv.{u.minLevel})</div>
                   ):(
-                    <div style={{color:can?"#f5c842":"#444",fontWeight:800,fontSize:12}}>💰 {fmt(cost)}</div>
+                    <div style={{
+                      background:can?"rgba(245,200,66,0.08)":"rgba(255,255,255,0.03)",
+                      border:`1px solid ${can?"rgba(245,200,66,0.2)":G.border}`,
+                      borderRadius:8,padding:"4px 8px",display:"inline-flex",gap:4,alignItems:"center",
+                    }}>
+                      <span style={{fontSize:12}}>💰</span>
+                      <span style={{color:can?G.gold:"#333",fontWeight:900,fontSize:12,fontVariantNumeric:"tabular-nums"}}>{fmt(cost)}</span>
+                    </div>
                   )}
                 </button>
               );
@@ -678,16 +943,27 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 }){
   return(
     <div style={{width:"100%"}}>
-      <div style={{color:"#333",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",padding:"5px 14px 3px"}}>⚡ Quick Upgrades</div>
+      <div style={{color:"#2a1540",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",padding:"4px 14px 4px"}}>⚡ Quick Upgrades</div>
       <div style={{overflowX:"auto",display:"flex",gap:7,padding:"4px 14px 10px",WebkitOverflowScrolling:"touch" as any}}>
         {UPGRADES.map(u=>{
           const lv=upgrades[u.id]||0,cost=getUpgCost(u,lv),can=coins>=cost;
-          return(<button key={u.id} onClick={()=>onBuyUpgrade(u.id)} style={{flex:"0 0 80px",height:88,background:can?"rgba(245,200,66,0.04)":"rgba(255,255,255,0.015)",border:`1px solid ${can?"rgba(245,200,66,0.25)":"rgba(255,255,255,0.04)"}`,borderRadius:12,padding:"7px 5px",cursor:can?"pointer":"not-allowed",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",opacity:can?1:0.45,position:"relative"}}>
-            {lv>0&&<div style={{position:"absolute",top:3,right:4,background:"rgba(168,85,247,0.7)",borderRadius:3,fontSize:8,fontWeight:900,color:"#fff",padding:"1px 3px"}}>Lv{lv}</div>}
-            <div style={{fontSize:22}}>{u.emoji}</div>
-            <div style={{color:"#bbb",fontSize:9,fontWeight:700,textAlign:"center",lineHeight:1.2}}>{u.name}</div>
-            <div style={{color:can?"#f5c842":"#444",fontSize:10,fontWeight:900}}>💰{fmt(cost)}</div>
-          </button>);
+          return(
+            <button key={u.id} onClick={()=>can&&onBuyUpgrade(u.id)} style={{
+              flex:"0 0 76px",height:84,
+              background:can?"rgba(245,200,66,0.05)":G.glass,
+              border:`1px solid ${can?"rgba(245,200,66,0.2)":G.border}`,
+              borderRadius:14,padding:"7px 5px",
+              cursor:can?"pointer":"not-allowed",
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",
+              opacity:can?1:0.35,position:"relative",
+              transition:"all 0.1s",
+            }}>
+              {lv>0&&<div style={{position:"absolute",top:3,right:4,background:"rgba(168,85,247,0.7)",borderRadius:4,fontSize:7,fontWeight:900,color:"#fff",padding:"1px 4px"}}>Lv{lv}</div>}
+              <div style={{fontSize:22}}>{u.emoji}</div>
+              <div style={{color:"#bbb",fontSize:9,fontWeight:700,textAlign:"center",lineHeight:1.2}}>{u.name}</div>
+              <div style={{color:can?G.gold:"#2a1540",fontSize:10,fontWeight:900}}>💰{fmt(cost)}</div>
+            </button>
+          );
         })}
       </div>
     </div>
@@ -737,33 +1013,33 @@ export default function TapGame() {
   const nextRank=getNextRank(level);
   const autoRate=UPGRADES.filter(u=>u.tapsPerSec).reduce((sum,u)=>{
     const lvl=upgrades[u.id]||0;
-    return sum + lvl*(u.tapsPerSec!);
+    return sum+lvl*(u.tapsPerSec!);
   },0);
 
-  // Use Supabase auth user ID as the player ID — prevents all users sharing the same localStorage ID
   useEffect(()=>{
-    if(!user?.id) return;
-    const authId = user.id;
+    if(!user?.id)return;
+    const authId=user.id;
     setPlayerId(authId);
-    // Load player profile from Supabase keyed by auth user ID
-    import("@/lib/supabase").then(async ({supabase})=>{
-      const {data} = await supabase.from("dt_players").select("username,sol_wallet,games_played,total_score,character").eq("wallet_address",authId).maybeSingle();
-      if(data){
-        if(data.username){ setUsername(data.username); setPlayerName(data.username); }
-        if(data.sol_wallet){ setSolWallet(data.sol_wallet); setPlayerWallet(data.sol_wallet); }
+    import("@/lib/supabase").then(async({supabase})=>{
+      const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
+      if(existing){
+        if(existing.username){setUsername(existing.username);setPlayerName(existing.username);}
+        if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet);}
       } else {
-        // No record for this auth ID — check if there's an OLD localStorage-based record to migrate
-        const oldLocalId = getPlayerId(); // old random localStorage ID
-        const {data: oldData} = await supabase.from("dt_players").select("*").eq("wallet_address",oldLocalId).maybeSingle();
-        if(oldData){
-          // Migrate: update wallet_address to auth UUID so the record is now owned by this account
-          await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldLocalId);
-          if(oldData.username){ setUsername(oldData.username); setPlayerName(oldData.username); }
-          if(oldData.sol_wallet){ setSolWallet(oldData.sol_wallet); setPlayerWallet(oldData.sol_wallet); }
+        const oldLocalId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
+        if(oldLocalId&&oldLocalId!==authId){
+          const{data:oldData}=await supabase.from("dt_players").select("*").eq("wallet_address",oldLocalId).maybeSingle();
+          if(oldData){
+            await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldLocalId);
+            if(oldData.username){setUsername(oldData.username);setPlayerName(oldData.username);}
+            if(oldData.sol_wallet){setSolWallet(oldData.sol_wallet);setPlayerWallet(oldData.sol_wallet);}
+          } else {
+            const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
+            setUsername(defaultName);setPlayerName(defaultName);
+          }
         } else {
-          // Brand new user — use email prefix as default username
-          const defaultName = user.email?.split("@")[0] || "Degen_"+authId.slice(-6);
-          setUsername(defaultName); setPlayerName(defaultName);
+          const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
+          setUsername(defaultName);setPlayerName(defaultName);
         }
       }
     });
@@ -779,12 +1055,12 @@ export default function TapGame() {
     setShowModal(false);
     if(pendingChar)startGame(pendingChar,name,wallet);
   }
-
   function startGame(id:string,name:string,wallet?:string){
     const s=loadSave(id);
     setCharId(id);setCoins(s.coins);setTotalEarned(s.totalEarned);setTotalTaps(s.totalTaps);
     setUpgrades(s.upgrades);
-    const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;setMaxEnergy(mx);setEnergy(mx);
+    const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;
+    setMaxEnergy(mx);setEnergy(mx);
     setScreen("game");setActiveTab("play");saveRef.current=s;
     const w=wallet??getPlayerWallet();
     syncDB(user?.id||playerId,name,id,s.totalEarned,s.totalTaps,w||undefined);
@@ -797,7 +1073,7 @@ export default function TapGame() {
     syncDB(user?.id||playerId,username||getPlayerName(),charId!,totalEarned,totalTaps,solWallet||getPlayerWallet()||undefined);
   },[charId,coins,totalEarned,totalTaps,upgrades,playerId,username,solWallet]);
 
-  useEffect(()=>{ if(screen!=="game"||!charId)return; const id=setInterval(doSave,8000); return()=>clearInterval(id); },[screen,charId,doSave]);
+  useEffect(()=>{if(screen!=="game"||!charId)return;const id=setInterval(doSave,8000);return()=>clearInterval(id);},[screen,charId,doSave]);
 
   useEffect(()=>{
     if(activeTab!=="play"||screen!=="game"||!char)return;
@@ -817,17 +1093,17 @@ export default function TapGame() {
 
   useEffect(()=>{
     if(activeTab!=="play"||screen!=="game")return;
-    const id=setInterval(()=>setComboTimer(t=>{ if(t<=0){setCombo(1);return 0;} return t-0.05; }),50);
+    const id=setInterval(()=>setComboTimer(t=>{if(t<=0){setCombo(1);return 0;}return t-0.05;}),50);
     return()=>clearInterval(id);
   },[activeTab,screen]);
 
   useEffect(()=>{
     if(!specialActive)return;
-    const id=setInterval(()=>setSpecialTimer(t=>{ if(t<=0){setSpecialActive(false);return 0;} return t-0.1; }),100);
+    const id=setInterval(()=>setSpecialTimer(t=>{if(t<=0){setSpecialActive(false);return 0;}return t-0.1;}),100);
     return()=>clearInterval(id);
   },[specialActive]);
 
-  const showToast=(msg:string)=>{ setToast(msg); setTimeout(()=>setToast(null),1800); };
+  const showToast=(msg:string)=>{setToast(msg);setTimeout(()=>setToast(null),1800);};
 
   const checkAchievements=useCallback((taps:number,earned:number)=>{
     const checks=[
@@ -838,7 +1114,7 @@ export default function TapGame() {
       {id:"coins_10k",text:"10K Earned! 🤑",cond:earned>=10000},
       {id:"coins_1m",text:"MILLIONAIRE! 💎",cond:earned>=1e6},
     ];
-    checks.forEach(c=>{ if(c.cond&&!achievSet.has(c.id)){ setAchievSet(a=>new Set([...a,c.id])); setNewAchiev(c.text); setTimeout(()=>setNewAchiev(null),3000); } });
+    checks.forEach(c=>{if(c.cond&&!achievSet.has(c.id)){setAchievSet(a=>new Set([...a,c.id]));setNewAchiev(c.text);setTimeout(()=>setNewAchiev(null),3000);}});
   },[achievSet]);
 
   const spawn=useCallback((x:number,y:number,v:string,color:string,big:boolean)=>{
@@ -866,22 +1142,17 @@ export default function TapGame() {
     let earned=tapBase*combo*specMult*(isCrit?critMult:1);
     earned=char.passive(earned);
     const newTapCount=tapCount+1;setTapCount(newTapCount);
-
     if(char.id==="trump"&&newTapCount%50===0){earned*=10;spawn(tx,ty,"💼 DEAL! 10×","#f5c842",true);}
     if(specialActive&&char.id==="troll")earned*=(1+Math.random()*14);
     earned=Math.max(0.1,earned);
-
     if(isCrit){setCritFlash(true);setTimeout(()=>setCritFlash(false),120);spawn(tx,ty,"CRIT! ⚡","#ff3344",true);}
     const coinColors=(a:number)=>a>=100?"#ff3344":a>=50?"#f5c842":a>=10?"#22d67a":a>=3?"#a855f7":"#aaa";
     spawn(tx,ty,`+${fmt(Math.round(earned*10)/10)}`,coinColors(earned),false);
-
     setCoins(c=>c+earned);
     setTotalEarned(t=>{const nt=t+earned;checkAchievements(newTapCount,nt);return nt;});
     setTotalTaps(t=>t+1);
-
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
-
     const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1;
     const gcBonus=char.id==="gigachad"?2:1;
     const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30;
@@ -897,7 +1168,7 @@ export default function TapGame() {
     if(!char||specialCharge<100||specialActive)return;
     setSpecialActive(true);setSpecialCharge(0);setSpecialTimer(char.specialDuration);
     if(char.id==="gigachad")setCombo(char.comboMax);
-    for(let i=0;i<12;i++)setTimeout(()=>spawn(window.innerWidth/2+(Math.random()-0.5)*260,window.innerHeight/2+(Math.random()-0.5)*220,["💥","⚡","🔥","✨","💫","🚀","💎","🌙","🎯","👑"][Math.floor(Math.random()*10)],char.color,true),i*55);
+    for(let i=0;i<14;i++)setTimeout(()=>spawn(window.innerWidth/2+(Math.random()-0.5)*300,window.innerHeight/2+(Math.random()-0.5)*260,["💥","⚡","🔥","✨","💫","🚀","💎","🌙","🎯","👑","🌟","🎆"][Math.floor(Math.random()*12)],char.color,true),i*50);
   },[char,specialCharge,specialActive,spawn]);
 
   const buyUpgrade=useCallback((id:string)=>{
@@ -913,34 +1184,47 @@ export default function TapGame() {
     showToast(`${u.emoji} ${u.name} Lv.${lv+1}!`);
   },[coins,upgrades]);
 
-  // suppress unused warning from comboTimer
   void comboTimer;
 
   function handleSettingsSave(u:string,w:string,av:string){
-    setUsername(u); setPlayerName(u);
-    setSolWallet(w); setPlayerWallet(w);
-    setAvatar(av); setAvatarStore(av);
+    setUsername(u);setPlayerName(u);
+    setSolWallet(w);setPlayerWallet(w);
+    setAvatar(av);setAvatarStore(av);
     syncDB(user?.id||playerId,u,charId||"pepe",totalEarned,totalTaps,w||undefined);
   }
 
+  // ─── RENDER ─────────────────────────────────────────────────────────────────
   return(
-    <div style={{background:"#080010",minHeight:"100vh",position:"relative"}}>
+    <div style={{background:G.bg,minHeight:"100vh",position:"relative"}}>
       <TopBar username={username} avatar={avatar} onSettings={()=>setActiveTab("settings")} onLogout={signOut}/>
-
       {showModal&&<UsernameModal onConfirm={onUsername}/>}
 
+      {/* Achievement toast */}
       {newAchiev&&(
-        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:300,background:"linear-gradient(135deg,#7c3aed,#a855f7)",borderRadius:14,padding:"9px 18px",color:"#fff",fontWeight:900,fontSize:13,boxShadow:"0 0 40px rgba(168,85,247,0.6)",whiteSpace:"nowrap",animation:"slideDown 0.3s ease-out"}}>
+        <div style={{position:"fixed",top:64,left:"50%",transform:"translateX(-50%)",zIndex:300,
+          background:"linear-gradient(135deg,#5b21b6,#a855f7)",borderRadius:20,
+          padding:"10px 20px",color:"#fff",fontWeight:900,fontSize:13,
+          boxShadow:"0 0 40px rgba(168,85,247,0.6), 0 8px 24px rgba(0,0,0,0.4)",
+          whiteSpace:"nowrap",animation:"slideDown 0.3s ease-out",
+        }}>
           🏅 {newAchiev}
         </div>
       )}
+      {/* Upgrade toast */}
       {toast&&(
-        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:299,background:"rgba(34,214,122,0.15)",border:"1px solid rgba(34,214,122,0.3)",borderRadius:14,padding:"7px 16px",color:"#22d67a",fontWeight:800,fontSize:12,whiteSpace:"nowrap",animation:"slideDown 0.2s ease-out"}}>
+        <div style={{position:"fixed",top:64,left:"50%",transform:"translateX(-50%)",zIndex:299,
+          background:"rgba(34,214,122,0.12)",border:"1px solid rgba(34,214,122,0.3)",
+          backdropFilter:G.blur,borderRadius:16,
+          padding:"8px 18px",color:"#22d67a",fontWeight:800,fontSize:12,
+          whiteSpace:"nowrap",animation:"slideDown 0.2s ease-out",
+        }}>
           {toast}
         </div>
       )}
-      {critFlash&&<div style={{position:"fixed",inset:0,background:"rgba(255,40,40,0.07)",zIndex:150,pointerEvents:"none"}}/>}
+      {/* Crit screen flash */}
+      {critFlash&&<div style={{position:"fixed",inset:0,background:"rgba(255,50,50,0.06)",zIndex:150,pointerEvents:"none"}}/>}
 
+      {/* Tab content */}
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
@@ -948,121 +1232,179 @@ export default function TapGame() {
 
       {activeTab==="play"&&(
         <>
+          {/* ── CHARACTER SELECT ── */}
           {screen==="select"&&(
-            <div style={{minHeight:"100vh",background:"#080010",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"24px 16px 100px",position:"relative",overflowY:"auto"}}>
-              <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 35%,rgba(120,40,200,0.22) 0%,transparent 65%)",pointerEvents:"none"}}/>
-              <div style={{position:"relative",zIndex:1,textAlign:"center",marginBottom:24}}>
-                <img src="/logo.png" alt="Degen Clicker" onError={e=>{(e.target as HTMLImageElement).style.display="none";}} style={{width:110,height:110,objectFit:"contain",marginBottom:4,filter:"drop-shadow(0 0 28px rgba(168,85,247,0.6))"}}/>
-                <p style={{color:"#6644aa",fontSize:13,margin:0}}>Choose your legend</p>
+            <div style={{minHeight:"100vh",background:G.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"52px 16px 100px",position:"relative",overflowY:"auto"}}>
+              <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 30%,rgba(100,30,180,0.2) 0%,transparent 65%)",pointerEvents:"none"}}/>
+              <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"28px 0 24px"}}>
+                <img src="/logo.png" alt="Degen Clicker" onError={e=>{(e.target as HTMLImageElement).style.display="none";}}
+                  style={{width:100,height:100,objectFit:"contain",marginBottom:8,filter:"drop-shadow(0 0 30px rgba(168,85,247,0.7))"}}/>
+                <h2 style={{color:"#fff",fontWeight:900,fontSize:20,margin:"0 0 4px",letterSpacing:"-0.02em"}}>Choose Your Legend</h2>
+                <p style={{color:"#3a2255",fontSize:12,margin:0}}>Each legend has unique abilities and passives</p>
               </div>
-              <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",maxWidth:440,position:"relative",zIndex:1}}>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
                 {CHARACTERS.map(c=>{
                   const s=loadSave(c.id);
-                  return(<button key={c.id} onClick={()=>tryStart(c.id)} style={{width:120,background:`rgba(${c.glow},0.04)`,border:`2px solid rgba(${c.glow},0.22)`,borderRadius:18,cursor:"pointer",padding:"16px 8px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:7,transition:"all 0.2s"}}
-                    onMouseEnter={e=>{const el=e.currentTarget;el.style.borderColor=`rgb(${c.glow})`;el.style.background=`rgba(${c.glow},0.12)`;el.style.transform="translateY(-4px)";el.style.boxShadow=`0 12px 36px rgba(${c.glow},0.35)`;}}
-                    onMouseLeave={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.22)`;el.style.background=`rgba(${c.glow},0.04)`;el.style.transform="";el.style.boxShadow="";}}>
-                    <div style={{fontSize:46}}>{c.emoji}</div>
-                    <div style={{color:"#fff",fontWeight:800,fontSize:13}}>{c.name}</div>
-                    <div style={{background:`rgba(${c.glow},0.15)`,border:`1px solid rgba(${c.glow},0.35)`,borderRadius:5,padding:"2px 7px",fontSize:9,color:`rgb(${c.glow})`,fontWeight:700,textAlign:"center"}}>{c.ability}</div>
-                    <div style={{fontSize:9,color:"#333",lineHeight:1.4,textAlign:"center"}}>{c.abilityDesc}</div>
-                    {s.totalEarned>0&&<div style={{fontSize:9,color:"#4a3a5a"}}>💰 {fmt(s.totalEarned)}</div>}
-                  </button>);
+                  return(
+                    <button key={c.id} onClick={()=>tryStart(c.id)}
+                      style={{
+                        width:130,
+                        background:`linear-gradient(145deg,rgba(${c.glow},0.06),rgba(${c.glow},0.02))`,
+                        border:`1.5px solid rgba(${c.glow},0.2)`,
+                        borderRadius:22,cursor:"pointer",padding:"20px 10px 16px",
+                        display:"flex",flexDirection:"column",alignItems:"center",gap:8,
+                        transition:"all 0.2s",
+                        boxShadow:`0 4px 20px rgba(0,0,0,0.3)`,
+                      }}
+                      onMouseEnter={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.8)`;el.style.background=`linear-gradient(145deg,rgba(${c.glow},0.14),rgba(${c.glow},0.06))`;el.style.transform="translateY(-6px)";el.style.boxShadow=`0 16px 40px rgba(${c.glow},0.3)`;}}
+                      onMouseLeave={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.2)`;el.style.background=`linear-gradient(145deg,rgba(${c.glow},0.06),rgba(${c.glow},0.02))`;el.style.transform="";el.style.boxShadow="0 4px 20px rgba(0,0,0,0.3)";}}>
+                      <div style={{fontSize:52,filter:`drop-shadow(0 0 16px rgba(${c.glow},0.6))`}}>{c.emoji}</div>
+                      <div style={{color:"#fff",fontWeight:900,fontSize:14,letterSpacing:"-0.01em"}}>{c.name}</div>
+                      <div style={{
+                        background:`rgba(${c.glow},0.12)`,border:`1px solid rgba(${c.glow},0.3)`,
+                        borderRadius:8,padding:"3px 9px",fontSize:9,color:`rgb(${c.glow})`,
+                        fontWeight:700,textAlign:"center",lineHeight:1.3,
+                      }}>{c.ability}</div>
+                      <div style={{fontSize:9,color:"#2a1540",lineHeight:1.4,textAlign:"center"}}>{c.abilityDesc}</div>
+                      {s.totalEarned>0&&(
+                        <div style={{fontSize:9,color:"#3a2255",background:G.glass,borderRadius:6,padding:"2px 6px"}}>💰 {fmt(s.totalEarned)} saved</div>
+                      )}
+                    </button>
+                  );
                 })}
               </div>
             </div>
           )}
 
+          {/* ── GAME SCREEN ── */}
           {screen==="game"&&char&&(
-            <div style={{minHeight:"100vh",background:"#080010",display:"flex",flexDirection:"column",alignItems:"center",paddingBottom:80,position:"relative",overflow:"hidden",userSelect:"none",WebkitUserSelect:"none"}} className={shaking?"shake":""}>
-              <div style={{position:"fixed",inset:0,pointerEvents:"none",background:`radial-gradient(ellipse at 50% 45%,rgba(${char.glow},${specialActive?0.28:0.12}) 0%,transparent 60%)`,transition:"background 0.5s"}}/>
+            <div style={{
+              minHeight:"100vh",background:G.bg,
+              display:"flex",flexDirection:"column",alignItems:"center",
+              paddingBottom:88,position:"relative",overflow:"hidden",
+              userSelect:"none",WebkitUserSelect:"none",
+            }} className={shaking?"shake":""}>
+              <div style={{position:"fixed",inset:0,pointerEvents:"none",background:`radial-gradient(ellipse at 50% 40%,rgba(${char.glow},${specialActive?0.3:0.12}) 0%,transparent 60%)`,transition:"background 0.6s"}}/>
 
-              {/* Top bar */}
-              <div style={{width:"100%",maxWidth:440,padding:"10px 14px 4px",zIndex:10,position:"relative"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-                  <button onClick={()=>setScreen("select")} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",color:"#555",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12}}>⬅</button>
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:18,fontWeight:900,color:"#f5c842"}}>💰 {fmt(coins)}</div>
-                    <div style={{fontSize:8,color:"#333",textTransform:"uppercase",letterSpacing:"0.08em"}}>$TOWER</div>
+              {/* Top stats bar */}
+              <div style={{width:"100%",maxWidth:480,padding:"58px 16px 6px",zIndex:10,position:"relative"}}>
+                {/* Coins + rank row */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                  <button onClick={()=>setScreen("select")} style={{background:G.glass,border:`1px solid ${G.border}`,color:"#555",borderRadius:10,padding:"6px 10px",cursor:"pointer",fontSize:12}}>⬅ Back</button>
+
+                  {/* Big coin display */}
+                  <div style={{
+                    background:"linear-gradient(135deg,rgba(245,200,66,0.1),rgba(245,200,66,0.05))",
+                    border:"1px solid rgba(245,200,66,0.25)",
+                    borderRadius:16,padding:"6px 16px",
+                    textAlign:"center",
+                  }}>
+                    <div style={{fontSize:20,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>💰 {fmt(coins)}</div>
+                    <div style={{fontSize:8,color:"#3a2255",textTransform:"uppercase",letterSpacing:"0.08em"}}>$DEGEN</div>
                   </div>
+
+                  {/* Rank */}
                   <div style={{textAlign:"right"}}>
-                    <div style={{color:rank.color,fontWeight:800,fontSize:11}}>{rank.emoji} {rank.name}</div>
-                    <div style={{color:"#333",fontSize:9}}>Level {level}</div>
+                    <div style={{color:rank.color,fontWeight:800,fontSize:12,marginBottom:1}}>{rank.emoji} {rank.name}</div>
+                    <div style={{color:"#2a1540",fontSize:9}}>Level {level}</div>
                   </div>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:5}}>
-                  <span style={{fontSize:8,color:"#333",fontWeight:700}}>Lv.{level}</span>
-                  <div style={{flex:1,height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}66,${rank.color})`,borderRadius:2,transition:"width 0.4s"}}/>
+
+                {/* XP bar */}
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                  <span style={{fontSize:8,color:"#2a1540",fontWeight:700,flexShrink:0}}>Lv.{level}</span>
+                  <div style={{flex:1,height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}55,${rank.color})`,borderRadius:2,transition:"width 0.5s",boxShadow:`0 0 6px ${rank.color}66`}}/>
                   </div>
-                  <span style={{fontSize:8,color:"#333"}}>
-                    {fmt(xpProgress.current)}/{fmt(xpProgress.needed)}
-                    {nextRank&&<span style={{color:nextRank.color,marginLeft:3}}>→{nextRank.emoji}</span>}
-                  </span>
+                  {nextRank&&<span style={{fontSize:8,color:nextRank.color,flexShrink:0}}>{nextRank.emoji}</span>}
+                </div>
+
+                {/* Mini stats row */}
+                <div style={{display:"flex",gap:6}}>
+                  {[
+                    {label:"Total",value:`💰${fmt(totalEarned)}`},
+                    {label:"Taps",value:`👆${fmt(totalTaps)}`},
+                    ...(autoRate>0?[{label:"Auto",value:`🤖${autoRate}/s`}]:[]),
+                    ...(combo>1.5?[{label:"Combo",value:`×${(Math.floor(combo*10)/10).toFixed(1)}`}]:[]),
+                  ].map(s=>(
+                    <div key={s.label} style={{flex:1,background:G.glass,border:`1px solid ${G.border}`,borderRadius:8,padding:"4px 6px",textAlign:"center"}}>
+                      <div style={{color:"#2a1540",fontSize:6,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:1}}>{s.label}</div>
+                      <div style={{color:"#ccc",fontWeight:800,fontSize:10}}>{s.value}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Stats row */}
-              <div style={{width:"100%",maxWidth:440,padding:"0 14px 5px",display:"flex",gap:5,zIndex:10,position:"relative"}}>
-                {[
-                  {label:"Total",value:`💰${fmt(totalEarned)}`,color:"#ccc"},
-                  {label:"Taps",value:`👆${fmt(totalTaps)}`,color:"#ccc"},
-                  ...(autoRate>0?[{label:"Auto",value:`🤖${autoRate}/s`,color:"#22d67a"}]:[]),
-                  ...(combo>1.5?[{label:"Combo",value:`×${(Math.floor(combo*10)/10).toFixed(1)}`,color:`rgb(${char.glow})`}]:[]),
-                ].map(s=>(
-                  <div key={s.label} style={{flex:1,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)",borderRadius:8,padding:"4px 6px",textAlign:"center"}}>
-                    <div style={{color:"#333",fontSize:7,textTransform:"uppercase",letterSpacing:"0.05em"}}>{s.label}</div>
-                    <div style={{color:s.color,fontWeight:800,fontSize:10}}>{s.value}</div>
-                  </div>
-                ))}
-              </div>
-
+              {/* Special active banner */}
               {specialActive&&(
-                <div style={{position:"relative",zIndex:10,background:`linear-gradient(135deg,rgba(${char.glow},0.8),rgba(${char.glow},0.5))`,borderRadius:20,padding:"3px 18px",marginBottom:4,fontSize:11,fontWeight:900,color:"#fff",boxShadow:`0 0 24px rgba(${char.glow},0.7)`,animation:"pulseBanner 0.4s infinite"}}>
+                <div style={{
+                  position:"relative",zIndex:10,
+                  background:`linear-gradient(135deg,rgba(${char.glow},0.9),rgba(${char.glow},0.6))`,
+                  borderRadius:20,padding:"5px 20px",marginBottom:6,
+                  fontSize:12,fontWeight:900,color:"#fff",
+                  boxShadow:`0 0 30px rgba(${char.glow},0.8)`,
+                  animation:"pulseBanner 0.5s infinite",
+                }}>
                   ⚡ {char.specialName.toUpperCase()} · {specialTimer.toFixed(1)}s
                 </div>
               )}
 
               {/* Character */}
-              <div style={{position:"relative",zIndex:10,width:"100%",maxWidth:260,height:260,margin:"0 auto 8px"}}>
+              <div style={{position:"relative",zIndex:10,width:"100%",maxWidth:280,height:270,margin:"0 auto 8px"}}>
                 <ModelStage char={char} specialActive={specialActive} charPulse={charPulse} onTap={handleTap} firstPlay={totalTaps<3}/>
               </div>
 
               {/* Energy bar */}
-              <div style={{width:"100%",maxWidth:300,padding:"0 0 4px",position:"relative",zIndex:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                  <span style={{fontSize:8,color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>⚡ Energy</span>
-                  <span style={{fontSize:8,color:"#333"}}>{Math.floor(energy)}/{maxEnergy}</span>
+              <div style={{width:"100%",maxWidth:300,padding:"0 0 5px",position:"relative",zIndex:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:8,color:"#2a1540",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>⚡ Energy</span>
+                  <span style={{fontSize:8,color:"#2a1540"}}>{Math.floor(energy)}/{maxEnergy}</span>
                 </div>
-                <div style={{height:5,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
-                  <div style={{height:"100%",borderRadius:3,width:`${(energy/maxEnergy)*100}%`,background:(energy/maxEnergy)>0.5?`linear-gradient(90deg,rgba(${char.glow},0.7),rgb(${char.glow}))`:energy/maxEnergy>0.2?"linear-gradient(90deg,#ffaa00,#ffcc44)":"linear-gradient(90deg,#ff3355,#ff6677)",transition:"width 0.1s"}}/>
+                <div style={{height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden",border:`1px solid ${G.border}`}}>
+                  <div style={{
+                    height:"100%",borderRadius:3,width:`${(energy/maxEnergy)*100}%`,
+                    background:(energy/maxEnergy)>0.5
+                      ?`linear-gradient(90deg,rgba(${char.glow},0.7),rgb(${char.glow}))`
+                      :(energy/maxEnergy)>0.2
+                        ?"linear-gradient(90deg,#cc8800,#ffaa00)"
+                        :"linear-gradient(90deg,#aa2233,#ff4455)",
+                    transition:"width 0.15s",
+                    boxShadow:`0 0 8px rgba(${char.glow},0.4)`,
+                  }}/>
                 </div>
               </div>
 
               {/* Special charge */}
-              <div style={{width:"100%",maxWidth:300,padding:"0 0 5px",position:"relative",zIndex:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                  <span style={{fontSize:8,color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>✨ {char.specialName}</span>
-                  <span style={{fontSize:8,color:specialCharge>=100?`rgb(${char.glow})`:"#333"}}>{Math.floor(specialCharge)}%</span>
+              <div style={{width:"100%",maxWidth:300,padding:"0 0 6px",position:"relative",zIndex:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:8,color:"#2a1540",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>✨ {char.specialName}</span>
+                  <span style={{fontSize:8,color:specialCharge>=100?`rgb(${char.glow})`:"#2a1540"}}>{Math.floor(specialCharge)}%</span>
                 </div>
-                <div onClick={launchSpecial} style={{height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden",cursor:specialCharge>=100&&!specialActive?"pointer":"default",border:specialCharge>=100&&!specialActive?`1px solid rgba(${char.glow},0.5)`:"1px solid transparent"}}>
-                  <div style={{height:"100%",borderRadius:3,width:`${specialCharge}%`,background:`linear-gradient(90deg,rgba(${char.glow},0.6),rgb(${char.glow}))`,transition:"width 0.15s"}}/>
+                <div onClick={launchSpecial} style={{height:7,background:"rgba(255,255,255,0.04)",borderRadius:4,overflow:"hidden",cursor:specialCharge>=100&&!specialActive?"pointer":"default",border:specialCharge>=100&&!specialActive?`1px solid rgba(${char.glow},0.5)`:`1px solid ${G.border}`}}>
+                  <div style={{height:"100%",borderRadius:4,width:`${specialCharge}%`,background:`linear-gradient(90deg,rgba(${char.glow},0.5),rgb(${char.glow}))`,transition:"width 0.2s",boxShadow:specialCharge>=100?`0 0 12px rgba(${char.glow},0.6)`:"none"}}/>
                 </div>
                 {specialCharge>=100&&!specialActive&&(
-                  <button onClick={launchSpecial} style={{width:"100%",marginTop:5,padding:"8px",background:`linear-gradient(135deg,rgba(${char.glow},0.7),rgb(${char.glow}))`,border:"none",borderRadius:9,color:"#fff",fontWeight:900,fontSize:12,cursor:"pointer",boxShadow:`0 0 20px rgba(${char.glow},0.6)`,animation:"pulseBanner 0.5s infinite"}}>
-                    ✨ {char.specialName.toUpperCase()} — ACTIVATE!
+                  <button onClick={launchSpecial} style={{
+                    width:"100%",marginTop:7,padding:"9px",
+                    background:`linear-gradient(135deg,rgba(${char.glow},0.8),rgba(${char.glow},0.6))`,
+                    border:"none",borderRadius:12,color:"#fff",fontWeight:900,fontSize:13,
+                    cursor:"pointer",boxShadow:`0 0 24px rgba(${char.glow},0.7)`,
+                    animation:"pulseBanner 0.5s infinite",
+                  }}>
+                    ✨ ACTIVATE {char.specialName.toUpperCase()}!
                   </button>
                 )}
               </div>
 
               {/* Quick upgrades */}
-              <div style={{width:"100%",maxWidth:440,position:"relative",zIndex:10}}>
+              <div style={{width:"100%",maxWidth:480,position:"relative",zIndex:10}}>
                 <QuickStrip coins={coins} upgrades={upgrades} onBuyUpgrade={buyUpgrade}/>
               </div>
 
               {/* Particles */}
               <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:50}}>
                 {particles.map(p=>(
-                  <div key={p.id} style={{position:"absolute",left:p.x,top:p.y,color:p.color,fontWeight:900,fontSize:p.big?17:12,textShadow:`0 0 8px ${p.color}`,pointerEvents:"none",animation:"floatUp 1.1s ease-out forwards",whiteSpace:"nowrap",transform:"translate(-50%,-50%)"}}>
+                  <div key={p.id} style={{position:"absolute",left:p.x,top:p.y,color:p.color,fontWeight:900,fontSize:p.big?18:13,textShadow:`0 0 10px ${p.color}`,pointerEvents:"none",animation:"floatUp 1.1s ease-out forwards",whiteSpace:"nowrap",transform:"translate(-50%,-50%)"}}>
                     {p.value}
                   </div>
                 ))}
@@ -1075,19 +1417,19 @@ export default function TapGame() {
       <BottomBar active={activeTab} onTab={t=>setActiveTab(t as any)}/>
 
       <style>{`
-        @keyframes floatUp { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,calc(-50% - 100px)) scale(0.6)} }
-        @keyframes slideDown { 0%{opacity:0;transform:translateX(-50%) translateY(-12px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
-        @keyframes pulseBanner { 0%,100%{opacity:1} 50%{opacity:0.7} }
-        @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes floatHint { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
+        @keyframes floatUp { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,calc(-50% - 110px)) scale(0.5)} }
+        @keyframes slideDown { 0%{opacity:0;transform:translateX(-50%) translateY(-14px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
+        @keyframes pulseBanner { 0%,100%{opacity:1} 50%{opacity:0.75} }
+        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.8)} }
+        @keyframes floatHint { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-6px)} }
         @keyframes orbit1 { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes orbit2 { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        .shake { animation: shakeFx 0.2s ease-out; }
-        @keyframes shakeFx { 0%,100%{transform:translate(0)} 25%{transform:translate(-3px,2px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,3px)} }
-        * { -webkit-tap-highlight-color:transparent; }
+        .shake { animation: shakeFx 0.18s ease-out; }
+        @keyframes shakeFx { 0%,100%{transform:translate(0)} 25%{transform:translate(-4px,2px)} 50%{transform:translate(4px,-2px)} 75%{transform:translate(-2px,3px)} }
+        * { -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
         ::-webkit-scrollbar { height:3px; width:3px; }
         ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:rgba(168,85,247,0.3); border-radius:2px; }
+        ::-webkit-scrollbar-thumb { background:rgba(168,85,247,0.35); border-radius:2px; }
       `}</style>
     </div>
   );
