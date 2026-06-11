@@ -1397,6 +1397,44 @@ export default function TapGame() {
     return()=>clearInterval(id);
   },[user?.id]);
 
+  // Always-on DB sync — runs every 2s regardless of screen/tab/charId.
+  // Reads best tap count from localStorage (global + all char saves) and pushes to DB.
+  // This ensures the leaderboard stays live even if the user is on the leaderboard tab
+  // before selecting a character.
+  useEffect(()=>{
+    const uid=user?.id;
+    if(!uid)return;
+    const interval=setInterval(()=>{
+      const gl=getGlobalTaps(uid);
+      let bestTaps=gl.totalTaps||0;
+      let bestEarned=gl.totalEarned||0;
+      try{
+        const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${uid}_`));
+        for(const sk of saves){
+          try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");
+            if((sv.totalTaps||0)>bestTaps)bestTaps=sv.totalTaps;
+            if((sv.totalEarned||0)>bestEarned)bestEarned=sv.totalEarned;
+          }catch{}
+        }
+      }catch{}
+      // Also use liveRef if game is running
+      if(liveRef.current.charId&&liveRef.current.uid===uid){
+        bestTaps=Math.max(bestTaps,liveRef.current.totalTaps);
+        bestEarned=Math.max(bestEarned,liveRef.current.totalEarned);
+      }
+      if(bestTaps<=0)return;
+      const name=getPlayerName(uid)||username;
+      const cid=liveRef.current.charId||charId||"pepe";
+      const coins=liveRef.current.coins||0;
+      const upgrades=liveRef.current.upgrades||{};
+      const wallet=liveRef.current.solWallet||getPlayerWallet(uid)||undefined;
+      const av=liveRef.current.avatarUrl||avatarUrl||undefined;
+      syncDB(uid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
+      setGlobalTaps(uid,bestTaps,bestEarned);
+    },2000);
+    return()=>clearInterval(interval);
+  },[user?.id]);// eslint-disable-line react-hooks/exhaustive-deps
+
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
   const xpProgress=getLevelProgress(totalEarned);
