@@ -1020,6 +1020,18 @@ export default function TapGame() {
     if(!user?.id)return;
     const authId=user.id;
     setPlayerId(authId);
+    // Device fingerprinting — runs silently in background
+    import("@/lib/security").then(async({getDeviceFingerprint,registerDeviceFingerprint,checkPlayerStatus})=>{
+      const fp=await getDeviceFingerprint();
+      registerDeviceFingerprint(authId,fp);
+      // Check if banned
+      const status=await checkPlayerStatus(authId);
+      if(status.banned){
+        await import("@/lib/auth").then(({useAuth:_})=>{});
+        alert(`Your account has been banned. Reason: ${status.reason||"Violation of Terms of Service"}`);
+        import("@/lib/auth").then(()=>window.location.href="/");
+      }
+    }).catch(()=>{});
     import("@/lib/supabase").then(async({supabase})=>{
       const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
       if(existing){
