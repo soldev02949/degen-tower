@@ -33,11 +33,19 @@ export default function SignupPage() {
     if (password !== confirm) { setError("Passwords don't match."); return; }
     if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     setSubmitting(true);
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data: signUpData, error } = await supabase.auth.signUp({ email, password });
     if (error) {
       setError(error.message);
       setSubmitting(false);
     } else {
+      // Log account creation event
+      if (signUpData?.user?.id) {
+        import("@/lib/security").then(async ({ getDeviceFingerprint, registerDeviceFingerprint, logSecurityEvent }) => {
+          const fp = await getDeviceFingerprint();
+          await logSecurityEvent(signUpData.user!.id, "account_created", "low", { email, fingerprint: fp });
+          registerDeviceFingerprint(signUpData.user!.id, fp);
+        }).catch(() => {});
+      }
       setSuccess(true);
     }
   }
