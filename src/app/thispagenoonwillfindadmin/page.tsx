@@ -58,7 +58,7 @@ const GOLD = "#f5c842";
 const GREEN = "#22d67a";
 const RED = "#ef4444";
 
-type TabId = "overview"|"players"|"flagged"|"rewards"|"payouts"|"devices"|"leaderboard";
+type TabId = "overview"|"players"|"flagged"|"rewards"|"payouts"|"devices"|"leaderboard"|"submissions";
 
 const STATUS_COLOR: Record<string,string> = {
   pending:"#f5c842", approved:"#22d67a", denied:"#ef4444",
@@ -108,6 +108,8 @@ export default function AdminDashboard() {
   const [payouts, setPayouts] = useState<PayoutLog[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
   const [ipData, setIpData] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [subLoading, setSubLoading] = useState(false);
 
   // UI state
   const [search, setSearch] = useState("");
@@ -163,7 +165,16 @@ export default function AdminDashboard() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (authed) fetchAll(); }, [authed, fetchAll]);
+  const fetchSubmissions = useCallback(async () => {
+    setSubLoading(true);
+    try {
+      const { data } = await supabase.from("dt_submissions").select("*").order("submitted_at", { ascending: false }).limit(200);
+      setSubmissions(data||[]);
+    } catch(e:any) { showMsg("Submissions fetch error: "+e.message,"err"); }
+    setSubLoading(false);
+  }, []);
+
+  useEffect(() => { if (authed) { fetchAll(); fetchSubmissions(); } }, [authed, fetchAll, fetchSubmissions]);
 
   // Auto-refresh every 15s
   useEffect(() => {
@@ -318,6 +329,7 @@ export default function AdminDashboard() {
     {id:"payouts",    label:"📤 Payouts"},
     {id:"devices",    label:"📱 Devices"},
     {id:"leaderboard",label:"🏆 Leaderboard"},
+    {id:"submissions",label:"📸 Submissions"},
   ];
 
   const filteredPlayers = players.filter(p=>
@@ -884,6 +896,70 @@ export default function AdminDashboard() {
           );
         })()}
       </div>
+
+        {tab==="submissions"&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+              <div>
+                <h3 style={{color:"#fff",fontWeight:900,margin:"0 0 2px",fontSize:16}}>📸 Score Submissions</h3>
+                <p style={{color:"#2a1540",fontSize:12,margin:0}}>{submissions.length} submissions · Screenshots uploaded by players from the Rankings tab</p>
+              </div>
+              <button onClick={fetchSubmissions} style={{background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.3)",color:PURPLE,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                🔄 Refresh
+              </button>
+            </div>
+            {subLoading&&<div style={{color:"#555",textAlign:"center",padding:32}}>Loading…</div>}
+            {!subLoading&&submissions.length===0&&(
+              <div style={{textAlign:"center",padding:48,color:"#333"}}>
+                <div style={{fontSize:48,marginBottom:12}}>📭</div>
+                <div style={{fontWeight:700}}>No submissions yet</div>
+                <div style={{fontSize:12,marginTop:4}}>Players can submit from the Rankings tab in the game.</div>
+              </div>
+            )}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+              {submissions.map((s:any)=>(
+                <div key={s.id} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:"hidden"}}>
+                  {s.screenshot_url&&(
+                    <a href={s.screenshot_url} target="_blank" rel="noopener noreferrer">
+                      <img src={s.screenshot_url} alt="score screenshot" style={{width:"100%",display:"block",maxHeight:220,objectFit:"cover",cursor:"pointer"}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>
+                    </a>
+                  )}
+                  <div style={{padding:"12px 14px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <div style={{color:"#fff",fontWeight:800,fontSize:14}}>{s.username||"Unknown"}</div>
+                      <Pill status={s.status||"pending"}/>
+                    </div>
+                    <div style={{display:"flex",gap:12,marginBottom:8}}>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{color:GOLD,fontWeight:900,fontSize:15}}>👆 {s.taps_claimed!=null?fmt(s.taps_claimed):"—"}</div>
+                        <div style={{color:"#555",fontSize:9,fontWeight:600}}>TAPS</div>
+                      </div>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{color:PURPLE,fontWeight:800,fontSize:12}}>Lv.{s.level_claimed||"—"}</div>
+                        <div style={{color:"#555",fontSize:9,fontWeight:600}}>LEVEL</div>
+                      </div>
+                    </div>
+                    <div style={{color:"#444",fontSize:10,marginBottom:10}}>{s.submitted_at?new Date(s.submitted_at).toLocaleString():"—"}</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={async()=>{await supabase.from("dt_submissions").update({status:"approved"}).eq("id",s.id);fetchSubmissions();}}
+                        style={{flex:1,background:"rgba(34,214,122,0.1)",border:"1px solid rgba(34,214,122,0.3)",color:"#22d67a",borderRadius:8,padding:"6px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                        ✅ Approve
+                      </button>
+                      <button onClick={async()=>{await supabase.from("dt_submissions").update({status:"denied"}).eq("id",s.id);fetchSubmissions();}}
+                        style={{flex:1,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.25)",color:RED,borderRadius:8,padding:"6px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                        ❌ Deny
+                      </button>
+                      <button onClick={async()=>{await supabase.from("dt_submissions").delete().eq("id",s.id);fetchSubmissions();}}
+                        style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,color:"#444",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11}}>
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* ── MODALS ── */}
 
