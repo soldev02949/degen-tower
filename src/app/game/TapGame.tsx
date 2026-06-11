@@ -285,7 +285,7 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
       p_wallet_address:pid,
       p_username:uname||("Degen_"+pid.slice(-6)),
       p_character:charId,
-      p_total_score:Math.floor(totalEarned),
+      p_total_score:String(Math.round(totalEarned)||0),// send as string to avoid JS float precision losing bignum
       p_games_played:Math.floor(totalTaps),
       p_token_balance:Math.floor(coins),
       p_is_verified:false,
@@ -1166,6 +1166,78 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
           </div>
         </div>
       )}
+
+      {/* ── SUBMIT SCORE SECTION ── */}
+      <SubmitScoreSection myPlayerId={myPlayerId} liveTaps={liveTaps} liveEarned={liveEarned} liveUsername={liveUsername} liveCharId={liveCharId}/>
+    </div>
+  );
+}
+
+// ─── SUBMIT SCORE SECTION ─────────────────────────────────────────────────────
+function SubmitScoreSection({myPlayerId,liveTaps,liveEarned,liveUsername,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveCharId:string}){
+  const SUPA_URL=SUPA_URL_CONST;
+  const SUPA_KEY=SUPA_KEY_CONST;
+  const [state,setState]=useState<"idle"|"uploading"|"done"|"error">("idle");
+  const [msg,setMsg]=useState("");
+  const fileRef=useRef<HTMLInputElement>(null);
+
+  async function handleFile(e:React.ChangeEvent<HTMLInputElement>){
+    const file=e.target.files?.[0];
+    if(!file||!myPlayerId){setMsg("Please log in first.");setState("error");return;}
+    setState("uploading");setMsg("Uploading screenshot…");
+    try{
+      const ext=file.name.split(".").pop()||"png";
+      const fname=`${myPlayerId}_${Date.now()}.${ext}`;
+      // Upload to Supabase storage
+      let authToken=SUPA_KEY;
+      try{const{supabase}=await import("@/lib/supabase");const{data:{session}}=await supabase.auth.getSession();if(session?.access_token)authToken=session.access_token;}catch{}
+      const upResp=await fetch(`${SUPA_URL}/storage/v1/object/score-screenshots/${fname}`,{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Content-Type":file.type,"Cache-Control":"3600","x-upsert":"true"},
+        body:file,
+      });
+      if(!upResp.ok){const t=await upResp.text();throw new Error(t);}
+      const screenshotUrl=`${SUPA_URL}/storage/v1/object/public/score-screenshots/${fname}`;
+      // Insert submission record
+      const subResp=await fetch(`${SUPA_URL}/rest/v1/dt_submissions`,{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({player_id:myPlayerId,username:liveUsername,screenshot_url:screenshotUrl,taps_claimed:Math.floor(liveTaps)||0,earned_claimed:String(Math.round(liveEarned)||0),level_claimed:getLevelFromXP(liveEarned)}),
+      });
+      if(!subResp.ok){const t=await subResp.text();throw new Error(t);}
+      setState("done");setMsg("Score submitted! ✅");
+    }catch(err){setState("error");setMsg("Upload failed: "+(err instanceof Error?err.message:"Unknown error"));console.error(err);}
+  }
+
+  return(
+    <div style={{margin:"20px 16px 100px",background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:20,padding:24,textAlign:"center"}}>
+      <div style={{fontSize:28,marginBottom:8}}>📸</div>
+      <div style={{color:"#c084fc",fontWeight:900,fontSize:16,marginBottom:6}}>Submit Your Score</div>
+      <div style={{color:"#888",fontSize:12,marginBottom:16,lineHeight:1.5}}>
+        Go to your <span style={{color:"#f5c842"}}>Home tab</span> and screenshot your stats,<br/>
+        then upload it here as proof of your score.
+      </div>
+      {state==="idle"&&(
+        <button onClick={()=>fileRef.current?.click()} style={{background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:14,padding:"12px 28px",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:"0 4px 20px rgba(168,85,247,0.4)"}}>
+          📤 Upload Screenshot
+        </button>
+      )}
+      {state==="uploading"&&<div style={{color:"#a855f7",fontWeight:700,fontSize:14}}>⏳ {msg}</div>}
+      {state==="done"&&<div style={{color:"#22d67a",fontWeight:800,fontSize:15}}>{msg}</div>}
+      {state==="error"&&(
+        <div>
+          <div style={{color:"#f87171",fontSize:12,marginBottom:10}}>{msg}</div>
+          <button onClick={()=>{setState("idle");setMsg("");}} style={{background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.4)",borderRadius:10,padding:"8px 20px",color:"#c084fc",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+            Try Again
+          </button>
+        </div>
+      )}
+      {state==="done"&&(
+        <button onClick={()=>{setState("idle");setMsg("");}} style={{background:"rgba(34,214,122,0.1)",border:"1px solid rgba(34,214,122,0.3)",borderRadius:10,padding:"8px 20px",color:"#22d67a",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:10}}>
+          Submit Another
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
     </div>
   );
 }
