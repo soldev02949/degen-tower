@@ -1167,6 +1167,24 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
               );
             })}
           </div>
+          {/* Force Sync Button for Admin/High Scores */}
+          <div style={{marginTop:20,textAlign:"center"}}>
+            <button 
+              onClick={() => doSave()}
+              style={{
+                background:"rgba(168,85,247,0.15)",
+                border:"1px solid rgba(168,85,247,0.4)",
+                color:"#c084fc",
+                padding:"8px 16px",
+                borderRadius:12,
+                fontSize:12,
+                fontWeight:800,
+                cursor:"pointer"
+              }}
+            >
+              🔄 Force Sync to Leaderboard
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -1499,11 +1517,12 @@ export default function TapGame() {
             const savedAv=getAvatar(authId);
             if(savedAv){setAvatar(savedAv);}
             if(existing.avatar_url){setAvatarUrl(existing.avatar_url as string);}
-            const dbTaps=Number(existing.games_played)||0;
-            const dbEarned=Number(existing.total_score)||0;
-            const dbCoins=Number(existing.token_balance)||0;
+            // USE STRINGS FOR LOAD to prevent precision loss for massive scores
+            const dbTaps=safeBigInt(String(existing.games_played));
+            const dbEarned=safeBigInt(String(existing.total_score));
+            const dbCoins=safeBigInt(String(existing.token_balance));
             const dbUpgrades=(existing.upgrades as Record<string,number>)||{};
-            dbValuesRef.current={totalEarned:dbEarned,totalTaps:dbTaps,coins:dbCoins,upgrades:dbUpgrades};
+            dbValuesRef.current={totalEarned:Number(dbEarned),totalTaps:Number(dbTaps),coins:Number(dbCoins),upgrades:dbUpgrades};
             // Always push local state to DB on load — GREATEST RPC makes it safe (DB only goes up).
             // This ensures the leaderboard always reflects the player's real count without manual fixes.
             const globalLocal=getGlobalTaps(authId);
@@ -1511,22 +1530,27 @@ export default function TapGame() {
             const localEarned=globalLocal.totalEarned||0;
             // Also scan all character saves for highest tap count
             const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${authId}_`));
-            let bestTaps=localTaps;let bestEarned=localEarned;let bestCoins=dbCoins;
+            let bestTaps=safeBigInt(localTaps);
+            let bestEarned=safeBigInt(localEarned);
+            let bestCoins=dbCoins;
             for(const sk of saves){
               try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");
-                if((sv.totalTaps||0)>bestTaps)bestTaps=sv.totalTaps;
-                if((sv.totalEarned||0)>bestEarned)bestEarned=sv.totalEarned;
-                if((sv.coins||0)>bestCoins)bestCoins=sv.coins;
+                const svTaps = safeBigInt(String(sv.totalTaps||"0"));
+                const svEarned = safeBigInt(String(sv.totalEarned||"0"));
+                const svCoins = safeBigInt(String(sv.coins||"0"));
+                if(svTaps > bestTaps) bestTaps = svTaps;
+                if(svEarned > bestEarned) bestEarned = svEarned;
+                if(svCoins > bestCoins) bestCoins = svCoins;
               }catch{}
             }
             {
-              const pushedTaps=Math.max(bestTaps,dbTaps);
-              const pushedEarned=Math.max(bestEarned,dbEarned);
-              const pushedCoins=Math.max(bestCoins,dbCoins);
+              const pushedTaps=maxBigInt(bestTaps, dbTaps);
+              const pushedEarned=maxBigInt(bestEarned, dbEarned);
+              const pushedCoins=maxBigInt(bestCoins, dbCoins);
               const uname=existing.username as string||getPlayerName(authId);
               const charId=existing.character as string||"pepe";
-              syncDB(authId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
-              dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
+              syncDB(authId,uname,charId,Number(pushedEarned),Number(pushedTaps),Number(pushedCoins),dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
+              dbValuesRef.current={totalEarned:Number(pushedEarned),totalTaps:Number(pushedTaps),coins:Number(pushedCoins),upgrades:dbUpgrades};
             }
           } else {
             // Try to migrate old p_xxx localStorage player ID to this auth account
@@ -1572,7 +1596,16 @@ export default function TapGame() {
         const data=arr[0];
         if(data){
           const prev=dbValuesRef.current;
-          dbValuesRef.current={totalTaps:Math.max(prev?.totalTaps||0,Number(data.games_played)||0),totalEarned:Math.max(prev?.totalEarned||0,Number(data.total_score)||0),coins:Math.max(prev?.coins||0,Number(data.token_balance)||0),upgrades:(data.upgrades as Record<string,number>)||(prev?.upgrades||{})};
+          const freshTaps = safeBigInt(String(data.games_played));
+          const freshEarned = safeBigInt(String(data.total_score));
+          const freshCoins = safeBigInt(String(data.token_balance));
+          
+          dbValuesRef.current={
+            totalTaps: Number(maxBigInt(safeBigInt(prev?.totalTaps||0), freshTaps)),
+            totalEarned: Number(maxBigInt(safeBigInt(prev?.totalEarned||0), freshEarned)),
+            coins: Number(maxBigInt(safeBigInt(prev?.coins||0), freshCoins)),
+            upgrades:(data.upgrades as Record<string,number>)||(prev?.upgrades||{})
+          };
         }
       }).catch(()=>{});
     };
