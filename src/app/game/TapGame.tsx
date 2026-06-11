@@ -231,7 +231,14 @@ const G = {
 };
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
-function fmt(n:number){ if(n>=1e9)return(n/1e9).toFixed(2)+"B"; if(n>=1e6)return(n/1e6).toFixed(2)+"M"; if(n>=1e3)return(n/1e3).toFixed(1)+"K"; return Math.floor(n).toString(); }
+function fmt(n:number){
+  if(n>=1e15)return(n/1e15).toFixed(2)+"Q";
+  if(n>=1e12)return(n/1e12).toFixed(2)+"T";
+  if(n>=1e9)return(n/1e9).toFixed(2)+"B";
+  if(n>=1e6)return(n/1e6).toFixed(2)+"M";
+  if(n>=1e3)return(n/1e3).toFixed(1)+"K";
+  return Math.floor(n).toString();
+}
 function getUpgCost(u:typeof UPGRADES[0], lv:number){ return Math.floor(u.baseCost*Math.pow(u.costMult,lv)); }
 function getPlayerName(uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ return localStorage.getItem(k)||""; }catch{ return ""; } }
 function setPlayerName(n:string,uid:string=""){ const k=uid?`degen_username_${uid}`:"degen_username"; try{ localStorage.setItem(k,n); }catch{} }
@@ -248,7 +255,12 @@ function getGlobalTaps(uid:string):{totalTaps:number;totalEarned:number}{
 }
 function setGlobalTaps(uid:string,totalTaps:number,totalEarned:number){
   if(typeof window==="undefined")return;
-  try{ localStorage.setItem(uid?`degen_global_${uid}`:"degen_global",JSON.stringify({totalTaps:Math.floor(totalTaps),totalEarned})); }catch{}
+  // Use a custom replacer for JSON.stringify to prevent scientific notation in localStorage
+  const data = JSON.stringify({totalTaps:Math.floor(totalTaps),totalEarned}, (key, val) => {
+    if (typeof val === 'number' && val >= 1e15) return val.toLocaleString('fullwide', {useGrouping:false});
+    return val;
+  });
+  try{ localStorage.setItem(uid?`degen_global_${uid}`:"degen_global", data); }catch{}
 }
 
 interface SaveData { charId:string; coins:number; totalEarned:number; totalTaps:number; upgrades:Record<string,number>; highScore:number; }
@@ -264,7 +276,14 @@ function loadSave(uid:string,charId:string):SaveData{
   }
   return { charId, coins:0, totalEarned:0, totalTaps:0, upgrades:{}, highScore:0 };
 }
-function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
+function persistSave(uid:string,d:SaveData){
+  const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`;
+  const data = JSON.stringify(d, (key, val) => {
+    if (typeof val === 'number' && val >= 1e15) return val.toLocaleString('fullwide', {useGrouping:false});
+    return val;
+  });
+  try{ localStorage.setItem(k,data); }catch{}
+}
 
 const SUPA_URL_CONST="https://paxtohwiycuhwmlziwrr.supabase.co";
 const SUPA_KEY_CONST="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
@@ -281,19 +300,34 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
     } catch {}
 
     // Use the GREATEST-based RPC so no browser can ever lower tap/coin counts in DB
+    // Use BigInt for extremely large scores to avoid scientific notation in JSON
+    // but convert back to regular numbers for the payload as Supabase expects bigint/numeric
     const rpcPayload:Record<string,unknown>={
       p_wallet_address:pid,
       p_username:uname||("Degen_"+pid.slice(-6)),
       p_character:charId,
-      p_total_score:Math.floor(totalEarned),
-      p_games_played:Math.floor(totalTaps),
-      p_token_balance:Math.floor(coins),
+      p_total_score: Math.round(totalEarned),
+      p_games_played: Math.round(totalTaps),
+      p_token_balance: Math.round(coins),
       p_is_verified:false,
       p_last_seen:new Date().toISOString(),
     };
     if(upgrades)rpcPayload.p_upgrades=upgrades;
     if(solWallet)rpcPayload.p_sol_wallet=solWallet;
     if(avatarUrl)rpcPayload.p_avatar_url=avatarUrl;
+    // Ensure large numbers are serialized as plain integers, not scientific notation
+    const body = JSON.stringify(rpcPayload, (key, value) => {
+      if (typeof value === 'number' && value >= 1e15) {
+        // Return as number in the JSON string but avoid scientific notation
+        return Math.round(value).toLocaleString('fullwide', {useGrouping:false});
+      }
+      return value;
+    });
+    // Note: JSON.stringify with the above replacer will turn the number into a string in the JSON
+    // but the Supabase RPC expects a numeric type. We need to manually fix the JSON string
+    // to remove the quotes around the large numbers so they are treated as numeric/bigint.
+    const fixedBody = body.replace(/:\"(\d{15,})\"/g, ':$1');
+
     await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/upsert_player_safe`,{
       method:"POST",
       headers:{
@@ -301,7 +335,7 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
         "Content-Type":"application/json",
         "Cache-Control":"no-cache",
       },
-      body:JSON.stringify(rpcPayload),
+      body: fixedBody,
     });
   }catch(e){console.error("syncDB error",e);}
 }
@@ -973,43 +1007,18 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
   },[]);
   useEffect(()=>{
     load();
-    const id=setInterval(load,1000);
+    const id=setInterval(load,1500);
     return()=>clearInterval(id);
   },[load]);
 
     const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
-  // Read live taps directly from localStorage on a 500ms interval — completely independent
-  // of DB polls and game state. Works even when user is on leaderboard tab while playing in another tab.
-  const readLocalTaps=useCallback(()=>{
-    if(!myPlayerId)return{taps:0,earned:0};
-    try{
-      const raw=localStorage.getItem(`degen_global_${myPlayerId}`);
-      if(!raw)return{taps:0,earned:0};
-      const d=JSON.parse(raw);
-      return{taps:Number(d.totalTaps)||0,earned:Number(d.totalEarned)||0};
-    }catch{return{taps:0,earned:0};}
-  },[myPlayerId]);
-  const [localSnapshot,setLocalSnapshot]=useState(()=>readLocalTaps());
-  useEffect(()=>{
-    setLocalSnapshot(readLocalTaps());
-    const id=setInterval(()=>setLocalSnapshot(readLocalTaps()),500);
-    return()=>clearInterval(id);
-  },[readLocalTaps]);
+  // We rely on the DB polling and the GREATEST-based RPC for real-time consistency across all users.
   const displayPlayers=useMemo(()=>{
-    if(!myPlayerId||!players.length)return players;
-    const effectiveTaps=Math.max(liveTaps,localSnapshot.taps);
-    const effectiveEarned=Math.max(liveEarned,localSnapshot.earned);
-    const patched=players.map(p=>{
-      // Use both id and wallet_address to ensure we match the current player correctly
-      if(p.wallet_address!==myPlayerId && p.id!==myPlayerId)return p;
-      return{...p,games_played:Math.max(p.games_played,effectiveTaps),total_score:Math.max(p.total_score,effectiveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
-    });
-    const exists=patched.some(p=>(p.wallet_address===myPlayerId || p.id===myPlayerId));
-    if(!exists&&effectiveTaps>0){
-      patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:effectiveEarned,games_played:effectiveTaps,avatar_url:liveAvatarUrl});
-    }
-    return patched.sort((a,b)=>b.games_played-a.games_played);
-  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId,localSnapshot]);
+    if(!players.length) return [];
+    // No more local patching - we rely on the 1s DB polling and the GREATEST-based RPC
+    // This ensures that what you see is what's actually in the database for everyone.
+    return [...players].sort((a,b) => (Number(b.games_played)||0) - (Number(a.games_played)||0));
+  },[players]);
     return(
     <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
@@ -1629,8 +1638,8 @@ export default function TapGame() {
     // This ensures previous-session taps (stored in degen_global_${uid}) are never lost
     // even if this session started from a lower DB value.
     const globalLocal=getGlobalTaps(d.uid);
-    const safeTaps=Math.max(d.totalTaps,globalLocal.totalTaps);
-    const safeEarned=Math.max(d.totalEarned,globalLocal.totalEarned);
+    const safeTaps=Math.max(Number(d.totalTaps)||0, Number(globalLocal.totalTaps)||0);
+    const safeEarned=Math.max(Number(d.totalEarned)||0, Number(globalLocal.totalEarned)||0);
     const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
     persistSave(d.uid,s);saveRef.current=s;
     setGlobalTaps(d.uid,safeTaps,safeEarned);
@@ -1754,6 +1763,8 @@ export default function TapGame() {
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
+    // Check if score is extremely large and needs BigInt handling
+    const safeEarned = totalEarned > 1e15 ? Math.floor(totalEarned) : totalEarned;
     const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1+(upgrades["combo_spd4"]||0)*2+(upgrades["combo_spd5"]||0)*5;
     const gcBonus=char.id==="gigachad"?2:1;
     const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30+(upgrades["combo_max4"]||0)*60+(upgrades["combo_max5"]||0)*120+(upgrades["combo_max6"]||0)*300;

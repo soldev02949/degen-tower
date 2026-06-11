@@ -25,6 +25,8 @@ function getRank(level: number): { name: string; color: string; emoji: string } 
 }
 
 function formatNum(n: number): string {
+  if (n >= 1e15) return (n / 1e15).toFixed(2) + "Q";
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
   if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
   if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
@@ -63,16 +65,31 @@ export default function Leaderboard() {
   const countdown = useCountdown();
 
   useEffect(() => {
-    supabase
-      .from("dt_players")
-      .select("*")
-      .order("games_played", { ascending: false })
-      .limit(100)
-      .then(({ data }) => {
-        // No deduplication here either to avoid the "stuck" number issue
-        setPlayers(data || []);
+    const fetchLB = async () => {
+      // Use raw fetch to bypass any potential Supabase client caching
+      const SUPA_URL = "https://paxtohwiycuhwmlziwrr.supabase.co";
+      const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
+      try {
+        const resp = await fetch(`${SUPA_URL}/rest/v1/dt_players?select=*&order=games_played.desc&limit=100`, {
+          headers: {
+            "apikey": SUPA_KEY,
+            "Authorization": `Bearer ${SUPA_KEY}`,
+            "Cache-Control": "no-cache"
+          }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          setPlayers(data || []);
+        }
+      } catch (e) {
+        console.error("LB fetch error", e);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+    fetchLB();
+    const id = setInterval(fetchLB, 2000);
+    return () => clearInterval(id);
   }, []);
 
   const medals = ["🥇","🥈","🥉"];
