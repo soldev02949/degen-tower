@@ -974,13 +974,27 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
   },[load]);
 
     const getRankForScore=(score:number)=>getRankFromLevel(getLevelFromXP(score));
-  // Patch current user's entry with live state (instant updates, no DB lag)
-  // liveTaps may be 0 before game loads - still show DB value via Math.max
+  // Read live taps directly from localStorage on a 500ms interval — completely independent
+  // of DB polls and game state. Works even when user is on leaderboard tab while playing in another tab.
+  const readLocalTaps=React.useCallback(()=>{
+    if(!myPlayerId)return{taps:0,earned:0};
+    try{
+      const raw=localStorage.getItem(`degen_global_${myPlayerId}`);
+      if(!raw)return{taps:0,earned:0};
+      const d=JSON.parse(raw);
+      return{taps:Number(d.totalTaps)||0,earned:Number(d.totalEarned)||0};
+    }catch{return{taps:0,earned:0};}
+  },[myPlayerId]);
+  const [localSnapshot,setLocalSnapshot]=useState(()=>readLocalTaps());
+  useEffect(()=>{
+    setLocalSnapshot(readLocalTaps());
+    const id=setInterval(()=>setLocalSnapshot(readLocalTaps()),500);
+    return()=>clearInterval(id);
+  },[readLocalTaps]);
   const displayPlayers=React.useMemo(()=>{
     if(!myPlayerId||!players.length)return players;
-    const localTaps=typeof window!=="undefined"?Number(JSON.parse(localStorage.getItem(myPlayerId?`degen_global_${myPlayerId}`:"degen_global")||"{}").totalTaps||0):0;
-    const effectiveTaps=Math.max(liveTaps,localTaps);
-    const effectiveEarned=Math.max(liveEarned,typeof window!=="undefined"?Number(JSON.parse(localStorage.getItem(myPlayerId?`degen_global_${myPlayerId}`:"degen_global")||"{}").totalEarned||0):0);
+    const effectiveTaps=Math.max(liveTaps,localSnapshot.taps);
+    const effectiveEarned=Math.max(liveEarned,localSnapshot.earned);
     const patched=players.map(p=>{
       if(p.wallet_address!==myPlayerId)return p;
       return{...p,games_played:Math.max(p.games_played,effectiveTaps),total_score:Math.max(p.total_score,effectiveEarned),username:liveUsername||p.username,avatar_url:liveAvatarUrl||p.avatar_url,character:liveCharId||p.character};
@@ -990,7 +1004,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       patched.push({id:myPlayerId,wallet_address:myPlayerId,username:liveUsername,character:liveCharId,total_score:effectiveEarned,games_played:effectiveTaps,avatar_url:liveAvatarUrl});
     }
     return patched.sort((a,b)=>b.games_played-a.games_played);
-  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId]);
+  },[players,myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId,localSnapshot]);
     return(
     <div style={{minHeight:"100vh",background:G.bg,paddingTop:64,paddingBottom:90,overflowY:"auto"}}>
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(245,200,66,0.08) 0%,transparent 50%)",pointerEvents:"none",zIndex:0}}/>
