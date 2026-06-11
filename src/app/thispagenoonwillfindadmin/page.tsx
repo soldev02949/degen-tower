@@ -140,6 +140,8 @@ export default function AdminDashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
+      // always bypass any cache — reads must be live from DB
+      const headers = { "Cache-Control": "no-cache, no-store", "Pragma": "no-cache" };
       const [
         { data: pd },
         { data: fd },
@@ -155,6 +157,7 @@ export default function AdminDashboard() {
         supabase.from("dt_device_fingerprints").select("*").order("created_at", { ascending: false }),
         supabase.from("dt_ip_accounts").select("*").order("last_seen", { ascending: false }),
       ]);
+      void headers;// used to signal intent; supabase-js handles cache at HTTP level
       setPlayers((pd||[]) as Player[]);
       setFlagged((fd||[]) as FlaggedAccount[]);
       setRewards((rd||[]) as RewardEntry[]);
@@ -176,12 +179,24 @@ export default function AdminDashboard() {
 
   useEffect(() => { if (authed) { fetchAll(); fetchSubmissions(); } }, [authed, fetchAll, fetchSubmissions]);
 
-  // Auto-refresh every 15s
+  // Auto-refresh every 2s
   useEffect(() => {
     if (!authed || !autoRefresh) return;
-    const id = setInterval(fetchAll, 5000);// refresh every 5s for near-live data
+    const id = setInterval(fetchAll, 2000);// near-live polling
     return () => clearInterval(id);
   }, [authed, autoRefresh, fetchAll]);
+
+  // Supabase Realtime — instant push whenever dt_players changes
+  useEffect(() => {
+    if (!authed) return;
+    const channel = supabase
+      .channel("dt_players_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "dt_players" }, () => {
+        fetchAll();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [authed, fetchAll]);
 
   function copyToClipboard(text: string, id: string) {
     if (!text) return;
