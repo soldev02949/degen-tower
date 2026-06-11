@@ -309,24 +309,45 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
 // ─── DEDICATED TAP SYNC (fully independent of earned/currency) ───────────────
 // This function ONLY writes games_played (taps). It never touches total_score.
 // Even if earned values overflow or have issues, taps still sync correctly.
-async function syncTaps(pid:string,uname:string,charId:string,taps:number){
-  if(!pid||taps<=0)return;
+// ─── RETRY QUEUE: any failed tap sync is stored and retried automatically ─────
+const _tapRetryQueue: Map<string,{pid:string;uname:string;charId:string;taps:number;retries:number}> = new Map();
+
+// syncTaps: writes taps to DB via dedicated RPC, returns DB value (or null on failure).
+// On failure, queues for retry. On success, any queued entry for this pid is cleared.
+async function syncTaps(pid:string,uname:string,charId:string,taps:number): Promise<number|null>{
+  if(!pid||taps<=0)return null;
   let authToken=SUPA_KEY_CONST;
   try{const{supabase}=await import("@/lib/supabase");const{data:{session}}=await supabase.auth.getSession();if(session?.access_token)authToken=session.access_token;}catch{}
   try{
     const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/rpc/sync_taps_only`,{
       method:"POST",
-      headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache"},
+      headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Cache-Control":"no-cache","Prefer":"return=representation"},
       body:JSON.stringify({p_wallet_address:pid,p_username:uname||("Degen_"+pid.slice(-6)),p_character:charId||"pepe",p_games_played:Math.floor(taps),p_last_seen:new Date().toISOString()}),
     });
     if(!resp.ok){
       const errText=await resp.text();
-      console.error("[syncTaps] DB rejected write — pid:",pid,"taps:",taps,"err:",errText);
+      console.error("[syncTaps] DB rejected:",errText,"— queueing for retry");
       logSyncError(pid,"syncTaps_http_error",errText,taps);
+      _tapRetryQueue.set(pid,{pid,uname,charId,taps,retries:(_tapRetryQueue.get(pid)?.retries||0)+1});
+      return null;
     }
+    const dbVal=await resp.json();// RPC returns bigint (the actual DB games_played)
+    const dbTaps=typeof dbVal==="number"?dbVal:(Array.isArray(dbVal)&&dbVal[0])?Number(dbVal[0]):null;
+    _tapRetryQueue.delete(pid);// success — clear any queued retry
+    return dbTaps;
   }catch(e){
-    console.error("[syncTaps] Network error — pid:",pid,"taps:",taps,"err:",e);
+    console.error("[syncTaps] Network error:",e,"— queueing for retry");
     logSyncError(pid,"syncTaps_network_error",String(e),taps);
+    _tapRetryQueue.set(pid,{pid,uname,charId,taps,retries:(_tapRetryQueue.get(pid)?.retries||0)+1});
+    return null;
+  }
+}
+
+// Drain the retry queue — called every sync cycle
+async function drainRetryQueue(){
+  for(const[,entry] of _tapRetryQueue){
+    if(entry.retries>20){_tapRetryQueue.delete(entry.pid);continue;}// give up after 20 retries
+    await syncTaps(entry.pid,entry.uname,entry.charId,entry.taps);
   }
 }
 
@@ -1292,14 +1313,18 @@ export default function TapGame() {
     return()=>clearInterval(id);
   },[user?.id]);
 
-  // Always-on DB sync — runs every 2s regardless of screen/tab/charId.
-  // Reads best tap count from localStorage (global + all char saves) and pushes to DB.
-  // This ensures the leaderboard stays live even if the user is on the leaderboard tab
-  // before selecting a character.
+  // ── REAL-TIME DB SYNC ───────────────────────────────────────────────────────
+  // Runs every 1s. Fires immediately on mount (no initial delay).
+  // 1. Reads best taps from localStorage + liveRef (local source of truth)
+  // 2. Pushes to dedicated sync_taps_only RPC (never touches earned/currency)
+  // 3. DB returns the authoritative value; if DB > local, local is updated
+  // 4. Drains any queued retries from previous failures
+  // 5. Full syncDB (earned/coins/upgrades) runs in parallel — won't block tap sync
   useEffect(()=>{
     const uid=user?.id;
     if(!uid)return;
-    const interval=setInterval(()=>{
+
+    async function runSync(){
       const gl=getGlobalTaps(uid);
       let bestTaps=gl.totalTaps||0;
       let bestEarned=gl.totalEarned||0;
@@ -1312,24 +1337,44 @@ export default function TapGame() {
           }catch{}
         }
       }catch{}
-      // Also use liveRef if game is running
       if(liveRef.current.charId&&liveRef.current.uid===uid){
         bestTaps=Math.max(bestTaps,liveRef.current.totalTaps);
         bestEarned=Math.max(bestEarned,liveRef.current.totalEarned);
       }
-      if(bestTaps<=0)return;
+      if(bestTaps<=0){drainRetryQueue();return;}
       const name=getPlayerName(uid)||username;
       const cid=liveRef.current.charId||charId||"pepe";
       const coins=liveRef.current.coins||0;
       const upgrades=liveRef.current.upgrades||{};
       const wallet=liveRef.current.solWallet||getPlayerWallet(uid)||undefined;
       const av=liveRef.current.avatarUrl||avatarUrl||undefined;
-      // TAPS: use dedicated independent RPC — never affected by earned overflow
-      syncTaps(uid,name,cid,bestTaps);
-      // Full sync (earned, coins, upgrades) separately — if it fails, taps already saved above
+
+      // 1. Push taps (independent of earned). Get back DB's authoritative value.
+      const dbTaps=await syncTaps(uid,name,cid,bestTaps);
+
+      // 2. If DB has MORE taps than we do locally, adopt the DB value
+      if(dbTaps!==null&&dbTaps>bestTaps){
+        bestTaps=dbTaps;
+        setGlobalTaps(uid,bestTaps,bestEarned);
+        // Also push into liveRef so in-game counter stays correct
+        if(liveRef.current.uid===uid&&dbTaps>liveRef.current.totalTaps){
+          liveRef.current.totalTaps=dbTaps;
+        }
+        console.log("[sync] DB had higher taps:",dbTaps,"— local updated");
+      }else{
+        setGlobalTaps(uid,bestTaps,bestEarned);
+      }
+
+      // 3. Full sync (earned, coins, upgrades) — runs in parallel, taps already safe
       syncDB(uid,name,cid,bestEarned,bestTaps,coins,upgrades,wallet,av);
-      setGlobalTaps(uid,bestTaps,bestEarned);
-    },2000);
+
+      // 4. Drain any queued retries
+      drainRetryQueue();
+    }
+
+    // Fire immediately on mount (handles unsynced data from previous session)
+    runSync();
+    const interval=setInterval(runSync,1000);
     return()=>clearInterval(interval);
   },[user?.id]);// eslint-disable-line react-hooks/exhaustive-deps
 
