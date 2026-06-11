@@ -111,14 +111,16 @@ function loadSave(uid:string,charId:string):SaveData{
 }
 function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
 
-async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,solWallet?:string,avatarUrl?:string){
+async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,coins:number,upgrades?:Record<string,number>,solWallet?:string,avatarUrl?:string){
   if(!pid)return;
   try{
     const{supabase}=await import("@/lib/supabase");
     await supabase.from("dt_players").upsert({
       wallet_address:pid, username:uname||("Degen_"+pid.slice(-6)), character:charId,
       total_score:Math.floor(totalEarned), games_played:Math.floor(totalTaps),
+      token_balance:Math.floor(coins),
       is_verified:false,
+      ...(upgrades?{upgrades}:{}),
       ...(solWallet?{sol_wallet:solWallet}:{}),
       ...(avatarUrl?{avatar_url:avatarUrl}:{}),
     },{onConflict:"wallet_address"});
@@ -126,7 +128,8 @@ async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,t
 }
 
 interface Particle { id:number; x:number; y:number; value:string; color:string; big:boolean; }
-interface LBEntry { id:string; wallet_address:string; username:string; character:string; total_score:number; games_played:number; avatar_url?:string; }
+interface LBEntry { id:string; wallet_address:string; username:string; character:string; total_score:number; games_played:number; avatar_url?:string; last_seen?:string; }
+function isOnline(last_seen?:string){if(!last_seen)return false;return(Date.now()-new Date(last_seen).getTime())<3*60*1000;}
 
 // ─── Countdown ────────────────────────────────────────────────────────────────
 function useCountdown(){
@@ -528,6 +531,61 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
   );
 }
 
+// ─── ONLINE STRIP ─────────────────────────────────────────────────────────────
+function OnlineStrip(){
+  const CE:Record<string,string>={pepe:"🐸",gigachad:"💪",trump:"🎩",troll:"🧌",bonk:"🐕"};
+  const [online,setOnline]=useState<LBEntry[]>([]);
+  const [ts,setTs]=useState(0);
+
+  useEffect(()=>{
+    async function fetch(){
+      try{
+        const{supabase}=await import("@/lib/supabase");
+        const cutoff=new Date(Date.now()-3*60*1000).toISOString();
+        const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,avatar_url,last_seen,games_played").gte("last_seen",cutoff).order("last_seen",{ascending:false}).limit(50);
+        setOnline((data||[]) as LBEntry[]);
+        setTs(Date.now());
+      }catch{}
+    }
+    fetch();
+    const id=setInterval(fetch,15000);
+    return()=>clearInterval(id);
+  },[]);
+
+  if(online.length===0)return null;
+
+  return(
+    <div style={{margin:"0 -16px",padding:"0 16px 4px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+        <span style={{width:8,height:8,borderRadius:"50%",background:"#22d67a",display:"inline-block",boxShadow:"0 0 6px #22d67a"}}/>
+        <span style={{color:"#22d67a",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Online Now</span>
+        <span style={{color:"#3a3a4a",fontSize:11,fontWeight:700,marginLeft:2}}>{online.length}</span>
+      </div>
+      <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8,scrollbarWidth:"none",WebkitOverflowScrolling:"touch"} as React.CSSProperties}>
+        {online.map(p=>{
+          const ago=p.last_seen?Math.floor((Date.now()-new Date(p.last_seen).getTime())/1000):999;
+          const online_now=ago<90;
+          return(
+            <div key={p.id} style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:60}}>
+              <div style={{position:"relative",width:44,height:44}}>
+                <div style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${online_now?"rgba(34,214,122,0.5)":"rgba(255,255,255,0.08)"}`,overflow:"hidden",background:"rgba(255,255,255,0.05)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
+                  {p.avatar_url
+                    ?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>{}}/>
+                    :<span>{CE[p.character]||"🎮"}</span>
+                  }
+                </div>
+                <span style={{position:"absolute",bottom:1,right:1,width:11,height:11,borderRadius:"50%",background:online_now?"#22d67a":"#555",border:"2px solid #0d0d1a",boxShadow:online_now?"0 0 6px #22d67a":""}}/>
+              </div>
+              <span style={{color:"#aaa",fontSize:9,fontWeight:600,maxWidth:58,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{p.username||"Degen"}</span>
+              <span style={{color:online_now?"#22d67a":"#555",fontSize:8,fontWeight:700}}>{online_now?"online":ago<3600?`${Math.floor(ago/60)}m ago`:"offline"}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
 function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId}:{
   onPlay:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
@@ -673,6 +731,11 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
           <span style={{position:"relative",zIndex:1}}>🎮 Play Now</span>
         </button>
 
+        {/* Who's Online strip */}
+        <div style={{background:"rgba(34,214,122,0.04)",border:"1px solid rgba(34,214,122,0.1)",borderRadius:16,padding:"12px 14px",marginBottom:16}}>
+          <OnlineStrip/>
+        </div>
+
         {/* Feature grid */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {[
@@ -709,7 +772,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
     setLoading(true);
     try{
       const{supabase}=await import("@/lib/supabase");
-      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played,avatar_url").order("games_played",{ascending:false}).limit(200);
+      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen").order("games_played",{ascending:false}).limit(200);
       const seen=new Map<string,LBEntry>();
       for(const p of (data||[]) as LBEntry[]){
         const key=(p.username||"").toLowerCase();
@@ -778,7 +841,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(180,180,180,0.1)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
                     <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px silver)"}}>🥈</div>
                     <div style={{fontSize:28,marginBottom:6,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={36}/></div>
-                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
+                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}{p.username||"Anon"}{me&&" 👈"}</div>
                     <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
                     <div style={{color:"#aaa",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
                   </div>
@@ -797,7 +860,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   }}>
                     <div style={{fontSize:36,marginBottom:8,filter:"drop-shadow(0 0 12px gold)"}}>👑</div>
                     <div style={{fontSize:36,marginBottom:8,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={44}/></div>
-                    <div style={{color:"#fff",fontWeight:900,fontSize:14,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
+                    <div style={{color:"#fff",fontWeight:900,fontSize:14,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{isOnline(p.last_seen)&&<span style={{width:8,height:8,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 6px #22d67a",display:"inline-block"}}/>}{p.username||"Anon"}{me&&" 👈"}</div>
                     <div style={{background:`${r.color}20`,border:`1px solid ${r.color}40`,borderRadius:8,padding:"3px 10px",fontSize:9,color:r.color,fontWeight:800,marginBottom:8,display:"inline-block"}}>{r.emoji} Lv.{lv} {r.name}</div>
                     <div style={{color:"#f5c842",fontWeight:900,fontSize:16,filter:"drop-shadow(0 0 6px rgba(245,200,66,0.5))"}}>👆 {fmt(p.games_played||0)}</div>
                   </div>
@@ -809,7 +872,7 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   <div style={{flex:1,background:me?"rgba(168,85,247,0.08)":G.glass,border:`1px solid ${me?"rgba(168,85,247,0.3)":"rgba(205,127,50,0.15)"}`,borderRadius:20,padding:"14px 10px",textAlign:"center",maxWidth:140}}>
                     <div style={{fontSize:28,marginBottom:6,filter:"drop-shadow(0 0 8px #cd7f32)"}}>🥉</div>
                     <div style={{fontSize:28,marginBottom:6,display:"flex",justifyContent:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={36}/></div>
-                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Anon"}{me&&" 👈"}</div>
+                    <div style={{color:"#ddd",fontWeight:700,fontSize:12,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}{p.username||"Anon"}{me&&" 👈"}</div>
                     <div style={{background:`${r.color}18`,border:`1px solid ${r.color}30`,borderRadius:8,padding:"3px 8px",fontSize:9,color:r.color,fontWeight:700,marginBottom:6,display:"inline-block"}}>{r.emoji} Lv.{lv}</div>
                     <div style={{color:"#cd7f32",fontWeight:900,fontSize:13}}>👆 {fmt(p.games_played||0)}</div>
                   </div>
@@ -833,7 +896,8 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   <div style={{color:isPrize?"#22d67a":"#2a1540",fontWeight:900,fontSize:13,width:26,textAlign:"center",flexShrink:0}}>#{i+4}</div>
                   <div style={{fontSize:22,flexShrink:0,display:"flex",alignItems:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={28}/></div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:me?"#c084fc":"#ddd",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    <div style={{color:me?"#c084fc":"#ddd",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+                      {isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}
                       {p.username||"Anon"}{me&&" 👈"}
                       {isPrize&&<span style={{marginLeft:6,fontSize:9,color:"#22d67a",fontWeight:800}}>💰PRIZE</span>}
                     </div>
@@ -864,7 +928,8 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
                   </div>
                   <div style={{flexShrink:0,display:"flex",alignItems:"center"}}><AvatarDisplay emoji={CE[p.character]||"🎮"} url={p.avatar_url} size={28}/></div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:me?"#c084fc":"#ccc",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    <div style={{color:me?"#c084fc":"#ccc",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+                      {isOnline(p.last_seen)&&<span style={{width:7,height:7,borderRadius:"50%",background:"#22d67a",flexShrink:0,boxShadow:"0 0 5px #22d67a",display:"inline-block"}}/>}
                       {p.username||"Anon"}{me&&" 👈"}
                       {isPrize&&<span style={{marginLeft:5,fontSize:9,color:"#22d67a",fontWeight:800}}>💰</span>}
                     </div>
@@ -1055,7 +1120,7 @@ export default function TapGame() {
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
   // DB-loaded values — source of truth for taps/coins (never overwrite with local zeros)
-  const dbValuesRef=useRef<{totalEarned:number;totalTaps:number}|null>(null);
+  const dbValuesRef=useRef<{totalEarned:number;totalTaps:number;coins:number;upgrades:Record<string,number>}|null>(null);
   const [showModal,setShowModal]=useState(false);
   const [pendingChar,setPendingChar]=useState<string|null>(null);
   const [playerId,setPlayerId]=useState("");
@@ -1091,6 +1156,21 @@ export default function TapGame() {
   const liveRef=useRef({charId:"",coins:0,totalEarned:0,totalTaps:0,upgrades:{} as Record<string,number>,uid:"",username:"",solWallet:"",avatarUrl:""});
   // Debounce timer ref — fires DB write 800ms after last tap
   const dbDebounceRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+
+  // Heartbeat — update last_seen every 30s so online presence is accurate
+  useEffect(()=>{
+    const uid=user?.id;
+    if(!uid)return;
+    async function ping(){
+      try{
+        const{supabase}=await import("@/lib/supabase");
+        await supabase.from("dt_players").update({last_seen:new Date().toISOString()}).eq("wallet_address",uid);
+      }catch{}
+    }
+    ping();// immediate ping on mount
+    const id=setInterval(ping,30000);
+    return()=>clearInterval(id);
+  },[user?.id]);
 
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
@@ -1131,7 +1211,7 @@ export default function TapGame() {
           const savedAv=getAvatar(authId);
           if(savedAv){setAvatar(savedAv);}
           if(existing.avatar_url){setAvatarUrl(existing.avatar_url);}
-          dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0};
+          dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0,coins:existing.token_balance||0,upgrades:(existing.upgrades as Record<string,number>)||{}};
         } else {
           // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
           let migrated=false;
@@ -1142,7 +1222,7 @@ export default function TapGame() {
               await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);
               if(oldRec.username){setUsername(oldRec.username);setPlayerName(oldRec.username,authId);}
               if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet);setPlayerWallet(oldRec.sol_wallet,authId);}
-              dbValuesRef.current={totalEarned:oldRec.total_score||0,totalTaps:oldRec.games_played||0};
+              dbValuesRef.current={totalEarned:oldRec.total_score||0,totalTaps:oldRec.games_played||0,coins:oldRec.token_balance||0,upgrades:(oldRec.upgrades as Record<string,number>)||{}};
               localStorage.removeItem("degen_player_id");
               migrated=true;
             }
@@ -1178,17 +1258,24 @@ export default function TapGame() {
     const safeEarned=Math.max(globalLocal.totalEarned, s.totalEarned, dbValuesRef.current?.totalEarned||0);
     // Update global store with the safe value so future character switches keep it
     setGlobalTaps(uid,safeTaps,safeEarned);
-    const safeCoins=s.coins;// coins are character-specific
+    // Coins are character-specific in localStorage but synced globally via DB
+    // On new browser/device, DB value is source of truth; on same device, take highest
+    const safeCoins=Math.max(s.coins, dbValuesRef.current?.coins||0);
+    // Merge upgrades: take MAX level per key across localStorage + DB (never lose purchased upgrades)
+    const dbUpgrades=dbValuesRef.current?.upgrades||{};
+    const allUpgradeKeys=new Set([...Object.keys(s.upgrades),...Object.keys(dbUpgrades)]);
+    const safeUpgrades:Record<string,number>={};
+    allUpgradeKeys.forEach(k=>{safeUpgrades[k]=Math.max(s.upgrades[k]||0,(dbUpgrades as Record<string,number>)[k]||0);});
     setCharId(id);setCoins(safeCoins);setTotalEarned(safeEarned);setTotalTaps(safeTaps);
-    setUpgrades(s.upgrades);
-    const mx=1000+(s.upgrades["energy_max"]||0)*200+(s.upgrades["energy_max2"]||0)*500+(s.upgrades["energy_max3"]||0)*1000;
+    setUpgrades(safeUpgrades);
+    const mx=1000+(safeUpgrades["energy_max"]||0)*200+(safeUpgrades["energy_max2"]||0)*500+(safeUpgrades["energy_max3"]||0)*1000;
     setMaxEnergy(mx);setEnergy(mx);
     setScreen("game");setActiveTab("play");
-    const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps};
+    const mergedSave={...s,coins:safeCoins,totalEarned:safeEarned,totalTaps:safeTaps,upgrades:safeUpgrades};
     saveRef.current=mergedSave;
     persistSave(uid,mergedSave);
-    // Sync to DB immediately on start (creates record for new users, never decrements)
-    syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
+    // Sync to DB immediately on start — writes all current state including merged upgrades
+    syncDB(uid,name||getPlayerName(uid),id,safeEarned,safeTaps,safeCoins,safeUpgrades,wallet||getPlayerWallet(uid)||undefined,avatarUrl||undefined);
   }
 
   // Stable doSave — reads from liveRef so deps never change, interval never restarts
@@ -1198,8 +1285,8 @@ export default function TapGame() {
     const s:SaveData={charId:d.charId,coins:d.coins,totalEarned:d.totalEarned,totalTaps:d.totalTaps,upgrades:d.upgrades,highScore:Math.max(d.coins,saveRef.current?.highScore||0)};
     persistSave(d.uid,s);saveRef.current=s;
     setGlobalTaps(d.uid,d.totalTaps,d.totalEarned);
-    dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned};
-    syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+    dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
+    syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
   },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
   // Save every 5s during play; save immediately on exit (cleanup)
@@ -1302,8 +1389,8 @@ export default function TapGame() {
         const d=liveRef.current;
         if(d.charId&&d.uid){
           // Update dbValuesRef so next character switch uses fresh values
-          dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned};
-          syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
+          dbValuesRef.current={totalTaps:d.totalTaps,totalEarned:d.totalEarned,coins:d.coins,upgrades:d.upgrades};
+          syncDB(d.uid,d.username||getPlayerName(d.uid),d.charId,d.totalEarned,d.totalTaps,d.coins,d.upgrades,d.solWallet||getPlayerWallet(d.uid)||undefined,d.avatarUrl||undefined);
         }
       },800);
     },0);
@@ -1348,7 +1435,7 @@ export default function TapGame() {
     setSolWallet(w);setPlayerWallet(w,uid);
     setAvatar(av);setAvatarStore(av,uid);
     if(url!==undefined)setAvatarUrl(url);
-    syncDB(uid,u,charId||"pepe",totalEarned,totalTaps,w||undefined,url||avatarUrl||undefined);
+    syncDB(uid,u,charId||"pepe",totalEarned,totalTaps,coins,upgrades,w||undefined,url||avatarUrl||undefined);
   }
 
   // ─── RENDER ─────────────────────────────────────────────────────────────────
