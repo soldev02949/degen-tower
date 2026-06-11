@@ -1393,47 +1393,100 @@ export default function TapGame() {
     }).catch(()=>{});
     // Safety timeout — unblock game if DB takes too long or errors
     const dbTimeout=setTimeout(()=>setDbLoaded(true),15000); // 15s max wait for DB
-    import("@/lib/supabase").then(async({supabase})=>{
+    // Use no-cache raw fetch for initial DB load to guarantee fresh data
+    (async()=>{
       try{
-        const{data:existing}=await supabase.from("dt_players").select("*").eq("wallet_address",authId).maybeSingle();
-        if(existing){
-          if(existing.username){setUsername(existing.username);setPlayerName(existing.username,authId);}
-          if(existing.sol_wallet){setSolWallet(existing.sol_wallet);setPlayerWallet(existing.sol_wallet,authId);}
-          const savedAv=getAvatar(authId);
-          if(savedAv){setAvatar(savedAv);}
-          if(existing.avatar_url){setAvatarUrl(existing.avatar_url);}
-          dbValuesRef.current={totalEarned:existing.total_score||0,totalTaps:existing.games_played||0,coins:existing.token_balance||0,upgrades:(existing.upgrades as Record<string,number>)||{}};
-        } else {
-          // Try to migrate old p_xxx localStorage player ID to this auth account (one-time migration)
-          let migrated=false;
-          const oldId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
-          if(oldId&&oldId.startsWith("p_")){
-            const{data:oldRec}=await supabase.from("dt_players").select("*").eq("wallet_address",oldId).maybeSingle();
-            if(oldRec){
-              await supabase.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);
-              if(oldRec.username){setUsername(oldRec.username);setPlayerName(oldRec.username,authId);}
-              if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet);setPlayerWallet(oldRec.sol_wallet,authId);}
-              dbValuesRef.current={totalEarned:oldRec.total_score||0,totalTaps:oldRec.games_played||0,coins:oldRec.token_balance||0,upgrades:(oldRec.upgrades as Record<string,number>)||{}};
-              localStorage.removeItem("degen_player_id");
-              migrated=true;
+        const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
+        const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
+        // Try to get auth token from supabase for RLS
+        let authToken=SUPA_KEY;
+        try{
+          const{supabase}=await import("@/lib/supabase");
+          const{data:{session}}=await supabase.auth.getSession();
+          if(session?.access_token)authToken=session.access_token;
+        }catch{}
+        const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(authId)}&limit=1`,{
+          headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
+          cache:"no-store",
+        });
+        if(resp.ok){
+          const arr=await resp.json() as Record<string,unknown>[];
+          const existing=arr[0];
+          if(existing){
+            if(existing.username){setUsername(existing.username as string);setPlayerName(existing.username as string,authId);}
+            if(existing.sol_wallet){setSolWallet(existing.sol_wallet as string);setPlayerWallet(existing.sol_wallet as string,authId);}
+            const savedAv=getAvatar(authId);
+            if(savedAv){setAvatar(savedAv);}
+            if(existing.avatar_url){setAvatarUrl(existing.avatar_url as string);}
+            const dbTaps=Number(existing.games_played)||0;
+            const dbEarned=Number(existing.total_score)||0;
+            const dbCoins=Number(existing.token_balance)||0;
+            const dbUpgrades=(existing.upgrades as Record<string,number>)||{};
+            dbValuesRef.current={totalEarned:dbEarned,totalTaps:dbTaps,coins:dbCoins,upgrades:dbUpgrades};
+            // Auto-push local state if it's higher than DB (catches tabs/sessions that weren't synced)
+            const globalLocal=getGlobalTaps(authId);
+            const localTaps=globalLocal.totalTaps||0;
+            const localEarned=globalLocal.totalEarned||0;
+            if(localTaps>dbTaps||localEarned>dbEarned){
+              const pushedTaps=Math.max(localTaps,dbTaps);
+              const pushedEarned=Math.max(localEarned,dbEarned);
+              const uname=existing.username as string||getPlayerName(authId);
+              const charId=existing.character as string||"pepe";
+              // Load character-specific coins too
+              const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${authId}_`));
+              let bestCoins=dbCoins;
+              for(const sk of saves){
+                try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");if((sv.coins||0)>bestCoins)bestCoins=sv.coins;}catch{}
+              }
+              const pushedCoins=Math.max(bestCoins,dbCoins);
+              syncDB(authId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
+              dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
             }
-          }
-          if(!migrated){
-            const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
-            setUsername(defaultName);setPlayerName(defaultName,authId);
+          } else {
+            // Try to migrate old p_xxx localStorage player ID to this auth account
+            let migrated=false;
+            const oldId=typeof window!=="undefined"?localStorage.getItem("degen_player_id"):"";
+            if(oldId&&oldId.startsWith("p_")){
+              const resp2=await fetch(`${SUPA_URL}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(oldId)}&limit=1`,{
+                headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache"},
+                cache:"no-store",
+              });
+              if(resp2.ok){
+                const arr2=await resp2.json() as Record<string,unknown>[];
+                const oldRec=arr2[0];
+                if(oldRec){
+                  // Update wallet_address via supabase
+                  try{const{supabase:sb}=await import("@/lib/supabase");await sb.from("dt_players").update({wallet_address:authId}).eq("wallet_address",oldId);}catch{}
+                  if(oldRec.username){setUsername(oldRec.username as string);setPlayerName(oldRec.username as string,authId);}
+                  if(oldRec.sol_wallet){setSolWallet(oldRec.sol_wallet as string);setPlayerWallet(oldRec.sol_wallet as string,authId);}
+                  dbValuesRef.current={totalEarned:Number(oldRec.total_score)||0,totalTaps:Number(oldRec.games_played)||0,coins:Number(oldRec.token_balance)||0,upgrades:(oldRec.upgrades as Record<string,number>)||{}};
+                  localStorage.removeItem("degen_player_id");
+                  migrated=true;
+                }
+              }
+            }
+            if(!migrated){
+              const defaultName=user.email?.split("@")[0]||"Degen_"+authId.slice(-6);
+              setUsername(defaultName);setPlayerName(defaultName,authId);
+            }
           }
         }
       }catch(e){console.error("DB load error",e);}
       finally{clearTimeout(dbTimeout);setDbLoaded(true);}
-    }).catch(()=>{clearTimeout(dbTimeout);setDbLoaded(true);});
+    })();
     // On page focus, re-fetch DB to catch any cloud updates (e.g. playing on another device)
     const onFocus=()=>{
       if(!user?.id)return;
-      import("@/lib/supabase").then(async({supabase})=>{
-        const{data}=await supabase.from("dt_players").select("games_played,total_score,token_balance,upgrades").eq("wallet_address",user.id).maybeSingle();
+      const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
+      const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
+      fetch(`${SUPA_URL}/rest/v1/dt_players?select=games_played,total_score,token_balance,upgrades&wallet_address=eq.${encodeURIComponent(user.id)}&limit=1`,{
+        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Cache-Control":"no-cache, no-store"},
+        cache:"no-store",
+      }).then(r=>r.json()).then((arr:Record<string,unknown>[])=>{
+        const data=arr[0];
         if(data){
           const prev=dbValuesRef.current;
-          dbValuesRef.current={totalTaps:Math.max(prev?.totalTaps||0,data.games_played||0),totalEarned:Math.max(prev?.totalEarned||0,data.total_score||0),coins:Math.max(prev?.coins||0,data.token_balance||0),upgrades:data.upgrades||(prev?.upgrades||{})};
+          dbValuesRef.current={totalTaps:Math.max(prev?.totalTaps||0,Number(data.games_played)||0),totalEarned:Math.max(prev?.totalEarned||0,Number(data.total_score)||0),coins:Math.max(prev?.coins||0,Number(data.token_balance)||0),upgrades:(data.upgrades as Record<string,number>)||(prev?.upgrades||{})};
         }
       }).catch(()=>{});
     };
