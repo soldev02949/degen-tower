@@ -87,7 +87,16 @@ export default function Leaderboard() {
           cache: "no-store"
         });
         if (resp.ok) {
-          const data = await resp.json();
+          const text = await resp.text();
+          // Custom regex-based parser to preserve BigInt precision for games_played and total_score
+          // This prevents the browser from rounding the 89Q score during JSON.parse()
+          const data = JSON.parse(text, (key, value) => {
+            if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'number') {
+              const match = text.match(new RegExp(`"${key}":\\s*(\\d+)`));
+              if (match && match[1].length > 15) return BigInt(match[1]);
+            }
+            return value;
+          });
           setPlayers(data || []);
         }
       } catch (e) {

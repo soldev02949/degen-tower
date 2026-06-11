@@ -1013,7 +1013,15 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
         cache:"no-store",
       });
       if(!resp.ok)throw new Error(`LB fetch ${resp.status}`);
-      const data=await resp.json() as LBEntry[];
+      const text=await resp.text();
+      // Custom high-precision parser for massive scores
+      const data = JSON.parse(text, (key, value) => {
+        if ((key === 'games_played' || key === 'total_score' || key === 'token_balance') && typeof value === 'number') {
+          const match = text.match(new RegExp(`"${key}":\\s*(\\d+)`));
+          if (match && match[1].length > 15) return BigInt(match[1]);
+        }
+        return value;
+      }) as LBEntry[];
       const error=null;
       if(error){console.error("LB error",error);return;}
       if(seq!==loadRef.current)return; // stale response, discard
