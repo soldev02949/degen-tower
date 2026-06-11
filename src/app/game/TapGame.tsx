@@ -266,20 +266,32 @@ function loadSave(uid:string,charId:string):SaveData{
 }
 function persistSave(uid:string,d:SaveData){ const k=uid?`degen_save_${uid}_${d.charId}`:`degen_save_${d.charId}`; try{ localStorage.setItem(k,JSON.stringify(d)); }catch{} }
 
+const SUPA_URL_CONST="https://paxtohwiycuhwmlziwrr.supabase.co";
+const SUPA_KEY_CONST="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
+
 async function syncDB(pid:string,uname:string,charId:string,totalEarned:number,totalTaps:number,coins:number,upgrades?:Record<string,number>,solWallet?:string,avatarUrl?:string){
   if(!pid)return;
   try{
-    const{supabase}=await import("@/lib/supabase");
-    await supabase.from("dt_players").upsert({
+    const payload:Record<string,unknown>={
       wallet_address:pid, username:uname||("Degen_"+pid.slice(-6)), character:charId,
       total_score:Math.floor(totalEarned), games_played:Math.floor(totalTaps),
-      token_balance:Math.floor(coins),
-      is_verified:false,
-      ...(upgrades?{upgrades}:{}),
-      ...(solWallet?{sol_wallet:solWallet}:{}),
-      ...(avatarUrl?{avatar_url:avatarUrl}:{}),
-    },{onConflict:"wallet_address"});
-  }catch{}
+      token_balance:Math.floor(coins), is_verified:false,
+      last_seen:new Date().toISOString(),
+    };
+    if(upgrades)payload.upgrades=upgrades;
+    if(solWallet)payload.sol_wallet=solWallet;
+    if(avatarUrl)payload.avatar_url=avatarUrl;
+    // Use raw fetch with no-cache to guarantee writes reach Postgres immediately
+    await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players`,{
+      method:"POST",
+      headers:{
+        "apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${SUPA_KEY_CONST}`,
+        "Content-Type":"application/json","Prefer":"resolution=merge-duplicates",
+        "Cache-Control":"no-cache",
+      },
+      body:JSON.stringify(payload),
+    });
+  }catch(e){console.error("syncDB error",e);}
 }
 
 interface Particle { id:number; x:number; y:number; value:string; color:string; big:boolean; }
@@ -923,22 +935,35 @@ function LeaderboardTab({myPlayerId}:{myPlayerId:string}){
   const [view,setView]=useState<"top3"|"list">("top3");
   const CE:Record<string,string>={pepe:"🐸",gigachad:"💪",trump:"🎩",troll:"🧌",bonk:"🐕"};
 
+  const loadRef=useRef(0);
   const load=useCallback(async()=>{
+    const seq=++loadRef.current;
     try{
       const{supabase}=await import("@/lib/supabase");
-      const{data}=await supabase.from("dt_players").select("id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen").order("games_played",{ascending:false}).limit(200);
+      // Bypass any client-side cache by querying with a timestamp condition that's always true
+      // Use raw fetch with no-cache to guarantee fresh data from Postgres
+      const SUPA_URL="https://paxtohwiycuhwmlziwrr.supabase.co";
+      const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheHRvaHdpeWN1aHdtbHppd3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEzNjMsImV4cCI6MjA5NjY4NzM2M30.HtHcTkUO35c_4WTjufHRHUhAHPDuATw23bqh39D_qkQ";
+      const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?select=id,wallet_address,username,character,total_score,games_played,avatar_url,last_seen&order=games_played.desc&limit=200`,{
+        headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
+        cache:"no-store",
+      });
+      if(!resp.ok)throw new Error(`LB fetch ${resp.status}`);
+      const data=await resp.json() as LBEntry[];
+      const error=null;
+      if(error){console.error("LB error",error);return;}
+      if(seq!==loadRef.current)return; // stale response, discard
       const seen=new Map<string,LBEntry>();
       for(const p of (data||[]) as LBEntry[]){
         const key=(p.username||"").toLowerCase();
         if(!seen.has(key)||(p.games_played>(seen.get(key)!.games_played))){ seen.set(key,p); }
       }
       setPlayers(Array.from(seen.values()).sort((a,b)=>b.games_played-a.games_played));
-    }catch{}
-    setLoading(false);
+    }catch(e){console.error("LB fetch error",e);}
+    if(seq===loadRef.current)setLoading(false);
   },[]);
   useEffect(()=>{
     load();
-    // Auto-refresh every 20s so leaderboard stays live
     const id=setInterval(load,3000);
     return()=>clearInterval(id);
   },[load]);
