@@ -1,5 +1,6 @@
 import {
   fetchLeaderboard,
+  formatLeaderboardChat,
   formatLeaderboardText,
   isLeaderboardQuery,
 } from "@/lib/leaderboard";
@@ -82,21 +83,6 @@ export async function callGemini(
     throw new Error("LLM_API_KEY not configured");
   }
 
-  // Detect leaderboard queries — inject live Supabase data as system context
-  const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  let systemPrompt = SYSTEM_PROMPT;
-  if (lastUser && isLeaderboardQuery(lastUser.content)) {
-    const players = await fetchLeaderboard(20).catch(() => []);
-    if (players.length > 0) {
-      const lbText = formatLeaderboardText(players);
-      systemPrompt =
-        SYSTEM_PROMPT +
-        "\n\n## LIVE LEADERBOARD (real-time data, right now)\n" +
-        lbText +
-        "\n\nWhen asked about the leaderboard, standings, rankings, or who is winning, use ONLY this live data.";
-    }
-  }
-
   const endpoint = LLM_BASE_URL + "/chat/completions";
   const res = await fetch(endpoint, {
     method: "POST",
@@ -107,7 +93,7 @@ export async function callGemini(
     body: JSON.stringify({
       model: "MiniMax-M3",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: SYSTEM_PROMPT },
         ...messages.map((m) => ({ role: m.role, content: m.content })),
       ],
       max_tokens: maxTokens,
@@ -121,10 +107,10 @@ export async function callGemini(
   }
 
   const data = await res.json();
-  return (
-    data?.choices?.[0]?.message?.content ??
-    "Sorry, I couldn't generate a response."
-  );
+  // Strip any <think>...</think> chain-of-thought blocks the model may emit
+  const raw: string =
+    data?.choices?.[0]?.message?.content ?? "Sorry, I couldn't generate a response.";
+  return raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -134,6 +120,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Short-circuit leaderboard queries — bypass LLM entirely, return live DB data
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUser && isLeaderboardQuery(lastUser.content)) {
+      const players = await fetchLeaderboard(20).catch(() => []);
+      const reply = formatLeaderboardChat(players);
+      return NextResponse.json({ content: reply });
+    }
+
     const text = await callGemini(messages);
     return NextResponse.json({ content: text });
   } catch (e) {
