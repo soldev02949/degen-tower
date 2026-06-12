@@ -36,8 +36,8 @@ const FEATURES = [
     desc: "Earn $TOWER to gain XP and level up your rank: Degen → Pepe → Rare Pepe → Whale → God Tier. Higher ranks unlock new characters and bigger bonuses.",
   },
   {
-    emoji: "🏆", title: "48hr Seasons",
-    desc: "The leaderboard resets every 48 hours. At the end of each season, the top 20 players split the USDC reward pool based on their final position.",
+    emoji: "🏆", title: "7-Day Seasons",
+    desc: "The leaderboard resets every 7 days. At the end of each season, the top 20 players split the USDC reward pool based on their final position.",
   },
   {
     emoji: "💰", title: "Reward Pool",
@@ -92,9 +92,9 @@ const CHARACTERS = [
 const FAQS: { q: string; a: string }[] = [
   { q: "Is Degen Clicker free to play?", a: "Yes — 100% free. No purchase required. Just sign up with email and start tapping." },
   { q: "What is $TOWER?", a: "$TOWER is the in-game currency. Earn it by tapping, completing quests, and daily login streaks. Top leaderboard players convert their standing into real USDC rewards." },
-  { q: "When do seasons reset?", a: "Every 48 hours. When the timer hits zero, the reward pool pays out to the top 20 players and a brand new season begins." },
+  { q: "When do seasons reset?", a: "Every 7 days. When the timer hits zero, the reward pool pays out to the top 20 players and a brand new season begins." },
   { q: "How does the USDC reward pool work?", a: "A real USDC prize pool accumulates during each season. At season end, the top 20 players on the leaderboard split the pool based on their final rank position." },
-  { q: "How do I claim my USDC winnings?", a: "Connect your Solana wallet in your profile settings. Winnings are sent on-chain to your wallet after the season closes." },
+  { q: "How do I claim my USDC winnings?", a: "No wallet connection needed — just paste your Solana wallet address in your profile settings. Winnings are sent on-chain after the season closes." },
   { q: "What is the token contract address?", a: `The Solana token CA is: ${TOKEN_CA} — verify it on Solscan before trading.` },
   { q: "Can I play on mobile?", a: "Yes — the game is fully optimized for mobile. Add it to your home screen as a PWA for vibration feedback and the best experience." },
   { q: "How do combos work?", a: "Tap continuously to build your multiplier up to 20×. Any pause resets it. At 5×, 10×, 15×, and 20× you get a celebration toast + sound cue. Fast tappers earn dramatically more." },
@@ -148,7 +148,7 @@ export default function FAQPage() {
             Degen Clicker
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: 16, maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
-            The most degen tap-to-earn game on Solana. Tap your way up the tower, build combos, earn $TOWER, and win real USDC every 48 hours.
+            The most degen tap-to-earn game on Solana. Tap your way up the tower, build combos, earn $TOWER, and win real USDC every 7 days.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 28, flexWrap: "wrap" }}>
@@ -208,7 +208,7 @@ export default function FAQPage() {
               "Tap your character to earn $TOWER coins",
               "Buy upgrades from the Shop to earn faster",
               "Build combos by tapping without pause — up to 20× multiplier",
-              "Climb the leaderboard. Top 20 after 48 hours split the USDC pool",
+              "Climb the leaderboard. Top 20 after 7 days split the USDC pool",
               "Come back daily for quests and streak bonuses",
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: i < 6 ? 14 : 0 }}>
@@ -289,7 +289,7 @@ export default function FAQPage() {
         }}>
           <div style={{ fontSize: 40, marginBottom: 14 }}>🚀</div>
           <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", marginBottom: 10 }}>Ready to become a degen?</h3>
-          <p style={{ color: "var(--text-muted)", marginBottom: 24, fontSize: 14 }}>Join thousands of players climbing the tower and winning USDC every 48 hours.</p>
+          <p style={{ color: "var(--text-muted)", marginBottom: 24, fontSize: 14 }}>Join thousands of players climbing the tower and winning USDC every 7 days.</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/signup">
               <button className="btn-primary" style={{ padding: "14px 32px", fontWeight: 700, fontSize: 15 }}>
