@@ -180,6 +180,8 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
   const lastBroadcastRef = useRef(0);
   const rematchSentRef = useRef(false);
   const lastRemoteTsRef = useRef(0);
+  const pendingBroadcastRef = useRef<Partial<RemoteState> | null>(null);
+  const broadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const localStateRef = useRef({ myTaps: 0, myScore: 0, mySpent: 0, myUpgrades: {} as Partial<Record<UpgradeId, number>> });
 
   useEffect(() => { statsRef.current = stats; saveStats(playerId || "anon", stats); }, [playerId, stats]);
@@ -274,7 +276,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     })();
   }, [playerId, refreshMPLeaderboard]);
 
-  const pushStateNow = useCallback((override?: Partial<RemoteState>) => {
+  const sendStateSnapshot = useCallback((override?: Partial<RemoteState>) => {
     const ch = matchChannelRef.current;
     if (!ch || !playerId) return;
     const now = Date.now();
@@ -297,6 +299,28 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
       } satisfies RemoteState,
     });
   }, [avatar, avatarUrl, charId, playerId, rematchReady, username]);
+
+  const queueStateBroadcast = useCallback((override?: Partial<RemoteState>) => {
+    const merged = { ...(pendingBroadcastRef.current || {}), ...(override || {}) };
+    pendingBroadcastRef.current = merged;
+    const now = Date.now();
+    const elapsed = now - lastBroadcastRef.current;
+    const flush = () => {
+      const next = pendingBroadcastRef.current || {};
+      pendingBroadcastRef.current = null;
+      if (broadcastTimerRef.current) {
+        clearTimeout(broadcastTimerRef.current);
+        broadcastTimerRef.current = null;
+      }
+      sendStateSnapshot(next);
+    };
+    if (elapsed >= 33) {
+      flush();
+      return;
+    }
+    if (broadcastTimerRef.current) return;
+    broadcastTimerRef.current = setTimeout(flush, Math.max(0, 33 - elapsed));
+  }, [sendStateSnapshot]);
 
   const me = useMemo<PlayerMeta>(() => ({
     id: playerId,
@@ -524,20 +548,20 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
       localStateRef.current = { ...localStateRef.current, myTaps: nextTaps, myScore: nextScore };
       setMyTaps(nextTaps);
       setMyScore(nextScore);
-      pushStateNow({ taps: nextTaps, score: nextScore, upgrades: localStateRef.current.myUpgrades, spent: localStateRef.current.mySpent });
-    }, 100);
+      queueStateBroadcast({ taps: nextTaps, score: nextScore, upgrades: localStateRef.current.myUpgrades, spent: localStateRef.current.mySpent });
+    }, 50);
     return () => clearInterval(iv);
-  }, [phase, pushStateNow]);
+  }, [phase, queueStateBroadcast]);
 
   useEffect(() => {
     if (!matchChannelRef.current || !match || (phase !== "battle" && phase !== "result" && phase !== "pregame")) return;
     const iv = setInterval(() => {
       const now = Date.now();
-      if (now - lastBroadcastRef.current < 90) return;
-      pushStateNow();
-    }, 100);
+      if (now - lastBroadcastRef.current < 45) return;
+      queueStateBroadcast();
+    }, 50);
     return () => clearInterval(iv);
-  }, [match, phase, pushStateNow]);
+  }, [match, phase, queueStateBroadcast]);
 
   useEffect(() => {
     if (phase !== "result" || resultLocked) return;
@@ -623,8 +647,8 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     localStateRef.current = { ...localStateRef.current, myTaps: nextTaps, myScore: nextScore };
     setMyTaps(nextTaps);
     setMyScore(nextScore);
-    pushStateNow({ taps: nextTaps, score: nextScore, upgrades: localStateRef.current.myUpgrades, spent: localStateRef.current.mySpent });
-  }, [charId, phase, pushStateNow]);
+    queueStateBroadcast({ taps: nextTaps, score: nextScore, upgrades: localStateRef.current.myUpgrades, spent: localStateRef.current.mySpent });
+  }, [charId, phase, queueStateBroadcast]);
 
   const buyUpgrade = useCallback(async (id: UpgradeId) => {
     if (phase !== "battle") return;
@@ -638,9 +662,9 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     localStateRef.current = { ...localStateRef.current, mySpent: nextSpent, myUpgrades: nextUpgrades };
     setMySpent(nextSpent);
     setMyUpgrades(nextUpgrades);
-    pushStateNow({ spent: nextSpent, upgrades: nextUpgrades, taps: localStateRef.current.myTaps, score: localStateRef.current.myScore });
+    queueStateBroadcast({ spent: nextSpent, upgrades: nextUpgrades, taps: localStateRef.current.myTaps, score: localStateRef.current.myScore });
     showToast(`${item.emoji} ${item.name} Lv.${owned + 1} bought for ${formatNum(price)}`);
-  }, [bankCoins, phase, pushStateNow, showToast, spendMatchCoins]);
+  }, [bankCoins, phase, queueStateBroadcast, showToast, spendMatchCoins]);
 
   const opponent = useMemo(() => match?.players.find((p) => p.id !== playerId) || null, [match, playerId]);
   const battleLeft = match ? Math.max(0, match.startAt + match.durationMs - Date.now()) : 0;
@@ -729,7 +753,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
 
             <div style={{ background: "rgba(34,214,122,0.05)", border: "1px solid rgba(34,214,122,0.14)", borderRadius: 18, padding: 14 }}>
               <div style={{ color: BG.green, fontWeight: 900, marginBottom: 8 }}>How this mode works</div>
-              <div style={{ color: "#8b7aa3", fontSize: 11.5, lineHeight: 1.6 }}>• Public = instant 2-player pairing<br/>• Private = code lobbies + rematches<br/>• Matches last 3 minutes<br/>• Multiplayer upgrades are temporary<br/>• *Leaderboard ranks up by wins*<br/>• *3 losses in a row drops your ladder by 1*<br/>• The coins spent to buy them are permanently deducted from your real balance</div>
+              <div style={{ color: "#8b7aa3", fontSize: 11.5, lineHeight: 1.6 }}>• Public = instant 2-player pairing<br/>• Private = code lobbies + rematches<br/>• Matches last 3 minutes<br/>• Each match starts with *100M match coins*<br/>• Multiplayer upgrades are temporary<br/>• *Leaderboard ranks up by wins*<br/>• *3 losses in a row drops your ladder by 1*</div>
             </div>
           </>
         )}
@@ -777,7 +801,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
               <div style={{ color: BG.gold, fontWeight: 900, fontSize: 22 }}>VS</div>
             </div>
             <div style={{ color: BG.green, fontWeight: 900, fontSize: 42, marginBottom: 8 }}>{Math.max(0, Math.ceil(matchCountdown / 1000))}</div>
-            <div style={{ color: "#7b6a92", fontSize: 12 }}>3 minutes. Buy temporary upgrades with real coins. Highest score wins.</div>
+            <div style={{ color: "#7b6a92", fontSize: 12 }}>3 minutes. Buy temporary upgrades with 100M match coins. Highest score wins.</div>
           </div>
         )}
 
@@ -801,7 +825,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
               <div style={{ textAlign: "center", marginBottom: 14 }}>
                 <button onClick={tapNow} className="press-fx char-breathe" style={{ width: 210, height: 210, borderRadius: "50%", border: `2px solid rgba(${charGlow(charId || "pepe")},0.45)`, background: `radial-gradient(circle at 50% 30%, rgba(${charGlow(charId || "pepe")},0.18), rgba(6,0,15,0.96))`, color: "#fff", fontSize: 84, boxShadow: `0 0 40px rgba(${charGlow(charId || "pepe")},0.28)` }}>{avatar || charEmoji(charId || "pepe")}</button>
                 <div style={{ color: "#fff", fontWeight: 900, fontSize: 18, marginTop: 12 }}>TAP TO DOMINATE</div>
-                <div style={{ color: "#6f5f86", fontSize: 11.5 }}>Every tap stacks your battle score. Upgrades are match-only, but the coins spent are permanent.</div>
+                <div style={{ color: "#6f5f86", fontSize: 11.5 }}>Every tap stacks your battle score. Upgrades and coins are match-only in multiplayer.</div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
