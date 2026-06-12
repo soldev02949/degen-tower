@@ -286,6 +286,13 @@ function charGlow(id: string) {
 function baseTapForChar(id: string) {
   return ({ pepe: 1, gigachad: 1.1, trump: 1.25, troll: 1, bonk: 1.05 } as Record<string, number>)[id] || 1;
 }
+const CHAR_ABILITIES: Record<string, { name: string; emoji: string; desc: string; mult: number; durMs: number; cdMs: number }> = {
+  pepe:     { name: "Meme Surge",   emoji: "🐸", desc: "3× taps for 8s",              mult: 3, durMs: 8000,  cdMs: 30000 },
+  gigachad: { name: "Alpha Flex",   emoji: "💪", desc: "5× taps for 4s",              mult: 5, durMs: 4000,  cdMs: 30000 },
+  trump:    { name: "Art of Deal",  emoji: "🎩", desc: "2.5× taps for 10s",           mult: 2.5, durMs: 10000, cdMs: 30000 },
+  troll:    { name: "Pure Chaos",   emoji: "🧌", desc: "2×–6× random taps for 7s",    mult: -1, durMs: 7000,  cdMs: 30000 },
+  bonk:     { name: "Zoomies",      emoji: "🐕", desc: "4× taps for 6s",              mult: 4, durMs: 6000,  cdMs: 30000 },
+};
 function statsKey(playerId: string) { return `degen_mp_stats_${playerId}`; }
 function seasonKey() {
   const d = new Date();
@@ -351,6 +358,21 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
   const pendingBroadcastRef = useRef<Partial<RemoteState> | null>(null);
   const broadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const localStateRef = useRef({ myTaps: 0, myScore: 0, mySpent: 0, myUpgrades: {} as Partial<Record<UpgradeId, number>> });
+  const abilityRef = useRef({ activeUntil: 0, readyAt: 0 });
+  const [abilityTick, setAbilityTick] = useState(0); // forces re-render for cooldown UI
+  useEffect(() => {
+    if (phase !== "battle") { abilityRef.current = { activeUntil: 0, readyAt: 0 }; return; }
+    const id = setInterval(() => setAbilityTick(t => t + 1), 250);
+    return () => clearInterval(id);
+  }, [phase]);
+  const useAbility = useCallback(() => {
+    const now = Date.now();
+    if (phase !== "battle" || now < abilityRef.current.readyAt || now < abilityRef.current.activeUntil) return;
+    const ab = CHAR_ABILITIES[charId || "pepe"];
+    if (!ab) return;
+    abilityRef.current = { activeUntil: now + ab.durMs, readyAt: now + ab.cdMs };
+    setAbilityTick(t => t + 1);
+  }, [phase, charId]);
 
   useEffect(() => { statsRef.current = stats; saveStats(playerId || "anon", stats); }, [playerId, stats]);
   useEffect(() => { localStateRef.current = { myTaps, myScore, mySpent, myUpgrades }; }, [myTaps, myScore, mySpent, myUpgrades]);
@@ -813,6 +835,10 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     if (Math.random() < Math.min(0.9, critPower)) base *= 2.5;
     if ((charId || "pepe") === "trump" && (currentTaps + 1) % 40 < 1) base *= 2;
     if ((charId || "pepe") === "troll") base *= 0.8 + Math.random() * 0.8;
+    if (abilityRef.current.activeUntil > Date.now()) {
+      const ab = CHAR_ABILITIES[charId || "pepe"];
+      base *= ab && ab.mult > 0 ? ab.mult : 2 + Math.random() * 4;
+    }
     const nextTaps = currentTaps + 1;
     const nextScore = localStateRef.current.myScore + base;
     localStateRef.current = { ...localStateRef.current, myTaps: nextTaps, myScore: nextScore };
@@ -998,6 +1024,21 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
                 <button onClick={tapNow} className="press-fx char-breathe" style={{ width: 210, height: 210, borderRadius: "50%", border: `2px solid rgba(${charGlow(charId || "pepe")},0.45)`, background: `radial-gradient(circle at 50% 30%, rgba(${charGlow(charId || "pepe")},0.18), rgba(6,0,15,0.96))`, color: "#fff", fontSize: 84, boxShadow: `0 0 40px rgba(${charGlow(charId || "pepe")},0.28)` }}>{avatar || charEmoji(charId || "pepe")}</button>
                 <div style={{ color: "#fff", fontWeight: 900, fontSize: 18, marginTop: 12 }}>TAP TO DOMINATE</div>
                 <div style={{ color: "#6f5f86", fontSize: 11.5 }}>Every tap stacks your battle score. Upgrades and coins are match-only in multiplayer.</div>
+                {(() => {
+                  void abilityTick;
+                  const ab = CHAR_ABILITIES[charId || "pepe"];
+                  if (!ab) return null;
+                  const now = Date.now();
+                  const active = now < abilityRef.current.activeUntil;
+                  const cdLeft = Math.max(0, abilityRef.current.readyAt - now);
+                  const ready = !active && cdLeft <= 0;
+                  return (
+                    <button onClick={useAbility} className="press-fx" disabled={!ready}
+                      style={{ marginTop: 12, width: "100%", maxWidth: 320, background: active ? "linear-gradient(135deg,#f5c842,#f59e0b)" : ready ? `linear-gradient(135deg,rgba(${charGlow(charId || "pepe")},0.9),rgba(168,85,247,0.85))` : "rgba(255,255,255,0.04)", border: ready || active ? "none" : "1px solid rgba(255,255,255,0.08)", borderRadius: 14, color: active ? "#1a0f00" : ready ? "#fff" : "#62546f", fontWeight: 900, fontSize: 13.5, padding: "13px 16px", cursor: ready ? "pointer" : "default", boxShadow: active ? "0 0 30px rgba(245,200,66,0.45)" : ready ? `0 0 24px rgba(${charGlow(charId || "pepe")},0.35)` : "none", transition: "all 0.2s" }}>
+                      {active ? `${ab.emoji} ${ab.name} ACTIVE! ${Math.ceil((abilityRef.current.activeUntil - now) / 1000)}s` : ready ? `${ab.emoji} ${ab.name} — ${ab.desc}` : `${ab.emoji} Recharging… ${Math.ceil(cdLeft / 1000)}s`}
+                    </button>
+                  );
+                })()}
               </div>
 
               <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 10 }}>
