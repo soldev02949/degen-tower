@@ -1180,10 +1180,52 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 
 // ─── LEADERBOARD TAB → SUBMIT SCORE (no player-facing leaderboard) ──────────────────
 // Leaderboard is admin-only. Players see the Submit Score screen here.
+// Podium avatar — module-level so React keeps identity stable across 1s data refreshes
+const PODIUM_MEDAL=["#f5c842","#d8dbe8","#d49058"];
+const PODIUM_HEIGHT=[92,64,48];
+function PodiumAvatar({p,pos,isMe}:{p:LBEntry;pos:number;isMe:boolean}){
+  const mc=PODIUM_MEDAL[pos];
+  const sizeBig=pos===0;
+  const sz=sizeBig?76:60;
+  const charEmoji=({"pepe":"🐸","gigachad":"💪","trump":"🎩","troll":"🧌","bonk":"🐕"} as Record<string,string>)[p.character]||"🐸";
+  const glow=(CHARACTERS.find(ch=>ch.id===p.character)||CHARACTERS[0]).glow;
+  const fmtTaps=(n:number)=>{if(!n)return"0";if(n>=1e9)return(n/1e9).toFixed(1)+"B";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"K";return Math.floor(n).toString();};
+  const barGlow=pos===0?"245,200,66":pos===1?"216,219,232":"212,144,88";
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,minWidth:0}}>
+      {pos===0&&<div style={{fontSize:26,marginBottom:-4,animation:"crownBob 2.4s ease-in-out infinite",filter:"drop-shadow(0 0 10px rgba(245,200,66,0.8))",zIndex:2}}>👑</div>}
+      <div style={{position:"relative",marginBottom:8}}>
+        <div style={{
+          width:sz,height:sz,borderRadius:"50%",overflow:"hidden",
+          border:`2.5px solid ${mc}`,
+          background:`radial-gradient(ellipse,rgba(${glow},0.25),rgba(6,0,15,0.9))`,
+          display:"flex",alignItems:"center",justifyContent:"center",fontSize:sizeBig?38:28,
+          boxShadow:`0 0 ${sizeBig?28:16}px ${mc}66`,
+          animation:pos===0?"podiumGlow 2.8s ease-in-out infinite":"none",
+        }}>
+          {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:charEmoji}
+        </div>
+        {isOnline(p.last_seen)&&<span className="live-dot" style={{position:"absolute",bottom:2,right:2,border:"2px solid #06000f",width:11,height:11}}/>}
+      </div>
+      <div style={{color:isMe?"#c084fc":"#fff",fontWeight:900,fontSize:sizeBig?14:12,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:isMe?"0 0 12px rgba(192,132,252,0.6)":"none"}}>{p.username||"Degen"}</div>
+      <div style={{color:mc,fontWeight:900,fontSize:sizeBig?16:13,fontVariantNumeric:"tabular-nums",textShadow:`0 0 14px ${mc}55`,marginBottom:8}}>{fmtTaps(p.games_played)}</div>
+      <div style={{
+        width:"82%",height:PODIUM_HEIGHT[pos],borderRadius:"10px 10px 0 0",
+        background:`linear-gradient(to top, rgba(${barGlow},0.04), rgba(${barGlow},0.16))`,
+        border:`1px solid ${mc}33`,borderBottom:"none",
+        display:"flex",alignItems:"center",justifyContent:"center",
+        color:mc,fontSize:sizeBig?26:20,fontWeight:900,
+        textShadow:`0 0 16px ${mc}`,
+      }}>{pos+1}</div>
+    </div>
+  );
+}
+
 function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveAvatarUrl?:string;liveCharId:string}){
   const [leaders,setLeaders]=useState<LBEntry[]>([]);
   const [loading,setLoading]=useState(true);
   const cd=useCountdown();
+  const lastJsonRef=useRef("");
   useEffect(()=>{
     let active=true;
     const fetchLeaders=async()=>{
@@ -1192,7 +1234,12 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
           headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${SUPA_KEY_CONST}`,"Cache-Control":"no-cache, no-store"},
           cache:"no-store",
         });
-        if(resp.ok&&active){const data=await resp.json();setLeaders(data);setLoading(false);}
+        if(resp.ok&&active){
+          const text=await resp.text();
+          // Only re-render when data actually changed — avoids restarting CSS animations every second
+          if(text!==lastJsonRef.current){lastJsonRef.current=text;setLeaders(JSON.parse(text));}
+          setLoading(false);
+        }
       }catch{if(active)setLoading(false);}
     };
     fetchLeaders();
@@ -1205,44 +1252,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
   const displayLeaders=leaders.map(l=>l.wallet_address===myPlayerId?{...l,games_played:Math.max(l.games_played,liveTaps),total_score:Math.max(l.total_score,liveEarned),username:liveUsername||l.username}:l).sort((a,b)=>b.games_played-a.games_played);
   const top3=displayLeaders.slice(0,3);
   const rest=displayLeaders.slice(3);
-  const medalColor=["#f5c842","#d8dbe8","#d49058"];
   const podiumOrder=[1,0,2]; // silver left, gold center, bronze right
-  const podiumHeight=[64,92,48];
-
-  const PodiumAvatar=({p,pos}:{p:LBEntry;pos:number})=>{
-    const isMe=p.wallet_address===myPlayerId;
-    const mc=medalColor[pos];
-    const sizeBig=pos===0;
-    const sz=sizeBig?76:60;
-    return(
-      <div className="anim-popin" style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,minWidth:0,animationDelay:`${pos*0.12}s`}}>
-        {pos===0&&<div style={{fontSize:26,marginBottom:-4,animation:"crownBob 2.4s ease-in-out infinite",filter:"drop-shadow(0 0 10px rgba(245,200,66,0.8))",zIndex:2}}>👑</div>}
-        <div style={{position:"relative",marginBottom:8}}>
-          <div style={{
-            width:sz,height:sz,borderRadius:"50%",overflow:"hidden",
-            border:`2.5px solid ${mc}`,
-            background:`radial-gradient(ellipse,rgba(${charGlow(p.character)},0.25),rgba(6,0,15,0.9))`,
-            display:"flex",alignItems:"center",justifyContent:"center",fontSize:sizeBig?38:28,
-            boxShadow:`0 0 ${sizeBig?28:16}px ${mc}66`,
-            animation:pos===0?"podiumGlow 2.8s ease-in-out infinite":"none",
-          }}>
-            {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:charEmoji(p.character)}
-          </div>
-          {isOnline(p.last_seen)&&<span className="live-dot" style={{position:"absolute",bottom:2,right:2,border:"2px solid #06000f",width:11,height:11}}/>}
-        </div>
-        <div style={{color:isMe?"#c084fc":"#fff",fontWeight:900,fontSize:sizeBig?14:12,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:isMe?"0 0 12px rgba(192,132,252,0.6)":"none"}}>{p.username||"Degen"}</div>
-        <div style={{color:mc,fontWeight:900,fontSize:sizeBig?16:13,fontVariantNumeric:"tabular-nums",textShadow:`0 0 14px ${mc}55`,marginBottom:8}}>{fmtTaps(p.games_played)}</div>
-        <div style={{
-          width:"82%",height:podiumHeight[pos],borderRadius:"10px 10px 0 0",
-          background:`linear-gradient(to top, rgba(${pos===0?"245,200,66":pos===1?"216,219,232":"212,144,88"},0.04), rgba(${pos===0?"245,200,66":pos===1?"216,219,232":"212,144,88"},0.16))`,
-          border:`1px solid ${mc}33`,borderBottom:"none",
-          display:"flex",alignItems:"center",justifyContent:"center",
-          color:mc,fontSize:sizeBig?26:20,fontWeight:900,
-          textShadow:`0 0 16px ${mc}`,
-        }}>{pos+1}</div>
-      </div>
-    );
-  };
 
   return(
     <div style={{flex:1,overflowY:"auto",paddingTop:60,paddingBottom:110,minHeight:"100vh",background:G.bg,position:"relative"}}>
@@ -1250,7 +1260,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
       <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -10%,rgba(245,200,66,0.12) 0%,transparent 55%)",pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"0 auto",padding:"0 16px"}}>
         {/* Header */}
-        <div style={{textAlign:"center",padding:"14px 0 4px"}} className="anim-slideup">
+        <div style={{textAlign:"center",padding:"14px 0 4px"}}>
           <div style={{
             display:"inline-block",fontSize:11,fontWeight:800,letterSpacing:"0.22em",
             color:"#f5c842",textTransform:"uppercase",
@@ -1264,10 +1274,10 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
         </div>
 
         {/* Prize banner */}
-        <div className="shine-card anim-slideup" style={{
+        <div className="shine-card" style={{
           margin:"14px 0",background:"linear-gradient(135deg,rgba(245,200,66,0.08),rgba(168,85,247,0.06))",
           border:"1px solid rgba(245,200,66,0.22)",borderRadius:16,padding:"11px 16px",
-          display:"flex",alignItems:"center",gap:10,animationDelay:"0.05s",
+          display:"flex",alignItems:"center",gap:10,
         }}>
           <span style={{fontSize:22,animation:"coinSpin 3s ease-in-out infinite",display:"inline-block"}}>🏆</span>
           <div style={{flex:1}}>
@@ -1282,7 +1292,7 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
         {/* Podium */}
         {!loading&&top3.length>0&&(
           <div style={{display:"flex",alignItems:"flex-end",gap:6,padding:"10px 4px 0",marginBottom:4}}>
-            {podiumOrder.map(pos=>top3[pos]?<PodiumAvatar key={top3[pos].id} p={top3[pos]} pos={pos}/>:<div key={pos} style={{flex:1}}/>)}
+            {podiumOrder.map(pos=>top3[pos]?<PodiumAvatar key={top3[pos].id} p={top3[pos]} pos={pos} isMe={top3[pos].wallet_address===myPlayerId}/>:<div key={pos} style={{flex:1}}/>)}
           </div>
         )}
         {/* Podium base line */}
@@ -1293,13 +1303,12 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
           const isMe=p.wallet_address===myPlayerId;
           const rank=i+4;
           return(
-            <div key={p.id} className="anim-slideup" style={{
+            <div key={p.id} style={{
               margin:"7px 0",
               background:isMe?"linear-gradient(135deg,rgba(168,85,247,0.16),rgba(168,85,247,0.07))":"rgba(255,255,255,0.025)",
               border:isMe?"1px solid rgba(168,85,247,0.45)":"1px solid rgba(255,255,255,0.05)",
               borderRadius:16,padding:"11px 14px",display:"flex",alignItems:"center",gap:12,
               boxShadow:isMe?"0 0 24px rgba(168,85,247,0.15)":"none",
-              animationDelay:`${Math.min(i*0.04,0.5)}s`,
             }}>
               <div style={{width:30,textAlign:"center",fontSize:13,fontWeight:900,color:isMe?"#c084fc":"#4d4d6b",fontVariantNumeric:"tabular-nums"}}>#{rank}</div>
               <div style={{position:"relative",flexShrink:0}}>
