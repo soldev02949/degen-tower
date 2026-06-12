@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank } from "@/lib/progression";
 import { useAuth } from "@/lib/auth";
+import MultiplayerArena from "./MultiplayerArena";
 
 // ─── Characters ───────────────────────────────────────────────────────────────
 export const CHARACTERS = [
@@ -533,11 +534,11 @@ function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string
 }
 
 // ─── BOTTOM BAR (glass) ──────────────────────────────────────────────────────
-const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
+const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"multi",label:"PvP",emoji:"⚔️"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
 
 function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
-  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="settings"?"#9aa0b5":"#c084fc";
-  const side=[TABS[0],TABS[3],null,TABS[2],TABS[4]]; // home, ranks, [PLAY], shop, settings
+  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="multi"?"#f87171":id==="settings"?"#9aa0b5":"#c084fc";
+  const side=[TABS[0],TABS[4],TABS[2],null,TABS[3],TABS[5]]; // home, ranks, PvP, [PLAY], shop, settings
   return(
     <div style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:100,
@@ -1605,7 +1606,7 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 // ─── MAIN GAME ────────────────────────────────────────────────────────────────
 export default function TapGame() {
   const {user,signOut}=useAuth();
-  const [activeTab,setActiveTab]=useState<"home"|"play"|"shop"|"ranks"|"settings">("home");
+  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"shop"|"ranks"|"settings">("home");
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
   // DB-loaded values — source of truth for taps/coins (never overwrite with local zeros)
@@ -2133,6 +2134,71 @@ export default function TapGame() {
     showToast(`${u.emoji} ${u.name} Lv.${lv+1}!`);
   },[coins,upgrades]);
 
+  const spendCoinsExact=useCallback(async(amount:number)=>{
+    const uid=user?.email||user?.id||playerId;
+    if(!uid||amount<=0)return false;
+    const current=Math.floor(liveRef.current.coins||0);
+    const spend=Math.floor(amount);
+    if(current<spend)return false;
+    const nextBalance=Math.max(0,current-spend);
+    setCoins(nextBalance);
+    liveRef.current.coins=nextBalance;
+    dbValuesRef.current={
+      totalTaps:liveRef.current.totalTaps,
+      totalEarned:liveRef.current.totalEarned,
+      coins:nextBalance,
+      upgrades:liveRef.current.upgrades,
+    };
+    if(liveRef.current.charId){
+      const s:SaveData={
+        charId:liveRef.current.charId,
+        coins:nextBalance,
+        totalEarned:liveRef.current.totalEarned,
+        totalTaps:liveRef.current.totalTaps,
+        upgrades:liveRef.current.upgrades,
+        highScore:Math.max(nextBalance,saveRef.current?.highScore||0),
+      };
+      persistSave(uid,s);
+      saveRef.current=s;
+      setGlobalTaps(uid,liveRef.current.totalTaps,liveRef.current.totalEarned);
+    }
+    try{
+      const authToken=await getAuthToken();
+      const payload:Record<string,unknown>={token_balance:nextBalance,last_seen:new Date().toISOString()};
+      if(liveRef.current.charId)payload.character=liveRef.current.charId;
+      const patch=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(uid)}`,{
+        method:"PATCH",
+        headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=representation"},
+        body:JSON.stringify(payload),
+      });
+      if(!patch.ok)throw new Error(`coin spend patch failed ${patch.status}`);
+      return true;
+    }catch(e){
+      console.error("spendCoinsExact failed",e);
+      setCoins(current);
+      liveRef.current.coins=current;
+      dbValuesRef.current={
+        totalTaps:liveRef.current.totalTaps,
+        totalEarned:liveRef.current.totalEarned,
+        coins:current,
+        upgrades:liveRef.current.upgrades,
+      };
+      if(liveRef.current.charId){
+        const rollback:SaveData={
+          charId:liveRef.current.charId,
+          coins:current,
+          totalEarned:liveRef.current.totalEarned,
+          totalTaps:liveRef.current.totalTaps,
+          upgrades:liveRef.current.upgrades,
+          highScore:Math.max(current,saveRef.current?.highScore||0),
+        };
+        persistSave(uid,rollback);
+        saveRef.current=rollback;
+      }
+      return false;
+    }
+  },[playerId,user?.email,user?.id]);
+
   void comboTimer;
 
   function handleSettingsSave(u:string,w:string,av:string,url?:string){
@@ -2178,6 +2244,7 @@ export default function TapGame() {
       {/* Tab content */}
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} liveTaps={totalTaps} liveEarned={totalEarned} liveUsername={username} liveAvatarUrl={avatarUrl} liveCharId={charId||"pepe"} key="lb"/>}
+      {activeTab==="multi"&&<MultiplayerArena playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} charId={charId} coins={coins} onSpendCoins={spendCoinsExact}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
       {activeTab==="settings"&&<SettingsTab username={username} solWallet={solWallet} currentAvatarUrl={avatarUrl} onSave={handleSettingsSave}/>}
 
