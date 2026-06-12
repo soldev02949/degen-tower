@@ -14,7 +14,8 @@ export const CHARACTERS = [
 ];
 
 // ─── Upgrades (40 items) ──────────────────────────────────────────────────────
-const UPGRADES: Array<{id:string;name:string;emoji:string;desc:string;baseCost:number;costMult:number;tapsPerSec?:number;minLevel?:number;category:string}> = [
+type UpgradeEffect = { tapsPerSec?:number; tapFlat?:number; tapMult?:number; chainBonus?:number; critChance?:number; critMultScale?:number; allIncomeMult?:number; energyRegen?:number; maxEnergy?:number; comboSpeed?:number; comboMax?:number; specialCharge?:number; specialPower?:number; passivePerSec?:number; passiveMult?:number; };
+const UPGRADES: Array<{id:string;name:string;emoji:string;desc:string;baseCost:number;costMult:number;tapsPerSec?:number;minLevel?:number;category:string;effect?:UpgradeEffect}> = [
   { id:"helper_1",   name:"FUD Bear",         emoji:"🐻", desc:"5 auto-taps/sec",              baseCost:200,       costMult:2.8,  tapsPerSec:5,    minLevel:1,  category:"auto" },
   { id:"helper_2",   name:"Bot Army",         emoji:"🤖", desc:"10 auto-taps/sec",             baseCost:1000,      costMult:3.0,  tapsPerSec:10,   minLevel:1,  category:"auto" },
   { id:"helper_3",   name:"Click Farm",       emoji:"🏭", desc:"25 auto-taps/sec",             baseCost:5000,      costMult:3.2,  tapsPerSec:25,   minLevel:5,  category:"auto" },
@@ -211,7 +212,91 @@ const UPGRADES: Array<{id:string;name:string;emoji:string;desc:string;baseCost:n
   { id:"dark_energy",   name:"Dark Energy",         emoji:"🌑", desc:"+100% auto & passive",          baseCost:300000000,  costMult:4.8, minLevel:40, category:"galaxy" },
   { id:"big_bang",      name:"Big Bang",            emoji:"💥", desc:"ALL gains x1.5 permanent",     baseCost:200000000,  costMult:5.0, minLevel:38, category:"galaxy" },
   { id:"galaxy_forge",  name:"Galaxy Forge",        emoji:"⚒️", desc:"ALL gains x10",               baseCost:50000000000,costMult:6.0, minLevel:50, category:"galaxy" },
+  { id:"new_auto_1", name:"Drone Bots", emoji:"🤖", desc:"+12 auto-taps/sec", baseCost:684, costMult:2.03, minLevel:1, category:"auto", effect:{tapsPerSec:12} },
+  { id:"new_auto_2", name:"Miner Bots", emoji:"🤖", desc:"+25 auto-taps/sec", baseCost:1339, costMult:2.11, minLevel:3, category:"auto", effect:{tapsPerSec:25} },
+  { id:"new_auto_3", name:"Factory Bots", emoji:"🤖", desc:"+60 auto-taps/sec", baseCost:2616, costMult:2.19, minLevel:6, category:"auto", effect:{tapsPerSec:60} },
+  { id:"new_auto_4", name:"Swarm Bots", emoji:"🤖", desc:"+140 auto-taps/sec", baseCost:5108, costMult:2.27, minLevel:9, category:"auto", effect:{tapsPerSec:140} },
+  { id:"new_auto_5", name:"Engine Bots", emoji:"🤖", desc:"+320 auto-taps/sec", baseCost:9966, costMult:2.35, minLevel:12, category:"auto", effect:{tapsPerSec:320} },
+  { id:"new_auto_6", name:"Forge Bots", emoji:"🤖", desc:"+760 auto-taps/sec", baseCost:19429, costMult:2.43, minLevel:15, category:"auto", effect:{tapsPerSec:760} },
+  { id:"new_auto_7", name:"Server Bots", emoji:"🤖", desc:"+1800 auto-taps/sec", baseCost:37855, costMult:2.51, minLevel:18, category:"auto", effect:{tapsPerSec:1800} },
+  { id:"new_auto_8", name:"Fleet Bots", emoji:"🤖", desc:"+4200 auto-taps/sec", baseCost:73708, costMult:2.59, minLevel:21, category:"auto", effect:{tapsPerSec:4200} },
+  { id:"new_tap_1", name:"Potion Tap", emoji:"⚡", desc:"+4 coins per tap", baseCost:844, costMult:2.03, minLevel:1, category:"tap", effect:{tapFlat:4} },
+  { id:"new_tap_2", name:"Glove Tap", emoji:"⚡", desc:"+9 coins per tap", baseCost:1642, costMult:2.11, minLevel:3, category:"tap", effect:{tapFlat:9} },
+  { id:"new_tap_3", name:"Hammer Tap", emoji:"⚡", desc:"+18 coins per tap", baseCost:3192, costMult:2.19, minLevel:6, category:"tap", effect:{tapFlat:18} },
+  { id:"new_tap_4", name:"Injector Tap", emoji:"⚡", desc:"+40 coins per tap", baseCost:6203, costMult:2.27, minLevel:9, category:"tap", effect:{tapFlat:40} },
+  { id:"new_tap_5", name:"Core Tap", emoji:"⚡", desc:"+95 coins per tap", baseCost:12046, costMult:2.35, minLevel:12, category:"tap", effect:{tapFlat:95} },
+  { id:"new_tap_6", name:"Rune Tap", emoji:"⚡", desc:"+220 coins per tap", baseCost:23381, costMult:2.43, minLevel:15, category:"tap", effect:{tapFlat:220} },
+  { id:"new_tap_7", name:"Sigil Tap", emoji:"⚡", desc:"+520 coins per tap", baseCost:45363, costMult:2.51, minLevel:18, category:"tap", effect:{tapFlat:520} },
+  { id:"new_tap_8", name:"Surge Tap", emoji:"⚡", desc:"+1200 coins per tap", baseCost:87974, costMult:2.59, minLevel:21, category:"tap", effect:{tapFlat:1200} },
+  { id:"new_crit_1", name:"Scope Crit", emoji:"💥", desc:"+3% crit chance and stronger crits", baseCost:1004, costMult:2.03, minLevel:1, category:"crit", effect:{critChance:0.03,critMultScale:0.2} },
+  { id:"new_crit_2", name:"Laser Crit", emoji:"💥", desc:"+4% crit chance and stronger crits", baseCost:1945, costMult:2.11, minLevel:3, category:"crit", effect:{critChance:0.04,critMultScale:0.25} },
+  { id:"new_crit_3", name:"Prism Crit", emoji:"💥", desc:"+5% crit chance and stronger crits", baseCost:3769, costMult:2.19, minLevel:6, category:"crit", effect:{critChance:0.05,critMultScale:0.30000000000000004} },
+  { id:"new_crit_4", name:"Targeter Crit", emoji:"💥", desc:"+6% crit chance and stronger crits", baseCost:7297, costMult:2.27, minLevel:9, category:"crit", effect:{critChance:0.06,critMultScale:0.35} },
+  { id:"new_crit_5", name:"Oracle Crit", emoji:"💥", desc:"+8% crit chance and stronger crits", baseCost:14126, costMult:2.35, minLevel:12, category:"crit", effect:{critChance:0.08,critMultScale:0.4} },
+  { id:"new_crit_6", name:"Catalyst Crit", emoji:"💥", desc:"+10% crit chance and stronger crits", baseCost:27333, costMult:2.43, minLevel:15, category:"crit", effect:{critChance:0.1,critMultScale:0.45000000000000007} },
+  { id:"new_energy_1", name:"Battery Energy", emoji:"🔋", desc:"+0.4 energy regen and +150 max energy", baseCost:1123, costMult:2.03, minLevel:1, category:"energy", effect:{energyRegen:0.4,maxEnergy:150} },
+  { id:"new_energy_2", name:"Cell Energy", emoji:"🔋", desc:"+0.8 energy regen and +300 max energy", baseCost:2173, costMult:2.11, minLevel:3, category:"energy", effect:{energyRegen:0.8,maxEnergy:300} },
+  { id:"new_energy_3", name:"Reactor Energy", emoji:"🔋", desc:"+1.5 energy regen and +700 max energy", baseCost:4201, costMult:2.19, minLevel:6, category:"energy", effect:{energyRegen:1.5,maxEnergy:700} },
+  { id:"new_energy_4", name:"Reservoir Energy", emoji:"🔋", desc:"+2.5 energy regen and +1400 max energy", baseCost:8118, costMult:2.27, minLevel:9, category:"energy", effect:{energyRegen:2.5,maxEnergy:1400} },
+  { id:"new_energy_5", name:"Conduit Energy", emoji:"🔋", desc:"+4 energy regen and +3000 max energy", baseCost:15686, costMult:2.35, minLevel:12, category:"energy", effect:{energyRegen:4,maxEnergy:3000} },
+  { id:"new_energy_6", name:"Matrix Energy", emoji:"🔋", desc:"+6 energy regen and +6500 max energy", baseCost:30297, costMult:2.43, minLevel:15, category:"energy", effect:{energyRegen:6,maxEnergy:6500} },
+  { id:"new_combo_1", name:"Rhythm Combo", emoji:"🔥", desc:"Faster combo build and +8 max combo", baseCost:1243, costMult:2.03, minLevel:1, category:"combo", effect:{comboSpeed:0.25,comboMax:8} },
+  { id:"new_combo_2", name:"Loop Combo", emoji:"🔥", desc:"Faster combo build and +12 max combo", baseCost:2400, costMult:2.11, minLevel:3, category:"combo", effect:{comboSpeed:0.4,comboMax:12} },
+  { id:"new_combo_3", name:"Chain Combo", emoji:"🔥", desc:"Faster combo build and +18 max combo", baseCost:4633, costMult:2.19, minLevel:6, category:"combo", effect:{comboSpeed:0.65,comboMax:18} },
+  { id:"new_combo_4", name:"Burst Combo", emoji:"🔥", desc:"Faster combo build and +28 max combo", baseCost:8940, costMult:2.27, minLevel:9, category:"combo", effect:{comboSpeed:1.0,comboMax:28} },
+  { id:"new_combo_5", name:"Drive Combo", emoji:"🔥", desc:"Faster combo build and +40 max combo", baseCost:17246, costMult:2.35, minLevel:12, category:"combo", effect:{comboSpeed:1.5,comboMax:40} },
+  { id:"new_combo_6", name:"Engine Combo", emoji:"🔥", desc:"Faster combo build and +60 max combo", baseCost:33261, costMult:2.43, minLevel:15, category:"combo", effect:{comboSpeed:2.4,comboMax:60} },
+  { id:"new_special_1", name:"Charger Special", emoji:"✨", desc:"Special charges faster and hits harder", baseCost:1363, costMult:2.03, minLevel:1, category:"special", effect:{specialCharge:1.5,specialPower:0.15} },
+  { id:"new_special_2", name:"Totem Special", emoji:"✨", desc:"Special charges faster and hits harder", baseCost:2628, costMult:2.11, minLevel:3, category:"special", effect:{specialCharge:2.5,specialPower:0.25} },
+  { id:"new_special_3", name:"Beacon Special", emoji:"✨", desc:"Special charges faster and hits harder", baseCost:5065, costMult:2.19, minLevel:6, category:"special", effect:{specialCharge:4,specialPower:0.35} },
+  { id:"new_special_4", name:"Idol Special", emoji:"✨", desc:"Special charges faster and hits harder", baseCost:9761, costMult:2.27, minLevel:9, category:"special", effect:{specialCharge:6.5,specialPower:0.5} },
+  { id:"new_special_5", name:"Flux Special", emoji:"✨", desc:"Special charges faster and hits harder", baseCost:18805, costMult:2.35, minLevel:12, category:"special", effect:{specialCharge:10,specialPower:0.8} },
+  { id:"new_special_6", name:"Crown Special", emoji:"✨", desc:"Special charges faster and hits harder", baseCost:36225, costMult:2.43, minLevel:15, category:"special", effect:{specialCharge:16,specialPower:1.2} },
+  { id:"new_bonus_1", name:"Luck Brew Potion", emoji:"🍀", desc:"+8% all income", baseCost:1482, costMult:2.03, minLevel:1, category:"bonus", effect:{allIncomeMult:0.08} },
+  { id:"new_bonus_2", name:"Jackpot Juice Potion", emoji:"🍀", desc:"+12% all income", baseCost:2855, costMult:2.11, minLevel:3, category:"bonus", effect:{allIncomeMult:0.12} },
+  { id:"new_bonus_3", name:"Moon Elixir Potion", emoji:"🍀", desc:"+18% all income", baseCost:5497, costMult:2.19, minLevel:6, category:"bonus", effect:{allIncomeMult:0.18} },
+  { id:"new_bonus_4", name:"Fortune Tonic Potion", emoji:"🍀", desc:"+26% all income", baseCost:10582, costMult:2.27, minLevel:9, category:"bonus", effect:{allIncomeMult:0.26} },
+  { id:"new_bonus_5", name:"Gold Mist Potion", emoji:"🍀", desc:"+38% all income", baseCost:20365, costMult:2.35, minLevel:12, category:"bonus", effect:{allIncomeMult:0.38} },
+  { id:"new_bonus_6", name:"Prism Soda Potion", emoji:"🍀", desc:"+55% all income", baseCost:39189, costMult:2.43, minLevel:15, category:"bonus", effect:{allIncomeMult:0.55} },
+  { id:"new_prestige_1", name:"Crest Relic", emoji:"🏆", desc:"+8% all income", baseCost:1602, costMult:2.03, minLevel:1, category:"prestige", effect:{allIncomeMult:0.08} },
+  { id:"new_prestige_2", name:"Medal Relic", emoji:"🏆", desc:"+12% all income", baseCost:3082, costMult:2.11, minLevel:3, category:"prestige", effect:{allIncomeMult:0.12} },
+  { id:"new_prestige_3", name:"Laurel Relic", emoji:"🏆", desc:"+18% all income", baseCost:5929, costMult:2.19, minLevel:6, category:"prestige", effect:{allIncomeMult:0.18} },
+  { id:"new_prestige_4", name:"Crown Relic", emoji:"🏆", desc:"+26% all income", baseCost:11403, costMult:2.27, minLevel:9, category:"prestige", effect:{allIncomeMult:0.26} },
+  { id:"new_prestige_5", name:"Halo Relic", emoji:"🏆", desc:"+38% all income", baseCost:21925, costMult:2.35, minLevel:12, category:"prestige", effect:{allIncomeMult:0.38} },
+  { id:"new_prestige_6", name:"Seal Relic", emoji:"🏆", desc:"+55% all income", baseCost:42153, costMult:2.43, minLevel:15, category:"prestige", effect:{allIncomeMult:0.55} },
+  { id:"new_degen_1", name:"Alpha Leak Degen", emoji:"🦍", desc:"+8% all income", baseCost:1722, costMult:2.03, minLevel:1, category:"degen", effect:{allIncomeMult:0.08} },
+  { id:"new_degen_2", name:"Whale Ping Degen", emoji:"🦍", desc:"+12% all income", baseCost:3310, costMult:2.11, minLevel:3, category:"degen", effect:{allIncomeMult:0.12} },
+  { id:"new_degen_3", name:"Ape Serum Degen", emoji:"🦍", desc:"+18% all income", baseCost:6361, costMult:2.19, minLevel:6, category:"degen", effect:{allIncomeMult:0.18} },
+  { id:"new_degen_4", name:"Flex Fuel Degen", emoji:"🦍", desc:"+26% all income", baseCost:12224, costMult:2.27, minLevel:9, category:"degen", effect:{allIncomeMult:0.26} },
+  { id:"new_degen_5", name:"Hype Can Degen", emoji:"🦍", desc:"+38% all income", baseCost:23485, costMult:2.35, minLevel:12, category:"degen", effect:{allIncomeMult:0.38} },
+  { id:"new_degen_6", name:"Diamond Dust Degen", emoji:"🦍", desc:"+55% all income", baseCost:45116, costMult:2.43, minLevel:15, category:"degen", effect:{allIncomeMult:0.55} },
+  { id:"new_passive_1", name:"Cache Yield", emoji:"🏦", desc:"+3/sec passive income", baseCost:1842, costMult:2.03, minLevel:1, category:"passive", effect:{passivePerSec:3,passiveMult:0.05} },
+  { id:"new_passive_2", name:"Vault Yield", emoji:"🏦", desc:"+8/sec passive income", baseCost:3537, costMult:2.11, minLevel:3, category:"passive", effect:{passivePerSec:8,passiveMult:0.08} },
+  { id:"new_passive_3", name:"Reservoir Yield", emoji:"🏦", desc:"+20/sec passive income", baseCost:6793, costMult:2.19, minLevel:6, category:"passive", effect:{passivePerSec:20,passiveMult:0.12} },
+  { id:"new_passive_4", name:"Stream Yield", emoji:"🏦", desc:"+55/sec passive income", baseCost:13045, costMult:2.27, minLevel:9, category:"passive", effect:{passivePerSec:55,passiveMult:0.18} },
+  { id:"new_passive_5", name:"Pipeline Yield", emoji:"🏦", desc:"+140/sec passive income", baseCost:25045, costMult:2.35, minLevel:12, category:"passive", effect:{passivePerSec:140,passiveMult:0.25} },
+  { id:"new_passive_6", name:"Drip Yield", emoji:"🏦", desc:"+360/sec passive income", baseCost:48080, costMult:2.43, minLevel:15, category:"passive", effect:{passivePerSec:360,passiveMult:0.35} },
+  { id:"new_tower_1", name:"Module Tower", emoji:"🏙️", desc:"+8% all income", baseCost:1961, costMult:2.03, minLevel:1, category:"tower", effect:{allIncomeMult:0.08} },
+  { id:"new_tower_2", name:"Wing Tower", emoji:"🏙️", desc:"+12% all income", baseCost:3765, costMult:2.11, minLevel:3, category:"tower", effect:{allIncomeMult:0.12} },
+  { id:"new_tower_3", name:"Vault Tower", emoji:"🏙️", desc:"+18% all income", baseCost:7225, costMult:2.19, minLevel:6, category:"tower", effect:{allIncomeMult:0.18} },
+  { id:"new_tower_4", name:"Lab Tower", emoji:"🏙️", desc:"+26% all income", baseCost:13866, costMult:2.27, minLevel:9, category:"tower", effect:{allIncomeMult:0.26} },
+  { id:"new_tower_5", name:"Bridge Tower", emoji:"🏙️", desc:"+38% all income", baseCost:26605, costMult:2.35, minLevel:12, category:"tower", effect:{allIncomeMult:0.38} },
+  { id:"new_tower_6", name:"Penthouse Tower", emoji:"🏙️", desc:"+55% all income", baseCost:51044, costMult:2.43, minLevel:15, category:"tower", effect:{allIncomeMult:0.55} },
+  { id:"new_meme_1", name:"Sticker Pack Meme", emoji:"📱", desc:"+8% all income", baseCost:2081, costMult:2.03, minLevel:1, category:"meme", effect:{allIncomeMult:0.08} },
+  { id:"new_meme_2", name:"Viral Clip Meme", emoji:"📱", desc:"+12% all income", baseCost:3992, costMult:2.11, minLevel:3, category:"meme", effect:{allIncomeMult:0.12} },
+  { id:"new_meme_3", name:"Trend Beam Meme", emoji:"📱", desc:"+18% all income", baseCost:7658, costMult:2.19, minLevel:6, category:"meme", effect:{allIncomeMult:0.18} },
+  { id:"new_meme_4", name:"Emoji Cannon Meme", emoji:"📱", desc:"+26% all income", baseCost:14687, costMult:2.27, minLevel:9, category:"meme", effect:{allIncomeMult:0.26} },
+  { id:"new_meme_5", name:"Hype Loop Meme", emoji:"📱", desc:"+38% all income", baseCost:28165, costMult:2.35, minLevel:12, category:"meme", effect:{allIncomeMult:0.38} },
+  { id:"new_meme_6", name:"Chaos Post Meme", emoji:"📱", desc:"+55% all income", baseCost:54008, costMult:2.43, minLevel:15, category:"meme", effect:{allIncomeMult:0.55} },
+  { id:"new_galaxy_1", name:"Nebula Shard Galaxy", emoji:"🌌", desc:"+8% all income", baseCost:2201, costMult:2.03, minLevel:1, category:"galaxy", effect:{allIncomeMult:0.08} },
+  { id:"new_galaxy_2", name:"Star Forge Galaxy", emoji:"🌌", desc:"+12% all income", baseCost:4220, costMult:2.11, minLevel:3, category:"galaxy", effect:{allIncomeMult:0.12} },
+  { id:"new_galaxy_3", name:"Void Prism Galaxy", emoji:"🌌", desc:"+18% all income", baseCost:8090, costMult:2.19, minLevel:6, category:"galaxy", effect:{allIncomeMult:0.18} },
+  { id:"new_galaxy_4", name:"Quasar Core Galaxy", emoji:"🌌", desc:"+26% all income", baseCost:15508, costMult:2.27, minLevel:9, category:"galaxy", effect:{allIncomeMult:0.26} },
+  { id:"new_galaxy_5", name:"Warp Crown Galaxy", emoji:"🌌", desc:"+38% all income", baseCost:29725, costMult:2.35, minLevel:12, category:"galaxy", effect:{allIncomeMult:0.38} },
+  { id:"new_galaxy_6", name:"Cosmic Engine Galaxy", emoji:"🌌", desc:"+55% all income", baseCost:56972, costMult:2.43, minLevel:15, category:"galaxy", effect:{allIncomeMult:0.55} },
 ];
+
+const upgradeEffectTotal = (upgrades:Record<string,number>, key:keyof UpgradeEffect) => UPGRADES.reduce((sum,u)=>sum+((u.effect?.[key]||0)*(upgrades[u.id]||0)),0);
 
 // ─── Glass UI helpers ─────────────────────────────────────────────────────────
 const G = {
@@ -1158,7 +1243,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
           {[
             {emoji:"🔥",title:"Combo System",desc:"Tap fast to stack up to 20× coin multiplier",glow:"249,115,22"},
             {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn taps while AFK",glow:"59,130,246"},
-            {emoji:"⚡",title:"40+ Upgrades",desc:"Power up every stat in the Shop",glow:"245,200,66"},
+            {emoji:"⚡",title:"300+ Upgrades",desc:"Massive upgrade catalog across every stat",glow:"245,200,66"},
             {emoji:"🏆",title:"Win USDC",desc:"Top 20 earn USDC every 7 days",glow:"34,214,122"},
           ].map((f,i)=>(
             <div key={f.title} className="anim-slideup" style={{
@@ -1750,10 +1835,11 @@ export default function TapGame() {
   const xpProgress=getLevelProgress(totalEarned);
   const rank=getRankFromLevel(level);
   const nextRank=getNextRank(level);
-  const autoBoostMult=1+(upgrades["auto_boost"]||0)*0.10+(upgrades["auto_boost2"]||0)*0.25+(upgrades["auto_boost3"]||0)*0.50+(upgrades["auto_boost4"]||0)*1.50+(upgrades["auto_mult"]?1:0)+(upgrades["auto_mult2"]?2:0)+(upgrades["auto_mult3"]?4:0)+(upgrades["prestige_auto"]||0)*0.20+(upgrades["prestige_auto2"]||0)*0.60+(upgrades["prestige_auto3"]||0)*1.50;
-  const autoRate=UPGRADES.filter(u=>u.tapsPerSec).reduce((sum,u)=>{
+  const autoBoostMult=1+(upgrades["auto_boost"]||0)*0.10+(upgrades["auto_boost2"]||0)*0.25+(upgrades["auto_boost3"]||0)*0.50+(upgrades["auto_boost4"]||0)*1.50+(upgrades["auto_mult"]?1:0)+(upgrades["auto_mult2"]?2:0)+(upgrades["auto_mult3"]?4:0)+(upgrades["prestige_auto"]||0)*0.20+(upgrades["prestige_auto2"]||0)*0.60+(upgrades["prestige_auto3"]||0)*1.50+upgradeEffectTotal(upgrades,"passiveMult");
+  const autoRate=UPGRADES.reduce((sum,u)=>{
     const lvl=upgrades[u.id]||0;
-    return sum+lvl*(u.tapsPerSec!)*autoBoostMult;
+    const rate=(u.tapsPerSec||u.effect?.tapsPerSec||0);
+    return sum+lvl*rate*autoBoostMult;
   },0);
   // Keep liveRef in sync so stable doSave always reads fresh values
   liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.email||user?.id||playerId,username,solWallet,avatarUrl};
@@ -2006,8 +2092,16 @@ export default function TapGame() {
   },[autoRate,screen,char,specialActive]);
 
   useEffect(()=>{
+    if(screen!=="game")return;
+    const passiveRate=(upgradeEffectTotal(upgrades,"passivePerSec"))*(1+upgradeEffectTotal(upgrades,"allIncomeMult"));
+    if(passiveRate<=0)return;
+    const id=setInterval(()=>{const pt=passiveRate/20;setCoins(c=>c+pt);setTotalEarned(t=>t+pt);},50);
+    return()=>clearInterval(id);
+  },[screen,upgrades]);
+
+  useEffect(()=>{
     if(activeTab!=="play"||screen!=="game"||!char)return;
-    const regenBonus=(upgrades["energy_reg"]||0)*0.5+(upgrades["energy_reg2"]||0)*1+(upgrades["energy_reg3"]||0)*2;
+    const regenBonus=(upgrades["energy_reg"]||0)*0.5+(upgrades["energy_reg2"]||0)*1+(upgrades["energy_reg3"]||0)*2+(upgrades["energy_reg4"]||0)*4+(upgrades["energy_reg5"]||0)*8+upgradeEffectTotal(upgrades,"energyRegen");
     const r=(char.energyRegen+regenBonus)*(specialActive&&char.id==="bonk"?999:1);
     const id=setInterval(()=>setEnergy(e=>Math.min(maxEnergy,e+r*0.05)),50);
     return()=>clearInterval(id);
@@ -2053,18 +2147,18 @@ export default function TapGame() {
     else if("clientX" in e){tx=(e as React.MouseEvent).clientX;ty=(e as React.MouseEvent).clientY;}
     if(energy<=0)return;
 
-    const tapPow=(upgrades["tap_power"]||0)*1+(upgrades["tap_pow2"]||0)*3+(upgrades["tap_pow3"]||0)*8+(upgrades["tap_pow4"]||0)*20+(upgrades["tap_pow5"]||0)*60+(upgrades["tap_pow6"]||0)*200+(upgrades["tap_pow7"]||0)*600+(upgrades["tap_pow8"]||0)*2000+(upgrades["tap_pow9"]||0)*8000;
-    const chainBonus=1+(upgrades["tap_chain"]||0)*1+(upgrades["tap_chain2"]||0)*2+(upgrades["tap_chain3"]||0)*5;
-    const multiTap=(1+(upgrades["multi_tap"]||0)*1+(upgrades["multi_tap2"]||0)*0.5+(upgrades["multi_tap3"]||0)*1+(upgrades["multi_tap4"]||0)*2+(upgrades["multi_tap5"]||0)*3+(upgrades["multi_tap6"]||0)*5+(upgrades["multi_tap7"]||0)*10)*chainBonus;
-    const critChance=Math.min(0.95,((upgrades["crit_chance"]||0)+(upgrades["crit_chan2"]||0)+(upgrades["crit_chan3"]||0)+(upgrades["crit_chan4"]||0)+(upgrades["crit_chan5"]||0))*0.1);
-    const critMult=(upgrades["crit_pow5"]?100:upgrades["crit_pow4"]?50:upgrades["crit_pow3"]?25:upgrades["crit_pow2"]?15:upgrades["crit_pow"]?8:5)*(1+(upgrades["crit_aura"]||0)*0.25+(upgrades["crit_aura2"]||0)*0.75);
+    const tapPow=(upgrades["tap_power"]||0)*1+(upgrades["tap_pow2"]||0)*3+(upgrades["tap_pow3"]||0)*8+(upgrades["tap_pow4"]||0)*20+(upgrades["tap_pow5"]||0)*60+(upgrades["tap_pow6"]||0)*200+(upgrades["tap_pow7"]||0)*600+(upgrades["tap_pow8"]||0)*2000+(upgrades["tap_pow9"]||0)*8000+upgradeEffectTotal(upgrades,"tapFlat");
+    const chainBonus=1+(upgrades["tap_chain"]||0)*1+(upgrades["tap_chain2"]||0)*2+(upgrades["tap_chain3"]||0)*5+upgradeEffectTotal(upgrades,"chainBonus");
+    const multiTap=(1+(upgrades["multi_tap"]||0)*1+(upgrades["multi_tap2"]||0)*0.5+(upgrades["multi_tap3"]||0)*1+(upgrades["multi_tap4"]||0)*2+(upgrades["multi_tap5"]||0)*3+(upgrades["multi_tap6"]||0)*5+(upgrades["multi_tap7"]||0)*10+upgradeEffectTotal(upgrades,"tapMult"))*chainBonus;
+    const critChance=Math.min(0.95,((upgrades["crit_chance"]||0)+(upgrades["crit_chan2"]||0)+(upgrades["crit_chan3"]||0)+(upgrades["crit_chan4"]||0)+(upgrades["crit_chan5"]||0))*0.1+upgradeEffectTotal(upgrades,"critChance"));
+    const critMult=(upgrades["crit_pow5"]?100:upgrades["crit_pow4"]?50:upgrades["crit_pow3"]?25:upgrades["crit_pow2"]?15:upgrades["crit_pow"]?8:5)*(1+(upgrades["crit_aura"]||0)*0.25+(upgrades["crit_aura2"]||0)*0.75+upgradeEffectTotal(upgrades,"critMultScale"));
     // Coin aura from multiple upgrade categories stacked
     const degenMult=1+(upgrades["degen_lore"]||0)*0.05+(upgrades["degen_lore2"]||0)*0.15+(upgrades["degen_lore3"]||0)*0.35+(upgrades["degen_lore4"]||0)*0.80+(upgrades["degen_lore5"]||0)*2.0+(upgrades["ngmi_tax"]||0)*0.10+(upgrades["wagmi_boost"]||0)*0.20+(upgrades["ape_in"]||0)*0.15+(upgrades["ape_in2"]||0)*0.40+(upgrades["diamond_hands"]||0)*0.25+(upgrades["diamond_hands2"]||0)*0.60+(upgrades["hype_train"]||0)*0.30+(upgrades["degen_grind"]||0)*0.20+(upgrades["degen_grind2"]||0)*0.50+(upgrades["alpha_call"]||0)*0.25+(upgrades["alpha_call2"]||0)*0.75+(upgrades["nft_flex"]||0)*0.20+(upgrades["whitelist"]||0)*0.15;
     const memeMult=1+(upgrades["meme_1"]||0)*0.10+(upgrades["meme_2"]||0)*0.12+(upgrades["meme_3"]||0)*0.15+(upgrades["meme_4"]||0)*0.18+(upgrades["meme_5"]||0)*0.12+(upgrades["meme_6"]||0)*0.20+(upgrades["meme_7"]||0)*0.30+(upgrades["meme_8"]||0)*0.50+(upgrades["meme_combo"]||0)*0.25+(upgrades["meme_legend"]||0)*1.0+(upgrades["viral_tap"]||0)*0.20+(upgrades["viral_tap2"]||0)*0.50+(upgrades["rug_pull"]||0)*0.15+(upgrades["pump_it"]||0)*0.35+(upgrades["to_da_moon"]||0)*0.60;
     const towerMult=1+(upgrades["tower_1"]||0)*0.05+(upgrades["tower_2"]||0)*0.12+(upgrades["tower_3"]||0)*0.25+(upgrades["tower_4"]||0)*0.50+(upgrades["tower_5"]||0)*1.0+(upgrades["tower_6"]||0)*2.0+(upgrades["tower_7"]||0)*5.0+(upgrades["tower_8"]||0)*15.0+(upgrades["tower_guard"]||0)*0.08+(upgrades["tower_lord"]||0)*0.50;
     const prestigeMult=1+(upgrades["prestige_tap"]||0)*0.20+(upgrades["prestige_tap2"]||0)*0.50+(upgrades["prestige_tap3"]||0)*1.0+(upgrades["prestige_all"]||0)*0.25+(upgrades["prestige_all2"]||0)*0.75+(upgrades["prestige_all3"]||0)*2.0+(upgrades["prestige_all4"]||0)*5.0;
     const galaxyMult=(upgrades["galaxy_3"]?5:upgrades["galaxy_2"]?3:upgrades["galaxy_1"]?2:1)*(1+(upgrades["big_bang"]||0)*0.5+(upgrades["dark_energy"]||0)*1.0+(upgrades["galaxy_forge"]?10:0));
-    const coinAura=(1+((upgrades["coin_aura"]||0)*0.5)+((upgrades["coin_aura2"]||0)*1.0)+((upgrades["coin_aura3"]||0)*2.5)+((upgrades["coin_aura4"]||0)*10.0)+(upgrades["lucky_str2"]||0)*0.10+(upgrades["lucky_str3"]||0)*0.15+(upgrades["lucky_str4"]||0)*0.25+(upgrades["double_coins"]||0)*0.25+(upgrades["triple_coins"]||0)*0.10+(upgrades["rainbow_tap"]||0)*0.20+(upgrades["moon_shot"]||0)*0.10)*degenMult*memeMult*towerMult*prestigeMult*galaxyMult;
+    const coinAura=(1+((upgrades["coin_aura"]||0)*0.5)+((upgrades["coin_aura2"]||0)*1.0)+((upgrades["coin_aura3"]||0)*2.5)+((upgrades["coin_aura4"]||0)*10.0)+(upgrades["lucky_str2"]||0)*0.10+(upgrades["lucky_str3"]||0)*0.15+(upgrades["lucky_str4"]||0)*0.25+(upgrades["double_coins"]||0)*0.25+(upgrades["triple_coins"]||0)*0.10+(upgrades["rainbow_tap"]||0)*0.20+(upgrades["moon_shot"]||0)*0.10+upgradeEffectTotal(upgrades,"allIncomeMult"))*degenMult*memeMult*towerMult*prestigeMult*galaxyMult;
     const tapBase=(char.baseCoins+tapPow)*multiTap*coinAura;
     const specMult=specialActive?char.specialMultiplier:1;
     const isCrit=Math.random()<critChance;
@@ -2103,12 +2197,12 @@ export default function TapGame() {
     },0);
     const ec=specialActive&&char.id==="bonk"?0:1;
     setEnergy(e=>Math.max(0,e-ec));
-    const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1+(upgrades["combo_spd4"]||0)*2+(upgrades["combo_spd5"]||0)*5;
+    const cspeed=1+(upgrades["combo_speed"]||0)*0.2+(upgrades["combo_spd2"]||0)*0.5+(upgrades["combo_spd3"]||0)*1+(upgrades["combo_spd4"]||0)*2+(upgrades["combo_spd5"]||0)*5+upgradeEffectTotal(upgrades,"comboSpeed");
     const gcBonus=char.id==="gigachad"?2:1;
-    const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30+(upgrades["combo_max4"]||0)*60+(upgrades["combo_max5"]||0)*120+(upgrades["combo_max6"]||0)*300;
+    const maxCombo=char.comboMax+(upgrades["combo_max"]||0)*5+(upgrades["combo_max2"]||0)*15+(upgrades["combo_max3"]||0)*30+(upgrades["combo_max4"]||0)*60+(upgrades["combo_max5"]||0)*120+(upgrades["combo_max6"]||0)*300+upgradeEffectTotal(upgrades,"comboMax");
     setCombo(c=>Math.min(maxCombo,c+0.3*cspeed*gcBonus));
     setComboTimer(0.8);
-    const spCharge=2+(upgrades["special_cd"]||0)*1+(upgrades["special_cd2"]||0)*2+(upgrades["special_cd3"]||0)*4+(upgrades["special_cd4"]||0)*8+(upgrades["special_cd5"]||0)*16+(upgrades["special_cd6"]||0)*40;
+    const spCharge=2+(upgrades["special_cd"]||0)*1+(upgrades["special_cd2"]||0)*2+(upgrades["special_cd3"]||0)*4+(upgrades["special_cd4"]||0)*8+(upgrades["special_cd5"]||0)*16+(upgrades["special_cd6"]||0)*40+upgradeEffectTotal(upgrades,"specialCharge");
     setSpecialCharge(s=>Math.min(100,s+spCharge));
     setCharPulse(true);setTimeout(()=>setCharPulse(false),90);
     if(earned>tapBase*5){setShaking(true);setTimeout(()=>setShaking(false),180);}
@@ -2116,7 +2210,7 @@ export default function TapGame() {
 
   const launchSpecial=useCallback(()=>{
     if(!char||specialCharge<100||specialActive)return;
-    setSpecialActive(true);setSpecialCharge(0);setSpecialTimer(char.specialDuration);
+    setSpecialActive(true);setSpecialCharge(0);setSpecialTimer(char.specialDuration*(1+upgradeEffectTotal(upgrades,"specialPower")*0.15));
     if(char.id==="gigachad")setCombo(char.comboMax);
     for(let i=0;i<14;i++)setTimeout(()=>spawn(window.innerWidth/2+(Math.random()-0.5)*300,window.innerHeight/2+(Math.random()-0.5)*260,["💥","⚡","🔥","✨","💫","🚀","💎","🌙","🎯","👑","🌟","🎆"][Math.floor(Math.random()*12)],char.color,true),i*50);
   },[char,specialCharge,specialActive,spawn]);
@@ -2127,9 +2221,9 @@ export default function TapGame() {
     if(coins<cost)return;
     setCoins(c=>c-cost);
     setUpgrades(u=>({...u,[id]:(u[id]||0)+1}));
-    if(id==="energy_max"||id==="energy_max2"||id==="energy_max3"||id==="energy_max4"||id==="energy_max5"||id==="energy_max6"){
+    {
       const nu={...upgrades,[id]:(upgrades[id]||0)+1};
-      setMaxEnergy(1000+(nu["energy_max"]||0)*200+(nu["energy_max2"]||0)*500+(nu["energy_max3"]||0)*1000+(nu["energy_max4"]||0)*2000+(nu["energy_max5"]||0)*5000+(nu["energy_max6"]||0)*15000);
+      setMaxEnergy(1000+(nu["energy_max"]||0)*200+(nu["energy_max2"]||0)*500+(nu["energy_max3"]||0)*1000+(nu["energy_max4"]||0)*2000+(nu["energy_max5"]||0)*5000+(nu["energy_max6"]||0)*15000+upgradeEffectTotal(nu,"maxEnergy"));
     }
     showToast(`${u.emoji} ${u.name} Lv.${lv+1}!`);
   },[coins,upgrades]);
