@@ -1138,6 +1138,7 @@ function ReferralCard({playerId,onClaim}:{playerId:string;onClaim:(reward:number
 function ProfileTab({playerId,username,avatar,avatarUrl,solWallet,charId,totalEarned,totalTaps,coins,level,rank,nextRank,upgrades,achievCount,onOpenSettings,onClaimRef,onAscend}:{playerId:string;username:string;avatar:string;avatarUrl?:string;solWallet:string;charId:string|null;totalEarned:number;totalTaps:number;coins:number;level:number;rank:ReturnType<typeof getRankFromLevel>;nextRank:ReturnType<typeof getNextRank>;upgrades:Record<string,number>;achievCount:number;onOpenSettings:()=>void;onClaimRef:(reward:number,count:number)=>void;onAscend:()=>void;}){
   const mp=useMemo(()=>loadMpProfileStats(playerId),[playerId]);
   const stars=upgrades["prestige_stars"]||0;
+  const isChamp=(upgrades["badge_tour_champ"]||0)>0;
   const canAscend=totalEarned>=100_000_000;
   const ascendGain=Math.max(1,Math.floor(Math.sqrt(totalEarned/100_000_000)));
   const [confirmAscend,setConfirmAscend]=useState(false);
@@ -1150,7 +1151,7 @@ function ProfileTab({playerId,username,avatar,avatarUrl,solWallet,charId,totalEa
     {label:"PvP Wins",value:fmt(mp.wins),color:"#f87171"},
     {label:"Ladder",value:fmt(mp.ladder),color:"#f5c842"},
   ];
-  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{background:"linear-gradient(160deg,rgba(168,85,247,0.18),rgba(96,165,250,0.08) 60%,rgba(255,255,255,0.02))",border:"1px solid rgba(168,85,247,0.22)",borderRadius:28,padding:"18px 18px 20px",boxShadow:"0 20px 50px rgba(0,0,0,0.32)"}}><div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}><div style={{width:78,height:78,borderRadius:"50%",overflow:"hidden",background:"radial-gradient(circle at 50% 30%,rgba(168,85,247,0.25),rgba(6,0,15,0.95))",border:"2px solid rgba(192,132,252,0.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,boxShadow:"0 0 30px rgba(168,85,247,0.25)"}}>{avatarUrl?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span>{avatar||"🐸"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:4}}>Player Profile</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</div><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:8}}><span style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:999,padding:"5px 10px",color:rank.color,fontWeight:900,fontSize:11}}>{rank.emoji} {rank.name}</span><span style={{background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.18)",borderRadius:999,padding:"5px 10px",color:"#7ef2b1",fontWeight:800,fontSize:11}}>Level {level}</span><span style={{background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.18)",borderRadius:999,padding:"5px 10px",color:"#93c5fd",fontWeight:800,fontSize:11}}>{achievCount} achievements</span></div></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:12}}><div style={{color:"#7f6c97",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Equipped Fighter</div><div style={{color:"#fff",fontWeight:900,fontSize:15}}>{fighter?`${fighter.emoji} ${fighter.name}`:"No fighter selected"}</div><div style={{color:"#8f7ca7",fontSize:11,marginTop:4}}>{fighter?.ability||"Choose a legend in Play"}</div></div><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:12}}><div style={{color:"#7f6c97",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Wallet</div><div style={{color:"#22d67a",fontWeight:900,fontSize:14,wordBreak:"break-all"}}>{maskWallet(solWallet)}</div><div style={{color:"#8f7ca7",fontSize:11,marginTop:4}}>Admin shows email + username. App shows username only.</div></div></div><div style={{height:10,background:"rgba(255,255,255,0.05)",borderRadius:999,overflow:"hidden",marginBottom:8,border:"1px solid rgba(255,255,255,0.04)"}}><div style={{height:"100%",width:`${Math.min(100,(level%10)*10)}%`,background:`linear-gradient(90deg,${rank.color}77,${rank.color})`,boxShadow:`0 0 16px ${rank.color}66`}}/></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{color:"#8f7ca7",fontSize:11}}>Current rank: {rank.name}</span><span style={{color:nextRank?.color||"#8f7ca7",fontSize:11}}>Next: {nextRank?`${nextRank.emoji} ${nextRank.name}`:"MAX"}</span></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{stats.map(s=><div key={s.label} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:16,padding:"12px 10px"}}><div style={{color:s.color,fontWeight:900,fontSize:17}}>{s.value}</div><div style={{color:"#7f6c97",fontSize:10.5,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>{s.label}</div></div>)}</div></div><div style={{display:"grid",gap:12,marginTop:14}}>
+  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{background:isChamp?"linear-gradient(160deg,rgba(245,200,66,0.22),rgba(245,158,11,0.08) 60%,rgba(255,255,255,0.02))":"linear-gradient(160deg,rgba(168,85,247,0.18),rgba(96,165,250,0.08) 60%,rgba(255,255,255,0.02))",border:isChamp?"1.5px solid rgba(245,200,66,0.5)":"1px solid rgba(168,85,247,0.22)",borderRadius:28,padding:"18px 18px 20px",boxShadow:isChamp?"0 20px 50px rgba(0,0,0,0.32), 0 0 40px rgba(245,200,66,0.18)":"0 20px 50px rgba(0,0,0,0.32)"}}><div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}><div style={{width:78,height:78,borderRadius:"50%",overflow:"hidden",background:"radial-gradient(circle at 50% 30%,rgba(168,85,247,0.25),rgba(6,0,15,0.95))",border:"2px solid rgba(192,132,252,0.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,boxShadow:"0 0 30px rgba(168,85,247,0.25)"}}>{avatarUrl?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span>{avatar||"🐸"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:4}}>Player Profile</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</div><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:8}}><span style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:999,padding:"5px 10px",color:rank.color,fontWeight:900,fontSize:11}}>{rank.emoji} {rank.name}</span><span style={{background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.18)",borderRadius:999,padding:"5px 10px",color:"#7ef2b1",fontWeight:800,fontSize:11}}>Level {level}</span>{isChamp&&<span style={{background:"rgba(245,200,66,0.12)",border:"1px solid rgba(245,200,66,0.4)",borderRadius:999,padding:"5px 10px",color:"#f5c842",fontWeight:900,fontSize:11,boxShadow:"0 0 14px rgba(245,200,66,0.3)"}}>👑 Champion</span>}<span style={{background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.18)",borderRadius:999,padding:"5px 10px",color:"#93c5fd",fontWeight:800,fontSize:11}}>{achievCount} achievements</span></div></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:12}}><div style={{color:"#7f6c97",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Equipped Fighter</div><div style={{color:"#fff",fontWeight:900,fontSize:15}}>{fighter?`${fighter.emoji} ${fighter.name}`:"No fighter selected"}</div><div style={{color:"#8f7ca7",fontSize:11,marginTop:4}}>{fighter?.ability||"Choose a legend in Play"}</div></div><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:12}}><div style={{color:"#7f6c97",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Wallet</div><div style={{color:"#22d67a",fontWeight:900,fontSize:14,wordBreak:"break-all"}}>{maskWallet(solWallet)}</div><div style={{color:"#8f7ca7",fontSize:11,marginTop:4}}>Admin shows email + username. App shows username only.</div></div></div><div style={{height:10,background:"rgba(255,255,255,0.05)",borderRadius:999,overflow:"hidden",marginBottom:8,border:"1px solid rgba(255,255,255,0.04)"}}><div style={{height:"100%",width:`${Math.min(100,(level%10)*10)}%`,background:`linear-gradient(90deg,${rank.color}77,${rank.color})`,boxShadow:`0 0 16px ${rank.color}66`}}/></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{color:"#8f7ca7",fontSize:11}}>Current rank: {rank.name}</span><span style={{color:nextRank?.color||"#8f7ca7",fontSize:11}}>Next: {nextRank?`${nextRank.emoji} ${nextRank.name}`:"MAX"}</span></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{stats.map(s=><div key={s.label} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:16,padding:"12px 10px"}}><div style={{color:s.color,fontWeight:900,fontSize:17}}>{s.value}</div><div style={{color:"#7f6c97",fontSize:10.5,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>{s.label}</div></div>)}</div></div><div style={{display:"grid",gap:12,marginTop:14}}>
   {/* Ascension / prestige card */}
   <div style={{background:canAscend?"linear-gradient(135deg,rgba(245,200,66,0.12),rgba(168,85,247,0.08))":"rgba(255,255,255,0.03)",border:`1px solid ${canAscend?"rgba(245,200,66,0.35)":"rgba(255,255,255,0.06)"}`,borderRadius:20,padding:14,boxShadow:canAscend?"0 0 30px rgba(245,200,66,0.12)":"none"}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
@@ -1173,6 +1174,19 @@ function ProfileTab({playerId,username,avatar,avatarUrl,solWallet,charId,totalEa
       </div>
     )}
   </div>
+  {TOUR_BADGES.some(b=>(upgrades[b.key]||0)>0)&&(
+    <div style={{background:"linear-gradient(135deg,rgba(245,200,66,0.10),rgba(168,85,247,0.05))",border:"1px solid rgba(245,200,66,0.25)",borderRadius:20,padding:14}}>
+      <div style={{color:"#fff",fontWeight:900,marginBottom:10}}>🎖 Tournament badges</div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        {TOUR_BADGES.filter(b=>(upgrades[b.key]||0)>0).map(b=>(
+          <span key={b.key} style={{display:"inline-flex",alignItems:"center",gap:6,background:`${b.color}1a`,border:`1px solid ${b.color}55`,borderRadius:999,color:b.color,fontSize:11.5,fontWeight:900,padding:"6px 12px",boxShadow:`0 0 14px ${b.color}33`}}>
+            {b.emoji} {b.label}{(upgrades[b.key]||0)>1&&` ×${upgrades[b.key]}`}
+          </span>
+        ))}
+      </div>
+      {(upgrades["badge_tour_champ"]||0)>0&&<div style={{marginTop:10,color:"#f5c842",fontSize:11,fontWeight:800}}>✨ GOLD champion theme active — your profile glows gold</div>}
+    </div>
+  )}
   <ReferralCard playerId={playerId} onClaim={onClaimRef}/><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}><div style={{color:"#fff",fontWeight:900,marginBottom:8}}>PvP snapshot</div><div style={{color:"#a794c3",fontSize:11.5,lineHeight:1.65}}>Wins: <b style={{color:'#fff'}}>{mp.wins}</b> · Losses: <b style={{color:'#fff'}}>{mp.losses}</b> · Draws: <b style={{color:'#fff'}}>{mp.draws}</b><br/>Best streak: <b style={{color:'#fff'}}>{mp.bestStreak}</b> · MMR: <b style={{color:'#fff'}}>{mp.mmr}</b> · Season points: <b style={{color:'#fff'}}>{mp.seasonPoints}</b></div></div><button onClick={onOpenSettings} className="press-fx" style={{background:"linear-gradient(135deg,rgba(168,85,247,0.92),rgba(96,165,250,0.75))",border:"1px solid rgba(255,255,255,0.12)",borderRadius:18,color:"#fff",fontWeight:900,fontSize:14,padding:"14px 16px",cursor:"pointer",boxShadow:"0 12px 26px rgba(96,165,250,0.18)"}}>Customize profile</button></div></div></div>;
 }
 
@@ -1262,11 +1276,25 @@ function DailyStreakCard({playerId,level,onClaim}:{playerId:string;level:number;
 // ─── TOURNAMENTS + CLANS ─────────────────────────────────────────────────────
 function weekId(d=new Date()){const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));const dayNum=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dayNum+3);const firstThu=new Date(Date.UTC(t.getUTCFullYear(),0,4));const wk=1+Math.round(((t.getTime()-firstThu.getTime())/86400000-3+((firstThu.getUTCDay()+6)%7))/7);return `${t.getUTCFullYear()}-W${wk}`;}
 function prevWeekId(){return weekId(new Date(Date.now()-7*86400000));}
-const TOUR_PRIZES=[5_000_000,2_500_000,1_000_000];
+const TOUR_PRIZES=[100_000_000,25_000_000,10_000_000];
+const TOUR_BADGES=[
+  {key:"badge_tour_champ",label:"Tournament Champion",emoji:"👑",color:"#f5c842",extra:"Exclusive GOLD theme unlocked"},
+  {key:"badge_tour_silver",label:"Tournament Silver",emoji:"🥈",color:"#e2e8f0",extra:""},
+  {key:"badge_tour_bronze",label:"Tournament Bronze",emoji:"🥉",color:"#f59e0b",extra:""},
+];
 type TourRow={id:string;player_id:string;data:{week:string;score:number;username:string;charId?:string}};
-type ClanRow={id:string;data:{name:string;tag:string;leader:string;members:string[];created:string}};
+type ClanRow={id:string;data:{name:string;tag:string;leader:string;members:string[];created:string;motto?:string}};
+const CLAN_TIERS=[
+  {min:0,name:"Street Crew",emoji:"🪨",color:"#9ca3af"},
+  {min:10_000_000,name:"Block Gang",emoji:"🥉",color:"#f59e0b"},
+  {min:100_000_000,name:"Tower Syndicate",emoji:"🥈",color:"#e2e8f0"},
+  {min:1_000_000_000,name:"Degen Cartel",emoji:"🥇",color:"#f5c842"},
+  {min:10_000_000_000,name:"Whale Dynasty",emoji:"🐋",color:"#60a5fa"},
+  {min:100_000_000_000,name:"Moon Empire",emoji:"🌕",color:"#c084fc"},
+];
+const clanTier=(power:number)=>{let t=CLAN_TIERS[0];for(const c of CLAN_TIERS)if(power>=c.min)t=c;return t;};
 
-function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:string;username:string;charId:string|null;totalEarned:number;onReward:(coins:number,label:string)=>void;}){
+function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:string;username:string;charId:string|null;totalEarned:number;onReward:(coins:number,label:string,badgeKey?:string)=>void;}){
   const [sub,setSub]=useState<"tournament"|"clans">("tournament");
   const wk=weekId();
   const joinKey=`degen_tour_${playerId}_${wk}`;
@@ -1276,6 +1304,9 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
   const [prizeState,setPrizeState]=useState<{rank:number;prize:number}|null>(null);
   const [clans,setClans]=useState<ClanRow[]>([]);
   const [clanScores,setClanScores]=useState<Record<string,number>>({});
+  const [clanWar,setClanWar]=useState<Record<string,number>>({});
+  const [memberScores,setMemberScores]=useState<Record<string,number>>({});
+  const [memberNames,setMemberNames]=useState<Record<string,string>>({});
   const [myClan,setMyClan]=useState<ClanRow|null>(null);
   const [loadingC,setLoadingC]=useState(true);
   const [cName,setCName]=useState("");const [cTag,setCTag]=useState("");
@@ -1349,7 +1380,8 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
   const claimPrize=()=>{
     if(!prizeState)return;
     try{localStorage.setItem(`degen_tour_claim_${playerId}_${prevWeekId()}`,"1");}catch{}
-    onReward(prizeState.prize,`🏆 Tournament rank #${prizeState.rank} prize`);
+    const badge=TOUR_BADGES[prizeState.rank-1];
+    onReward(prizeState.prize,`🏆 Tournament rank #${prizeState.rank} prize`,badge?.key);
     setPrizeState(null);
   };
 
@@ -1366,11 +1398,21 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
       // clan power = sum of member total_score
       const allMembers=Array.from(new Set(rows.flatMap(c=>c.data?.members||[]))).slice(0,200);
       if(allMembers.length){
-        const {data:pl}=await supabase.from("dt_players").select("wallet_address,total_score").in("wallet_address",allMembers);
-        const scoreOf:Record<string,number>={};(pl||[]).forEach((p:{wallet_address:string;total_score:number})=>{scoreOf[p.wallet_address]=Number(p.total_score)||0;});
+        const {data:pl}=await supabase.from("dt_players").select("wallet_address,username,total_score").in("wallet_address",allMembers);
+        const scoreOf:Record<string,number>={};const nameOf:Record<string,string>={};
+        (pl||[]).forEach((p:{wallet_address:string;username:string;total_score:number})=>{scoreOf[p.wallet_address]=Number(p.total_score)||0;nameOf[p.wallet_address]=p.username||"anon";});
         const cs:Record<string,number>={};rows.forEach(c=>{cs[c.id]=(c.data?.members||[]).reduce((s,m)=>s+(scoreOf[m]||0),0);});
-        setClanScores(cs);
+        setClanScores(cs);setMemberScores(scoreOf);setMemberNames(nameOf);
       }
+      // clan war: sum of member tournament scores this week
+      try{
+        const {data:tw}=await supabase.from("dt_security_events").select("player_id,data")
+          .eq("event_type","tournament").eq("data->>week",weekId()).limit(200);
+        const warOf:Record<string,number>={};
+        ((tw||[]) as {player_id:string;data:{score?:number}}[]).forEach(r=>{warOf[r.player_id]=Math.max(warOf[r.player_id]||0,r.data?.score||0);});
+        const cw:Record<string,number>={};rows.forEach(c=>{cw[c.id]=(c.data?.members||[]).reduce((s,m)=>s+(warOf[m]||0),0);});
+        setClanWar(cw);
+      }catch{}
     }catch{}
     setLoadingC(false);
   },[playerId]);
@@ -1435,7 +1477,7 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
             {prizeState&&(
               <div className="shine-card" style={{background:"linear-gradient(135deg,rgba(245,200,66,0.16),rgba(168,85,247,0.08))",border:"1.5px solid rgba(245,200,66,0.45)",borderRadius:20,padding:14,boxShadow:"0 0 36px rgba(245,200,66,0.18)"}}>
                 <div style={{color:"#fff",fontWeight:900,marginBottom:4}}>🏆 You placed {medal(prizeState.rank-1)} last week!</div>
-                <div style={{color:"#a794c3",fontSize:11.5,marginBottom:10}}>Prize: <b style={{color:"#f5c842"}}>+{fmt(prizeState.prize)} coins</b></div>
+                <div style={{color:"#a794c3",fontSize:11.5,marginBottom:10}}>Prize: <b style={{color:"#f5c842"}}>+{fmt(prizeState.prize)} coins</b> + {TOUR_BADGES[prizeState.rank-1]?.emoji} <b style={{color:TOUR_BADGES[prizeState.rank-1]?.color}}>{TOUR_BADGES[prizeState.rank-1]?.label} badge</b>{prizeState.rank===1&&<> + <b style={{color:"#f5c842"}}>GOLD theme</b></>}</div>
                 <button onClick={claimPrize} className="press-fx" style={{width:"100%",background:"linear-gradient(135deg,#f5c842,#f59e0b)",border:"none",borderRadius:12,color:"#1a0f00",fontWeight:900,fontSize:13,padding:"12px 0",cursor:"pointer"}}>Claim prize</button>
               </div>
             )}
@@ -1446,7 +1488,10 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
                 <span style={{background:"rgba(168,85,247,0.14)",border:"1px solid rgba(168,85,247,0.3)",borderRadius:999,color:"#c084fc",fontSize:10.5,fontWeight:900,padding:"4px 10px"}}>{wk}</span>
               </div>
               <div style={{color:"#a794c3",fontSize:11.5,lineHeight:1.55,marginBottom:10}}>
-                Race everyone on <b style={{color:"#fff"}}>coins earned this week</b>. Resets Monday. Prizes: <b style={{color:"#f5c842"}}>🥇 {fmt(TOUR_PRIZES[0])}</b> · <b style={{color:"#e2e8f0"}}>🥈 {fmt(TOUR_PRIZES[1])}</b> · <b style={{color:"#f59e0b"}}>🥉 {fmt(TOUR_PRIZES[2])}</b>
+                Race everyone on <b style={{color:"#fff"}}>coins earned this week</b>. Resets Monday.
+                <span style={{display:"block",marginTop:6}}>🥇 <b style={{color:"#f5c842"}}>{fmt(TOUR_PRIZES[0])} coins + 👑 Champion badge + exclusive GOLD theme</b></span>
+                <span style={{display:"block"}}>🥈 <b style={{color:"#e2e8f0"}}>{fmt(TOUR_PRIZES[1])} coins + Silver badge</b></span>
+                <span style={{display:"block"}}>🥉 <b style={{color:"#f59e0b"}}>{fmt(TOUR_PRIZES[2])} coins + Bronze badge</b></span>
               </div>
               {!joined?(
                 <button onClick={joinTournament} disabled={busy} className="press-fx" style={{width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:12,color:"#fff",fontWeight:900,fontSize:13,padding:"13px 0",cursor:"pointer",boxShadow:"0 4px 20px rgba(168,85,247,0.35)"}}>{busy?"Joining…":"⚔️ Enter tournament — free"}</button>
@@ -1485,19 +1530,53 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
 
         {sub==="clans"&&(
           <div style={{display:"grid",gap:12}}>
-            {myClan?(
+            {myClan?(()=>{
+              const power=clanScores[myClan.id]||0;
+              const tier=clanTier(power);
+              const next=CLAN_TIERS[CLAN_TIERS.indexOf(tier)+1];
+              const warSorted=[...clans].sort((a,b)=>(clanWar[b.id]||0)-(clanWar[a.id]||0));
+              const warRank=warSorted.findIndex(c=>c.id===myClan.id)+1;
+              const roster=[...(myClan.data.members||[])].sort((a,b)=>(memberScores[b]||0)-(memberScores[a]||0));
+              const isLeader=myClan.data.leader===playerId;
+              return(
               <div className="shine-card" style={{background:"linear-gradient(135deg,rgba(34,214,122,0.10),rgba(96,165,250,0.05))",border:"1.5px solid rgba(34,214,122,0.3)",borderRadius:20,padding:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                   <span style={{fontSize:20}}>🛡️</span>
-                  <div style={{color:"#fff",fontWeight:900,flex:1}}>[{myClan.data.tag}] {myClan.data.name}</div>
-                  <span style={{background:"rgba(34,214,122,0.12)",border:"1px solid rgba(34,214,122,0.25)",borderRadius:999,color:"#7ef2b1",fontSize:10.5,fontWeight:900,padding:"4px 10px"}}>Your clan</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:"#fff",fontWeight:900,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>[{myClan.data.tag}] {myClan.data.name}</div>
+                    {myClan.data.motto&&<div style={{color:"#8f7ca7",fontSize:10.5,fontStyle:"italic"}}>&ldquo;{myClan.data.motto}&rdquo;</div>}
+                  </div>
+                  <span style={{background:`${tier.color}1a`,border:`1px solid ${tier.color}55`,borderRadius:999,color:tier.color,fontSize:10.5,fontWeight:900,padding:"4px 10px",whiteSpace:"nowrap"}}>{tier.emoji} {tier.name}</span>
                 </div>
-                <div style={{color:"#a794c3",fontSize:11.5,marginBottom:10}}>
-                  {myClan.data.members.length} member{myClan.data.members.length!==1?"s":""} · Power <b style={{color:"#f5c842"}}>{fmt(clanScores[myClan.id]||0)}</b>{myClan.data.leader===playerId&&" · 👑 You lead this clan"}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                  {[["Power",fmt(power),"#f5c842"],["War score",fmt(clanWar[myClan.id]||0),"#f87171"],["War rank",warRank>0?`#${warRank}`:"—","#c084fc"]].map(([l,v,c])=>(
+                    <div key={l as string} style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:12,padding:"8px 6px",textAlign:"center"}}>
+                      <div style={{color:"#8f7ca7",fontSize:9,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase"}}>{l}</div>
+                      <div style={{color:c as string,fontWeight:900,fontSize:14}}>{v}</div>
+                    </div>
+                  ))}
                 </div>
+                <div style={{background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.2)",borderRadius:12,padding:"9px 12px",color:"#7ef2b1",fontSize:11.5,fontWeight:800,marginBottom:10}}>⚡ Clan perk active: +10% coins on every tap</div>
+                {next&&<div style={{color:"#8f7ca7",fontSize:10.5,marginBottom:10}}>Next tier: {next.emoji} <b style={{color:next.color}}>{next.name}</b> at {fmt(next.min)} power ({Math.min(100,Math.floor(power/next.min*100))}%)</div>}
+                <div style={{color:"#fff",fontWeight:900,fontSize:12.5,marginBottom:8}}>Members ({roster.length})</div>
+                <div style={{display:"grid",gap:6,marginBottom:10,maxHeight:220,overflowY:"auto"}}>
+                  {roster.slice(0,30).map((m,i)=>(
+                    <div key={m} style={{display:"flex",alignItems:"center",gap:8,background:m===playerId?"rgba(168,85,247,0.1)":"rgba(255,255,255,0.02)",border:m===playerId?"1px solid rgba(168,85,247,0.3)":"1px solid rgba(255,255,255,0.04)",borderRadius:10,padding:"7px 10px"}}>
+                      <span style={{width:22,color:"#6d5a86",fontWeight:900,fontSize:11}}>#{i+1}</span>
+                      <span style={{flex:1,color:m===playerId?"#c084fc":"#fff",fontWeight:800,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m===myClan.data.leader&&"👑 "}{memberNames[m]||"anon"}{m===playerId&&" (you)"}</span>
+                      <span style={{color:"#f5c842",fontWeight:900,fontSize:11.5}}>{fmt(memberScores[m]||0)}</span>
+                    </div>
+                  ))}
+                </div>
+                {isLeader&&(
+                  <div style={{display:"flex",gap:8,marginBottom:10}}>
+                    <input value={cName} onChange={e=>setCName(e.target.value)} placeholder="Set clan motto…" maxLength={60} style={{flex:1,minWidth:0,background:"rgba(0,0,0,0.35)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,color:"#fff",fontSize:12,fontWeight:600,padding:"10px 12px",outline:"none"}}/>
+                    <button onClick={async()=>{const motto=cName.trim();if(!motto||busy)return;setBusy(true);try{const {supabase}=await import("@/lib/supabase");await supabase.from("dt_security_events").update({data:{...myClan.data,motto}}).eq("id",myClan.id);setCName("");await fetchClans();}catch{};setBusy(false);}} disabled={busy||!cName.trim()} className="press-fx" style={{background:"linear-gradient(135deg,#60a5fa,#a855f7)",border:"none",borderRadius:10,color:"#fff",fontWeight:900,fontSize:11.5,padding:"0 14px",cursor:"pointer"}}>Save</button>
+                  </div>
+                )}
                 <button onClick={leaveClan} disabled={busy} className="press-fx" style={{width:"100%",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:12,color:"#f87171",fontWeight:900,fontSize:12.5,padding:"11px 0",cursor:"pointer"}}>Leave clan</button>
               </div>
-            ):(
+              );})():(
               <div style={{background:"linear-gradient(135deg,rgba(96,165,250,0.08),rgba(168,85,247,0.05))",border:"1px solid rgba(96,165,250,0.22)",borderRadius:20,padding:14}}>
                 <div style={{color:"#fff",fontWeight:900,marginBottom:8}}>⚒️ Found a clan</div>
                 <div style={{display:"flex",gap:8,marginBottom:8}}>
@@ -1507,19 +1586,39 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
                 <button onClick={createClan} disabled={busy||cName.trim().length<3||cTag.trim().length<2} className="press-fx" style={{width:"100%",background:cName.trim().length>=3&&cTag.trim().length>=2?"linear-gradient(135deg,#60a5fa,#a855f7)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:cName.trim().length>=3&&cTag.trim().length>=2?"#fff":"#556",fontWeight:900,fontSize:13,padding:"12px 0",cursor:"pointer"}}>{busy?"Creating…":"Create clan"}</button>
               </div>
             )}
+            <div style={{background:"linear-gradient(135deg,rgba(248,113,113,0.08),rgba(168,85,247,0.05))",border:"1px solid rgba(248,113,113,0.22)",borderRadius:20,padding:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <span style={{fontSize:18}}>⚔️</span>
+                <div style={{color:"#fff",fontWeight:900,flex:1}}>Clan War — this week</div>
+                <span style={{background:"rgba(248,113,113,0.12)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:999,color:"#fca5a5",fontSize:10,fontWeight:900,padding:"4px 10px"}}>{wk}</span>
+              </div>
+              <div style={{color:"#a794c3",fontSize:11,lineHeight:1.5,marginBottom:10}}>Every member&apos;s tournament score counts for the clan. Get your whole clan into the tournament and stack war score.</div>
+              {(()=>{const ws=[...clans].sort((a,b)=>(clanWar[b.id]||0)-(clanWar[a.id]||0)).filter(c=>(clanWar[c.id]||0)>0).slice(0,10);
+                return ws.length===0?<div style={{color:"#8f7ca7",fontSize:12}}>No war scores yet — enter the tournament to put your clan on the board ⚔️</div>:
+                <div style={{display:"grid",gap:6}}>
+                  {ws.map((c,i)=>{const mine=myClan?.id===c.id;return(
+                    <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,background:mine?"rgba(248,113,113,0.1)":"rgba(255,255,255,0.02)",border:mine?"1px solid rgba(248,113,113,0.35)":"1px solid rgba(255,255,255,0.04)",borderRadius:12,padding:"8px 12px"}}>
+                      <span style={{width:28,fontWeight:900,fontSize:i<3?15:11,color:i<3?"#f5c842":"#6d5a86"}}>{medal(i)}</span>
+                      <span style={{flex:1,color:mine?"#fca5a5":"#fff",fontWeight:800,fontSize:12.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>[{c.data?.tag}] {c.data?.name}</span>
+                      <span style={{color:"#f87171",fontWeight:900,fontSize:12.5}}>{fmt(clanWar[c.id]||0)}</span>
+                    </div>);})}
+                </div>;})()}
+            </div>
             <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}>
-              <div style={{color:"#fff",fontWeight:900,marginBottom:10}}>Clan leaderboard</div>
+              <div style={{color:"#fff",fontWeight:900,marginBottom:4}}>Clan leaderboard</div>
+              <div style={{color:"#8f7ca7",fontSize:10.5,marginBottom:10}}>All clan members get a permanent <b style={{color:"#7ef2b1"}}>+10% tap income perk</b></div>
               {loadingC?<div style={{color:"#8f7ca7",fontSize:12}}>Loading…</div>:
                 sortedClans.length===0?<div style={{color:"#8f7ca7",fontSize:12}}>No clans yet — found the first one 🛡️</div>:
                 <div style={{display:"grid",gap:8}}>
                   {sortedClans.slice(0,25).map((c,i)=>{
                     const mine=myClan?.id===c.id;
+                    const tier=clanTier(clanScores[c.id]||0);
                     return(
                       <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,background:mine?"linear-gradient(135deg,rgba(34,214,122,0.1),rgba(96,165,250,0.04))":i<3?"rgba(245,200,66,0.05)":"rgba(255,255,255,0.02)",border:mine?"1px solid rgba(34,214,122,0.35)":"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"10px 12px"}}>
                         <span style={{width:30,fontWeight:900,fontSize:i<3?16:12,color:i<3?"#f5c842":"#6d5a86"}}>{medal(i)}</span>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{color:mine?"#7ef2b1":"#fff",fontWeight:800,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>[{c.data?.tag}] {c.data?.name}</div>
-                          <div style={{color:"#6d5a86",fontSize:10.5,fontWeight:600}}>{(c.data?.members||[]).length} members · Power {fmt(clanScores[c.id]||0)}</div>
+                          <div style={{color:mine?"#7ef2b1":"#fff",fontWeight:800,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tier.emoji} [{c.data?.tag}] {c.data?.name}</div>
+                          <div style={{color:"#6d5a86",fontSize:10.5,fontWeight:600}}><span style={{color:tier.color,fontWeight:800}}>{tier.name}</span> · {(c.data?.members||[]).length} members · Power {fmt(clanScores[c.id]||0)}</div>
                         </div>
                         {!myClan&&<button onClick={()=>joinClan(c)} disabled={busy} className="press-fx" style={{background:"linear-gradient(135deg,#22d67a,#16a34a)",border:"none",borderRadius:10,color:"#04210f",fontWeight:900,fontSize:11.5,padding:"8px 14px",cursor:"pointer",whiteSpace:"nowrap"}}>Join</button>}
                       </div>
@@ -2165,6 +2264,17 @@ export default function TapGame() {
   const [showModal,setShowModal]=useState(false);
   const [pendingChar,setPendingChar]=useState<string|null>(null);
   const [playerId,setPlayerId]=useState("");
+  const inClanRef=useRef(false);
+  useEffect(()=>{ // clan tap bonus check (+10% income while in a clan)
+    if(!playerId)return;
+    (async()=>{
+      try{
+        const {supabase}=await import("@/lib/supabase");
+        const {data}=await supabase.from("dt_security_events").select("data").eq("event_type","clan").eq("player_id","__clan__").limit(100);
+        inClanRef.current=((data||[]) as {data:{members?:string[]}}[]).some(c=>(c.data?.members||[]).includes(playerId));
+      }catch{}
+    })();
+  },[playerId]);
   const [username,setUsername]=useState("");
   const [solWallet,setSolWallet]=useState("");
   const [avatar,setAvatar]=useState("🐸");
@@ -2645,7 +2755,7 @@ export default function TapGame() {
     const towerMult=1+(upgrades["tower_1"]||0)*0.05+(upgrades["tower_2"]||0)*0.12+(upgrades["tower_3"]||0)*0.25+(upgrades["tower_4"]||0)*0.50+(upgrades["tower_5"]||0)*1.0+(upgrades["tower_6"]||0)*2.0+(upgrades["tower_7"]||0)*5.0+(upgrades["tower_8"]||0)*15.0+(upgrades["tower_guard"]||0)*0.08+(upgrades["tower_lord"]||0)*0.50;
     const prestigeMult=1+(upgrades["prestige_tap"]||0)*0.20+(upgrades["prestige_tap2"]||0)*0.50+(upgrades["prestige_tap3"]||0)*1.0+(upgrades["prestige_all"]||0)*0.25+(upgrades["prestige_all2"]||0)*0.75+(upgrades["prestige_all3"]||0)*2.0+(upgrades["prestige_all4"]||0)*5.0;
     const galaxyMult=(upgrades["galaxy_3"]?5:upgrades["galaxy_2"]?3:upgrades["galaxy_1"]?2:1)*(1+(upgrades["big_bang"]||0)*0.5+(upgrades["dark_energy"]||0)*1.0+(upgrades["galaxy_forge"]?10:0));
-    const ascendMult=1+(upgrades["prestige_stars"]||0)*0.5;
+    const ascendMult=(1+(upgrades["prestige_stars"]||0)*0.5)*(inClanRef.current?1.1:1);
     const coinAura=(1+((upgrades["coin_aura"]||0)*0.5)+((upgrades["coin_aura2"]||0)*1.0)+((upgrades["coin_aura3"]||0)*2.5)+((upgrades["coin_aura4"]||0)*10.0)+(upgrades["lucky_str2"]||0)*0.10+(upgrades["lucky_str3"]||0)*0.15+(upgrades["lucky_str4"]||0)*0.25+(upgrades["double_coins"]||0)*0.25+(upgrades["triple_coins"]||0)*0.10+(upgrades["rainbow_tap"]||0)*0.20+(upgrades["moon_shot"]||0)*0.10+upgradeEffectTotal(upgrades,"allIncomeMult"))*degenMult*memeMult*towerMult*prestigeMult*galaxyMult*ascendMult;
     const tapBase=(char.baseCoins+tapPow)*multiTap*coinAura;
     const specMult=specialActive?char.specialMultiplier:1;
@@ -2723,7 +2833,7 @@ export default function TapGame() {
     const gained=Math.max(1,Math.floor(Math.sqrt(earned/100_000_000)));
     setUpgrades(u=>{
       const kept:Record<string,number>={};
-      for(const[k,v]of Object.entries(u)){ if(k.startsWith("mp_")||k==="prestige_stars")kept[k]=v; }
+      for(const[k,v]of Object.entries(u)){ if(k.startsWith("mp_")||k.startsWith("badge_")||k==="prestige_stars")kept[k]=v; }
       kept["prestige_stars"]=(kept["prestige_stars"]||0)+gained;
       return kept;
     });
@@ -2922,7 +3032,7 @@ export default function TapGame() {
       {activeTab==="profile"&&<ProfileTab playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} solWallet={solWallet} charId={charId} totalEarned={totalEarned} totalTaps={totalTaps} coins={coins} level={level} rank={rank} nextRank={nextRank} upgrades={upgrades} achievCount={achievSet.size} onOpenSettings={()=>setActiveTab("settings")} onClaimRef={(reward,count)=>{setCoins(c=>c+reward); showToast(`🤝 +${fmt(reward)} coins from ${count} invite${count>1?"s":""}!`);}} onAscend={ascend}/>}
       {activeTab==="quests"&&<MissionsTab playerId={playerId} totalTaps={totalTaps} totalEarned={totalEarned} upgrades={upgrades} charId={charId} onClaim={(id,reward)=>{setCoins(c=>c+reward); showToast(`Mission cleared! +${fmt(reward)} coins`);}}/>}
       {activeTab==="achievements"&&<AchievementsTab achievSet={achievSet} totalTaps={totalTaps} coins={coins}/>}
-      {activeTab==="compete"&&<CompeteTab playerId={playerId} username={username} charId={charId} totalEarned={totalEarned} onReward={(coins,label)=>{setCoins(c=>c+coins); showToast(`${label}: +${fmt(coins)} coins!`);}}/>}
+      {activeTab==="compete"&&<CompeteTab playerId={playerId} username={username} charId={charId} totalEarned={totalEarned} onReward={(coins,label,badgeKey)=>{setCoins(c=>c+coins); if(badgeKey)setUpgrades(u=>({...u,[badgeKey]:(u[badgeKey]||0)+1})); showToast(`${label}: +${fmt(coins)} coins!${badgeKey?" 🎖 Badge unlocked!":""}`);}}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} liveTaps={totalTaps} liveEarned={totalEarned} liveUsername={username} liveAvatarUrl={avatarUrl} liveCharId={charId||"pepe"} key="lb"/>}
       {activeTab==="multi"&&<MultiplayerArena playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} charId={charId} coins={coins} onSpendCoins={spendCoinsExact}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
