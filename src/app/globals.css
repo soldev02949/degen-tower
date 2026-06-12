@@ -169,3 +169,154 @@ body {
   z-index: 0;
   overflow: hidden;
 }
+
+/* ════════════════════════════════════════════════════════════
+   ARCADE DESIGN SYSTEM v2 — Degen Tower premium UI
+   ════════════════════════════════════════════════════════════ */
+
+/* Character idle animations */
+@keyframes charFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+@keyframes charBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+@keyframes ringSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes ringSpinRev {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes sparkRise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-90px) scale(0.2); opacity: 0; }
+}
+@keyframes crownBob {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-5px) rotate(6deg); }
+}
+@keyframes podiumGlow {
+  0%, 100% { box-shadow: 0 0 24px rgba(245,200,66,0.25), 0 0 60px rgba(245,200,66,0.08); }
+  50% { box-shadow: 0 0 40px rgba(245,200,66,0.5), 0 0 90px rgba(245,200,66,0.18); }
+}
+@keyframes borderFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes neonFlicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.6; }
+  94% { opacity: 1; }
+  97% { opacity: 0.8; }
+  98% { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes popIn {
+  0% { transform: scale(0.85); opacity: 0; }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes livePing {
+  0% { transform: scale(1); opacity: 0.9; }
+  70% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes shineSweep {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(220%) skewX(-20deg); }
+}
+@keyframes gridScroll {
+  from { background-position: 0 0; }
+  to { background-position: 0 48px; }
+}
+@keyframes scanline {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100vh); }
+}
+@keyframes coinSpin {
+  0%, 100% { transform: rotateY(0deg); }
+  50% { transform: rotateY(180deg); }
+}
+@keyframes rainbowText {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+@keyframes tabPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@keyframes xpFill {
+  from { width: 0; }
+}
+@keyframes marqueeScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Utility classes */
+.char-idle { animation: charFloat 3.4s ease-in-out infinite; will-change: transform; }
+.char-breathe { animation: charBreathe 2.6s ease-in-out infinite; will-change: transform; }
+.anim-slideup { animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.anim-popin { animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+.neon-flicker { animation: neonFlicker 6s infinite; }
+
+/* Arcade grid floor overlay */
+.arcade-grid {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.9) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.9) 100%);
+  animation: gridScroll 4s linear infinite;
+}
+
+/* Shine sweep on cards */
+.shine-card { position: relative; overflow: hidden; }
+.shine-card::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  animation: shineSweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Animated gradient border (legendary items) */
+.legendary-border {
+  position: relative;
+  background-clip: padding-box;
+}
+.legendary-border::before {
+  content: ""; position: absolute; inset: -1.5px; border-radius: inherit; z-index: -1;
+  background: linear-gradient(90deg, #f5c842, #ff6b9d, #a855f7, #3b82f6, #f5c842);
+  background-size: 200% 100%;
+  animation: borderFlow 3s linear infinite;
+}
+
+/* Press feedback */
+.press-fx { transition: transform 0.1s ease, filter 0.15s ease; }
+.press-fx:active { transform: scale(0.95); filter: brightness(1.2); }
+
+/* Live dot with ping */
+.live-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #22d67a; flex-shrink: 0; }
+.live-dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: #22d67a; animation: livePing 1.8s cubic-bezier(0,0,0.2,1) infinite;
+}
+
+/* Spark particles around character stage */
+.spark { position: absolute; border-radius: 50%; pointer-events: none; animation: sparkRise 2.6s ease-out infinite; }
