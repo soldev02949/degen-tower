@@ -395,7 +395,7 @@ export default function AdminDashboard() {
 
   const TABS: {id:TabId;label:string;badge?:number}[] = [
     {id:"overview",   label:"📊 Overview"},
-    {id:"tasks",      label:"🗂 Tasks", badge:tasks.filter(t=>t.data?.status==="active").length},
+    {id:"tasks",      label:"🧭 Missions", badge:tasks.filter(t=>t.data?.status==="active").length},
     {id:"players",    label:"👥 Players"},
     {id:"flagged",    label:"🚨 Flagged", badge:flaggedCount},
     {id:"rewards",    label:"💰 Rewards", badge:pendingRewards},
@@ -565,8 +565,8 @@ export default function AdminDashboard() {
           <>
             <div style={{display:"flex",gap:10,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
               <div>
-                <h3 style={{color:"#fff",fontWeight:900,fontSize:16,margin:"0 0 2px"}}>🗂 Custom Tasks</h3>
-                <p style={{color:"#556",fontSize:12,margin:0}}>{tasks.length} total · {tasks.filter(t=>t.data?.status==="active").length} active</p>
+                <h3 style={{color:"#fff",fontWeight:900,fontSize:16,margin:"0 0 2px"}}>🧭 Player Missions</h3>
+                <p style={{color:"#556",fontSize:12,margin:0}}>{tasks.length} total · {tasks.filter(t=>t.data?.status==="active").length} active — active missions with a coin reward show in the in-game Missions tab and players claim coins directly</p>
               </div>
               <div style={{display:"flex",gap:6,marginLeft:"auto",alignItems:"center"}}>
                 {(["all","active","paused","done"] as const).map(f=>(
@@ -1135,8 +1135,8 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <div>
-                <label style={{color:"#667",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Reward (optional)</label>
-                <input value={taskForm.reward} onChange={e=>setTaskForm(f=>({...f,reward:e.target.value}))} placeholder="e.g. 50 USDC"
+                <label style={{color:"#667",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Coin reward (shows in game Missions tab)</label>
+                <input value={taskForm.reward} onChange={e=>setTaskForm(f=>({...f,reward:e.target.value}))} placeholder="coins, e.g. 250000"
                   style={{width:"100%",marginTop:4,background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"9px 12px",outline:"none",boxSizing:"border-box"}}/>
               </div>
               <div>
