@@ -798,7 +798,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
                   const price = Math.floor(u.cost * Math.pow(1.65, owned));
                   const can = coins >= price;
                   return (
-                    <button key={u.id} disabled={!can} onClick={() => void buyUpgrade(u.id)} className={can ? "press-fx" : ""} style={{ textAlign: "left", background: can ? `linear-gradient(135deg,rgba(168,85,247,0.14),rgba(168,85,247,0.05))` : "rgba(255,255,255,0.03)", border: `1px solid ${can ? "rgba(168,85,247,0.24)" : "rgba(255,255,255,0.06)"}`, borderRadius: 18, padding: 12, cursor: can ? "pointer" : "not-allowed", opacity: can ? 1 : 0.5 }}>
+                    <button key={u.id} onClick={() => void buyUpgrade(u.id)} className="press-fx" style={{ textAlign: "left", background: can ? `linear-gradient(135deg,rgba(168,85,247,0.14),rgba(168,85,247,0.05))` : "rgba(255,255,255,0.03)", border: `1px solid ${can ? "rgba(168,85,247,0.24)" : "rgba(255,255,255,0.06)"}`, borderRadius: 18, padding: 12, cursor: "pointer", opacity: can ? 1 : 0.72 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 5 }}>
                         <span style={{ color: "#fff", fontWeight: 900, fontSize: 12.5 }}>{u.emoji} {u.name}</span>
                         <span style={{ color: "#c084fc", fontWeight: 900, fontSize: 10.5 }}>Lv.{owned}</span>
