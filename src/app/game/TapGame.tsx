@@ -1273,6 +1273,76 @@ function DailyStreakCard({playerId,level,onClaim}:{playerId:string;level:number;
   );
 }
 
+// ─── LUCKY CHESTS ────────────────────────────────────────────────────────────
+type ChestResult={coins:number;boostMult?:number;boostMins?:number;jackpot?:boolean};
+const CHESTS=[
+  {id:"bronze",name:"Bronze Chest",emoji:"🥉",cost:50_000,color:"#f59e0b",desc:"Cheap gamble. Small stacks, 1% shot at 5M.",
+    roll:():ChestResult=>{const r=Math.random();
+      if(r<0.01)return{coins:5_000_000,jackpot:true};
+      if(r<0.10)return{coins:500_000};
+      if(r<0.40)return{coins:100_000+Math.floor(Math.random()*100_000)};
+      return{coins:20_000+Math.floor(Math.random()*60_000)};}},
+  {id:"gold",name:"Gold Chest",emoji:"🏆",cost:1_000_000,color:"#f5c842",desc:"Mid stakes. Can drop a 2× tap boost or 50M jackpot.",
+    roll:():ChestResult=>{const r=Math.random();
+      if(r<0.01)return{coins:50_000_000,jackpot:true};
+      if(r<0.05)return{coins:10_000_000};
+      if(r<0.15)return{coins:0,boostMult:2,boostMins:10};
+      if(r<0.45)return{coins:2_000_000+Math.floor(Math.random()*2_000_000)};
+      return{coins:400_000+Math.floor(Math.random()*1_200_000)};}},
+  {id:"degen",name:"Degen Chest",emoji:"💎",cost:25_000_000,color:"#c084fc",desc:"Full degen. 3× boosts, 250M drops, 1% at 1B.",
+    roll:():ChestResult=>{const r=Math.random();
+      if(r<0.01)return{coins:1_000_000_000,jackpot:true};
+      if(r<0.10)return{coins:250_000_000};
+      if(r<0.25)return{coins:0,boostMult:3,boostMins:15};
+      if(r<0.50)return{coins:50_000_000+Math.floor(Math.random()*50_000_000)};
+      return{coins:10_000_000+Math.floor(Math.random()*30_000_000)};}},
+];
+
+function LuckyChests({coins,boostMult,boostLeft,onOpen}:{coins:number;boostMult:number;boostLeft:number;onOpen:(cost:number,res:ChestResult)=>void;}){
+  const [opening,setOpening]=useState<string|null>(null);
+  const [result,setResult]=useState<{chest:typeof CHESTS[number];res:ChestResult}|null>(null);
+  const open=(c:typeof CHESTS[number])=>{
+    if(opening||coins<c.cost)return;
+    setOpening(c.id);setResult(null);
+    const res=c.roll();
+    onOpen(c.cost,res);
+    setTimeout(()=>{setOpening(null);setResult({chest:c,res});},900);
+  };
+  return(
+    <div style={{background:"linear-gradient(135deg,rgba(245,200,66,0.07),rgba(168,85,247,0.06))",border:"1px solid rgba(245,200,66,0.2)",borderRadius:22,padding:14,marginBottom:14}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+        <span style={{fontSize:20}}>🎰</span>
+        <div style={{color:"#fff",fontWeight:900,flex:1}}>Lucky Chests</div>
+        {boostMult>1&&boostLeft>0&&<span style={{background:"rgba(34,214,122,0.12)",border:"1px solid rgba(34,214,122,0.35)",borderRadius:999,color:"#7ef2b1",fontSize:10.5,fontWeight:900,padding:"4px 10px"}}>⚡ {boostMult}× boost · {Math.ceil(boostLeft/60)}m left</span>}
+      </div>
+      <div style={{color:"#8f7ca7",fontSize:11,marginBottom:12}}>Spend coins, hit jackpots up to <b style={{color:"#f5c842"}}>1B</b> or win temporary tap boosts.</div>
+      {result&&(
+        <div className="anim-slideup" style={{background:result.res.jackpot?"linear-gradient(135deg,rgba(245,200,66,0.2),rgba(248,113,113,0.1))":"rgba(0,0,0,0.3)",border:result.res.jackpot?"1.5px solid rgba(245,200,66,0.6)":"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"12px 14px",marginBottom:12,textAlign:"center",boxShadow:result.res.jackpot?"0 0 40px rgba(245,200,66,0.3)":"none"}}>
+          <div style={{fontSize:26,marginBottom:4}}>{result.res.jackpot?"🎉":result.res.boostMult?"⚡":"💰"}</div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:14}}>
+            {result.res.jackpot&&"JACKPOT! "}
+            {result.res.boostMult?`${result.res.boostMult}× tap boost for ${result.res.boostMins} min!`:`+${fmt(result.res.coins)} coins`}
+          </div>
+          <div style={{color:"#8f7ca7",fontSize:10.5,marginTop:2}}>{result.chest.emoji} {result.chest.name}</div>
+        </div>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {CHESTS.map(c=>{
+          const afford=coins>=c.cost;
+          return(
+            <button key={c.id} onClick={()=>open(c)} disabled={!afford||!!opening} className="press-fx"
+              style={{background:afford?`linear-gradient(160deg,${c.color}1f,rgba(0,0,0,0.25))`:"rgba(255,255,255,0.02)",border:`1px solid ${afford?c.color+"4d":"rgba(255,255,255,0.05)"}`,borderRadius:16,padding:"12px 8px",cursor:afford?"pointer":"default",textAlign:"center",opacity:afford?1:0.5}}>
+              <div style={{fontSize:26,marginBottom:4,animation:opening===c.id?"chestShake 0.15s linear infinite":"none"}}>{c.emoji}</div>
+              <div style={{color:"#fff",fontWeight:900,fontSize:11.5,marginBottom:2}}>{c.name}</div>
+              <div style={{color:c.color,fontWeight:900,fontSize:11}}>{fmt(c.cost)}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── TOURNAMENTS + CLANS ─────────────────────────────────────────────────────
 function weekId(d=new Date()){const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));const dayNum=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dayNum+3);const firstThu=new Date(Date.UTC(t.getUTCFullYear(),0,4));const wk=1+Math.round(((t.getTime()-firstThu.getTime())/86400000-3+((firstThu.getUTCDay()+6)%7))/7);return `${t.getUTCFullYear()}-W${wk}`;}
 function prevWeekId(){return weekId(new Date(Date.now()-7*86400000));}
@@ -1634,10 +1704,11 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
 }
 
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
-function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily}:{
+function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily,coins,boostMult,boostLeft,onChestOpen}:{
   onPlay:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
   level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
   nextRank:ReturnType<typeof getNextRank>;charId:string|null;playerId:string;onClaimDaily:(reward:number,streak:number)=>void;
+  coins:number;boostMult:number;boostLeft:number;onChestOpen:(cost:number,res:ChestResult)=>void;
 }){
   const cd=useCountdown();
   const char=CHARACTERS.find(c=>c.id===charId);
@@ -1711,6 +1782,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 
         {/* ── Daily streak chest ── */}
         <DailyStreakCard playerId={playerId} level={level} onClaim={onClaimDaily}/>
+        <LuckyChests coins={coins} boostMult={boostMult} boostLeft={boostLeft} onOpen={onChestOpen}/>
 
         {/* ── Stats row ── */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
@@ -2265,6 +2337,18 @@ export default function TapGame() {
   const [pendingChar,setPendingChar]=useState<string|null>(null);
   const [playerId,setPlayerId]=useState("");
   const inClanRef=useRef(false);
+  // chest boost: {mult, until(ms epoch)} persisted in localStorage
+  const [boost,setBoost]=useState<{mult:number;until:number}>({mult:1,until:0});
+  const [boostLeft,setBoostLeft]=useState(0);
+  const boostRef=useRef(boost);boostRef.current=boost;
+  useEffect(()=>{ if(!playerId)return; try{const b=JSON.parse(localStorage.getItem(`degen_boost_${playerId}`)||"null"); if(b&&b.until>Date.now())setBoost(b);}catch{} },[playerId]);
+  useEffect(()=>{
+    const id=setInterval(()=>{
+      const b=boostRef.current;
+      setBoostLeft(b.until>Date.now()?Math.ceil((b.until-Date.now())/1000):0);
+    },1000);
+    return()=>clearInterval(id);
+  },[]);
   useEffect(()=>{ // clan tap bonus check (+10% income while in a clan)
     if(!playerId)return;
     (async()=>{
@@ -2755,7 +2839,8 @@ export default function TapGame() {
     const towerMult=1+(upgrades["tower_1"]||0)*0.05+(upgrades["tower_2"]||0)*0.12+(upgrades["tower_3"]||0)*0.25+(upgrades["tower_4"]||0)*0.50+(upgrades["tower_5"]||0)*1.0+(upgrades["tower_6"]||0)*2.0+(upgrades["tower_7"]||0)*5.0+(upgrades["tower_8"]||0)*15.0+(upgrades["tower_guard"]||0)*0.08+(upgrades["tower_lord"]||0)*0.50;
     const prestigeMult=1+(upgrades["prestige_tap"]||0)*0.20+(upgrades["prestige_tap2"]||0)*0.50+(upgrades["prestige_tap3"]||0)*1.0+(upgrades["prestige_all"]||0)*0.25+(upgrades["prestige_all2"]||0)*0.75+(upgrades["prestige_all3"]||0)*2.0+(upgrades["prestige_all4"]||0)*5.0;
     const galaxyMult=(upgrades["galaxy_3"]?5:upgrades["galaxy_2"]?3:upgrades["galaxy_1"]?2:1)*(1+(upgrades["big_bang"]||0)*0.5+(upgrades["dark_energy"]||0)*1.0+(upgrades["galaxy_forge"]?10:0));
-    const ascendMult=(1+(upgrades["prestige_stars"]||0)*0.5)*(inClanRef.current?1.1:1);
+    const chestBoost=boostRef.current.until>Date.now()?boostRef.current.mult:1;
+    const ascendMult=(1+(upgrades["prestige_stars"]||0)*0.5)*(inClanRef.current?1.1:1)*chestBoost;
     const coinAura=(1+((upgrades["coin_aura"]||0)*0.5)+((upgrades["coin_aura2"]||0)*1.0)+((upgrades["coin_aura3"]||0)*2.5)+((upgrades["coin_aura4"]||0)*10.0)+(upgrades["lucky_str2"]||0)*0.10+(upgrades["lucky_str3"]||0)*0.15+(upgrades["lucky_str4"]||0)*0.25+(upgrades["double_coins"]||0)*0.25+(upgrades["triple_coins"]||0)*0.10+(upgrades["rainbow_tap"]||0)*0.20+(upgrades["moon_shot"]||0)*0.10+upgradeEffectTotal(upgrades,"allIncomeMult"))*degenMult*memeMult*towerMult*prestigeMult*galaxyMult*ascendMult;
     const tapBase=(char.baseCoins+tapPow)*multiTap*coinAura;
     const specMult=specialActive?char.specialMultiplier:1;
@@ -3028,7 +3113,14 @@ export default function TapGame() {
       {critFlash&&<div style={{position:"fixed",inset:0,background:"rgba(255,50,50,0.06)",zIndex:150,pointerEvents:"none"}}/>}
 
       {/* Tab content */}
-      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId} playerId={playerId} onClaimDaily={(reward,streak)=>{setCoins(c=>c+reward); showToast(`🎁 Day ${streak} chest! +${fmt(reward)} coins`);}}/>}
+      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId} playerId={playerId} onClaimDaily={(reward,streak)=>{setCoins(c=>c+reward); showToast(`🎁 Day ${streak} chest! +${fmt(reward)} coins`);}} coins={coins} boostMult={boost.until>Date.now()?boost.mult:1} boostLeft={boostLeft} onChestOpen={(cost,res)=>{
+        setCoins(c=>c-cost+(res.coins||0));
+        if(res.boostMult&&res.boostMins){
+          const b={mult:res.boostMult,until:Date.now()+res.boostMins*60000};
+          setBoost(b);try{localStorage.setItem(`degen_boost_${playerId}`,JSON.stringify(b));}catch{}
+          showToast(`⚡ ${res.boostMult}× tap boost for ${res.boostMins} min!`);
+        }else if(res.jackpot){showToast(`🎉 JACKPOT! +${fmt(res.coins)} coins!`);}
+      }}/>}
       {activeTab==="profile"&&<ProfileTab playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} solWallet={solWallet} charId={charId} totalEarned={totalEarned} totalTaps={totalTaps} coins={coins} level={level} rank={rank} nextRank={nextRank} upgrades={upgrades} achievCount={achievSet.size} onOpenSettings={()=>setActiveTab("settings")} onClaimRef={(reward,count)=>{setCoins(c=>c+reward); showToast(`🤝 +${fmt(reward)} coins from ${count} invite${count>1?"s":""}!`);}} onAscend={ascend}/>}
       {activeTab==="quests"&&<MissionsTab playerId={playerId} totalTaps={totalTaps} totalEarned={totalEarned} upgrades={upgrades} charId={charId} onClaim={(id,reward)=>{setCoins(c=>c+reward); showToast(`Mission cleared! +${fmt(reward)} coins`);}}/>}
       {activeTab==="achievements"&&<AchievementsTab achievSet={achievSet} totalTaps={totalTaps} coins={coins}/>}
@@ -3247,6 +3339,7 @@ export default function TapGame() {
 
       <style>{`
         @keyframes floatUp { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,calc(-50% - 110px)) scale(0.5)} }
+        @keyframes chestShake { 0%,100%{transform:rotate(-8deg) scale(1.1)} 50%{transform:rotate(8deg) scale(1.15)} }
         @keyframes slideDown { 0%{opacity:0;transform:translateX(-50%) translateY(-14px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
         @keyframes pulseBanner { 0%,100%{opacity:1} 50%{opacity:0.75} }
         @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.8)} }
