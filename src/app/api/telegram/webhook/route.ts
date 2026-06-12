@@ -28,7 +28,7 @@ async function sendAction(chat_id: number, action = "typing") {
 
 const CMD_START = `🎮 *Welcome to Degen Clicker!*
 
-The most degen tap\\-to\\-earn game on Solana\\. Tap your way up the tower, build combos, and win real USDC every 48 hours\\.
+The most degen tap\\-to\\-earn game on Solana\\. Tap your way up the tower, build combos, and win real USDC every 7 days\\.
 
 *Quick links:*
 🕹️ [Play Now](https://degen-tower.vercel.app/game)
@@ -68,10 +68,10 @@ Yes — 100% free\\. No purchase, no wallet required to start\\.
 Your in\\-game currency\\. Earn it tapping, from quests & streaks\\. Top 20 each season win real USDC\\.
 
 *When do seasons reset?*
-Every 48 hours\\. Timer runs live on the leaderboard page\\.
+Every 7 days\. Timer runs live on the leaderboard page\\.
 
 *How do I win USDC?*
-Stay in the top 20 when the 48\\-hour timer ends\\. Connect a Solana wallet to claim your share\\.
+Stay in the top 20 when the season ends\. Just paste your Solana wallet address in your profile to claim your share\.
 
 *What's the token CA?*
 \`AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf\`
@@ -95,7 +95,7 @@ const CMD_FEATURES = `✨ *All Degen Clicker Features*
 🤖 *Auto\\-Tappers* — Bot armies that earn while you sleep
 💥 *Critical Hits* — Land crits for massive coin bursts
 👑 *Rank Ladder* — Degen → Pepe → Whale → God Tier
-🏆 *48hr Seasons* — Leaderboard resets, top 20 win USDC
+🏆 *7-Day Seasons* — Leaderboard resets, top 20 win USDC
 💰 *Live Reward Pool* — Real USDC prize pool shown on home page
 🧭 *Daily Quests* — 6 quests refreshed every 24h for bonus coins
 🗓️ *Login Streaks* — Daily login bonuses, 7\\-day streak rewards
@@ -143,16 +143,16 @@ Always verify the CA before trading\\. Official links only from @degenclickerupd
 
 const CMD_SEASON = `🏆 *Seasons & Rewards*
 
-Degen Clicker runs on 48\\-hour seasons:
+Degen Clicker runs on 7-day seasons:
 
 1️⃣ Season starts — reward pool is 0 USDC
-2️⃣ Players tap & compete for 48 hours
+2️⃣ Players tap & compete for 7 days
 3️⃣ Timer hits zero — snapshot of top 20 taken
 4️⃣ USDC reward pool is split among top 20 by rank
 5️⃣ New season begins immediately
 
 *To claim winnings:*
-Connect your Solana wallet in Profile Settings\\. Rewards are sent on\\-chain\\.
+Just paste your Solana wallet address in Profile Settings\. Rewards are sent on-chain\.
 
 The live pool counter is always visible on the [home page](https://degen-tower.vercel.app) \\👀`;
 
@@ -232,16 +232,17 @@ export async function POST(req: NextRequest) {
     // Keep context window manageable
     const context = history.slice(-MAX_HISTORY);
 
-    const reply = await callGemini(context, 400);
+    let reply: string;
+    try {
+      reply = await callGemini(context, 400);
+    } catch (_aiErr) {
+      await send(chat_id, "🤖 AI is resting for a sec — try again in a moment, or use /help for commands!");
+      return NextResponse.json({ ok: true });
+    }
     history.push({ role: "assistant", content: reply });
     sessions.set(chat_id, history.slice(-MAX_HISTORY));
 
-    // Telegram MarkdownV2 special chars need escaping — use Markdown (v1) which is more lenient
-    // Strip backtick blocks to avoid parse errors in v1
-    const safe_reply = reply
-      .replace(/```[\s\S]*?```/g, (m) => m) // keep code blocks
-      .substring(0, 4000); // hard cap
-
+    const safe_reply = reply.substring(0, 4000);
     await send(chat_id, safe_reply);
     return NextResponse.json({ ok: true });
   } catch (err) {

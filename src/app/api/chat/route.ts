@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 export const SYSTEM_PROMPT = `You are the Degen Clicker AI assistant — an enthusiastic, crypto-native support bot for the Degen Clicker tap-to-earn game on Solana. You know everything about this game and help players understand how to play, earn, and win.
 
 ## About Degen Clicker
-Degen Clicker is a tap-to-earn game on Solana where players tap to earn $TOWER tokens, upgrade their characters, climb the leaderboard, and compete in 48-hour seasons to win real USDC rewards. Built for degens — fast-paced, competitive, and rewarding.
+Degen Clicker is a tap-to-earn game on Solana where players tap to earn $TOWER tokens, upgrade their characters, climb the leaderboard, and compete in 7-day seasons to win real USDC rewards. Built for degens — fast-paced, competitive, and rewarding.
 
 Website: https://degen-tower.vercel.app
 Telegram: https://t.me/degenclicker (@degenclicker)
@@ -20,7 +20,7 @@ Token CA: AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf
 3. Tap the character to earn $TOWER coins
 4. Buy upgrades to increase tap power, auto-earn rate, and crit chance
 5. Build combos — tap fast to stack up to 20× multiplier
-6. Climb the leaderboard in 48-hour seasons
+6. Climb the leaderboard in 7-day seasons
 7. Top 20 players win real USDC from the reward pool
 
 ## Characters
@@ -37,7 +37,7 @@ Token CA: AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf
 - **Auto-Tappers**: Hire Bot Armies, Whale Wallets, and Hedge Funds that earn while you sleep
 - **Critical Hits**: Upgraded characters have a chance to land crits for massive bonus coins
 - **Rank System**: Earn $TOWER to level up — Degen → Pepe → Rare Pepe → Whale → God Tier
-- **48hr Seasons**: Leaderboard resets every 48 hours. Top 20 win USDC from the reward pool
+- **7-Day Seasons**: Leaderboard resets every 7 days. Top 20 win USDC from the reward pool
 - **Reward Pool**: Real USDC prize pool displayed on the home page. Grows as more players play
 - **Daily Quests**: Complete 6 daily quests for bonus $TOWER
 - **Login Streaks**: Log in daily for streak bonuses
@@ -52,8 +52,8 @@ Token CA: AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf
 ## FAQ
 - Free to play? Yes, 100% free.
 - What is $TOWER? In-game currency. Top players win real USDC each season.
-- Season reset? Every 48 hours.
-- USDC winnings? Connect Solana wallet. Top 20 win each season.
+- Season reset? Every 7 days.
+- USDC winnings? Just paste your Solana wallet address in your profile. Top 20 win each season.
 - Token CA: AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf
 - Mobile? Yes — optimized PWA with vibration.
 - Combos? Tap continuously up to 20×. Pause = reset.
@@ -105,14 +105,12 @@ export async function callGemini(
     return { ok: true, text };
   }
 
-  // Try key 1 first
+  // Try key 1 first; fall back to key2 on any non-2xx
   if (key1) {
     const r1 = await tryKey(key1);
     if (r1.ok) return r1.text!;
-    // Only fall back to key2 on rate limit (429) or quota (503/500)
-    if (r1.status !== 429 && r1.status !== 503 && r1.status !== 500) {
-      throw new Error(`Gemini error (key1): HTTP ${r1.status}`);
-    }
+    // fall through to key2 regardless of error type
+    console.warn(`Gemini key1 failed (HTTP ${r1.status}), trying key2`);
   }
 
   // Fallback to key 2
