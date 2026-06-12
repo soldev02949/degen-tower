@@ -724,7 +724,7 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
             background:`radial-gradient(ellipse at 50% 30%,rgba(${char.glow},0.14) 0%,rgba(6,0,15,0.85) 100%)`,
           }}
         >
-          <img src={char.image} alt={char.name} draggable={false}
+          <img src="/characters/troll.png" alt={char.name} draggable={false}
             style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",display:"block",pointerEvents:"none",
               filter:specialActive?`brightness(1.25) saturate(1.5) drop-shadow(0 0 18px rgba(${char.glow},0.7))`:"none",transition:"filter 0.4s"}}
             onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:115px;filter:drop-shadow(0 0 24px rgba(${char.glow},0.6))">${char.emoji}</div>`;}}
@@ -2135,10 +2135,11 @@ export default function TapGame() {
   },[coins,upgrades]);
 
   const spendCoinsExact=useCallback(async(amount:number)=>{
-    const uid=user?.email||user?.id||playerId;
+    const ids=[playerId,user?.email,user?.id].filter((v):v is string=>!!v);
+    const uid=ids[0];
     if(!uid||amount<=0)return false;
-    const current=Math.floor(liveRef.current.coins||0);
-    const spend=Math.floor(amount);
+    const current=Math.max(dbNum(liveRef.current.coins),dbNum(coins),dbNum(dbValuesRef.current?.coins));
+    const spend=Math.max(0,Math.floor(amount));
     if(current<spend)return false;
     const nextBalance=Math.max(0,current-spend);
     setCoins(nextBalance);
@@ -2166,12 +2167,24 @@ export default function TapGame() {
       const authToken=await getAuthToken();
       const payload:Record<string,unknown>={token_balance:nextBalance,last_seen:new Date().toISOString()};
       if(liveRef.current.charId)payload.character=liveRef.current.charId;
-      const patch=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(uid)}`,{
-        method:"PATCH",
-        headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=representation"},
-        body:JSON.stringify(payload),
-      });
-      if(!patch.ok)throw new Error(`coin spend patch failed ${patch.status}`);
+      let patched=false;
+      let lastErr:Error|null=null;
+      for(const pid of ids){
+        try{
+          const patch=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(pid)}`,{
+            method:"PATCH",
+            headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=representation"},
+            body:JSON.stringify(payload),
+          });
+          if(!patch.ok)throw new Error(`coin spend patch failed ${patch.status}`);
+          const rows=await patch.json().catch(()=>[] as unknown[]);
+          if(Array.isArray(rows)&&rows.length>0){patched=true;break;}
+        }catch(err){
+          lastErr=err instanceof Error?err:new Error(String(err));
+        }
+      }
+      if(!patched&&lastErr)throw lastErr;
+      if(!patched)throw new Error("coin spend patch affected 0 rows");
       return true;
     }catch(e){
       console.error("spendCoinsExact failed",e);

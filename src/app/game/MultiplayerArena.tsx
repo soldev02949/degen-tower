@@ -620,7 +620,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     const owned = localStateRef.current.myUpgrades[id] || 0;
     const price = Math.floor(item.cost * Math.pow(1.65, owned));
     const ok = await onSpendCoins(price);
-    if (!ok) { showToast("Not enough real coins"); return; }
+    if (!ok) { showToast(coins >= price ? "Coin sync failed — retrying against your real balance" : "Not enough real coins"); return; }
     const nextSpent = localStateRef.current.mySpent + price;
     const nextUpgrades = { ...localStateRef.current.myUpgrades, [id]: owned + 1 };
     localStateRef.current = { ...localStateRef.current, mySpent: nextSpent, myUpgrades: nextUpgrades };
