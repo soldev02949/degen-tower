@@ -633,6 +633,7 @@ const MENU_TABS=[
   {id:"quests",label:"Missions",emoji:"🧭",desc:"Progress tasks and rewards"},
   {id:"achievements",label:"Achievements",emoji:"🏅",desc:"Unlocked milestones and flex"},
   {id:"ranks",label:"Leaderboard",emoji:"🏆",desc:"Live global climb"},
+  {id:"compete",label:"Tournaments & Clans",emoji:"🏟️",desc:"Weekly tournament + clan wars"},
   {id:"settings",label:"Settings",emoji:"⚙️",desc:"Wallet, avatar, account"},
 ];
 
@@ -1178,10 +1179,26 @@ function ProfileTab({playerId,username,avatar,avatarUrl,solWallet,charId,totalEa
 function MissionsTab({playerId,totalTaps,totalEarned,upgrades,charId,onClaim}:{playerId:string;totalTaps:number;totalEarned:number;upgrades:Record<string,number>;charId:string|null;onClaim:(id:string,reward:number)=>void;}){
   const [claimed,setClaimed]=useState<Record<string,boolean>>({});
   const mp=useMemo(()=>loadMpProfileStats(playerId),[playerId]);
+  const [adminMissions,setAdminMissions]=useState<{id:string;title:string;desc:string;reward:number;category:string}[]>([]);
   useEffect(()=>{ if(typeof window==="undefined"||!playerId)return; try{setClaimed(JSON.parse(localStorage.getItem(`degen_missions_${playerId}`)||"{}"));}catch{} },[playerId]);
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const {supabase}=await import("@/lib/supabase");
+        const {data}=await supabase.from("dt_security_events").select("id,data")
+          .eq("event_type","admin_task").eq("player_id","__admin_task__").order("created_at",{ascending:false}).limit(100);
+        type T={id:string;data:{title?:string;description?:string;status?:string;reward?:string;category?:string}};
+        const rows=((data||[]) as T[]).filter(t=>t.data?.status==="active"&&t.data?.title);
+        setAdminMissions(rows.map(t=>({
+          id:`admin_${t.id}`,title:t.data.title||"",desc:t.data.description||"Complete this mission",
+          reward:Math.max(0,parseInt((t.data.reward||"").replace(/[^0-9]/g,""),10)||0),category:t.data.category||"event",
+        })).filter(m=>m.reward>0));
+      }catch{}
+    })();
+  },[playerId]);
   const missions=[{id:"tap_1k",title:"Finger Warmup",desc:"Reach 1,000 taps",progress:totalTaps,target:1000,reward:15000,color:"#c084fc"},{id:"tap_100k",title:"Tower Maniac",desc:"Reach 100,000 taps",progress:totalTaps,target:100000,reward:500000,color:"#a855f7"},{id:"earn_1m",title:"First Million",desc:"Earn 1M total coins",progress:totalEarned,target:1_000_000,reward:200000,color:"#22d67a"},{id:"upgrade_25",title:"Build the Machine",desc:"Buy 25 upgrade levels",progress:totalUpgradeLevels(upgrades),target:25,reward:300000,color:"#60a5fa"},{id:"pvp_3",title:"Arena Rookie",desc:"Win 3 PvP matches",progress:mp.wins,target:3,reward:750000,color:"#f87171"},{id:"legend_pick",title:"Choose Your Legend",desc:"Equip any fighter",progress:charId?1:0,target:1,reward:25000,color:"#f5c842"}];
   const doClaim=(id:string,reward:number)=>{ const next={...claimed,[id]:true}; setClaimed(next); try{localStorage.setItem(`degen_missions_${playerId}`,JSON.stringify(next));}catch{}; onClaim(id,reward); };
-  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{marginBottom:14}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:6}}>Mission Control</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",marginBottom:6}}>Live quests</div><div style={{color:"#8f7ca7",fontSize:12.5,lineHeight:1.6}}>Now the platform has an actual task loop, not just raw tapping. Finish missions and cash rewards instantly.</div></div><div style={{display:"grid",gap:10}}>{missions.map(m=>{ const pct=Math.max(0,Math.min(100,(m.progress/m.target)*100)); const done=m.progress>=m.target; const wasClaimed=!!claimed[m.id]; return <div key={m.id} style={{background:done&&!wasClaimed?"linear-gradient(135deg,rgba(34,214,122,0.1),rgba(168,85,247,0.08))":"rgba(255,255,255,0.03)",border:done&&!wasClaimed?"1px solid rgba(34,214,122,0.28)":"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:10}}><div><div style={{color:m.color,fontSize:11,fontWeight:900,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5}}>{m.title}</div><div style={{color:"#fff",fontWeight:800,fontSize:13.5,marginBottom:4}}>{m.desc}</div><div style={{color:"#8f7ca7",fontSize:11}}>Reward: 💰 {fmt(m.reward)}</div></div><div style={{color:done?"#22d67a":"#b6a2cf",fontWeight:900,fontSize:12}}>{wasClaimed?"CLAIMED":done?"READY":"IN PROGRESS"}</div></div><div style={{height:8,background:"rgba(255,255,255,0.05)",borderRadius:999,overflow:"hidden",border:"1px solid rgba(255,255,255,0.04)",marginBottom:8}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${m.color}99,${m.color})`,boxShadow:`0 0 12px ${m.color}55`}}/></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{color:"#8f7ca7",fontSize:11}}>{fmt(m.progress)} / {fmt(m.target)}</div>{done&&!wasClaimed?<button onClick={()=>doClaim(m.id,m.reward)} style={{background:"linear-gradient(135deg,#22d67a,#16a34a)",border:"none",borderRadius:12,color:"#fff",fontWeight:900,padding:"9px 12px",cursor:"pointer"}}>Claim reward</button>:<div style={{color:wasClaimed?"#22d67a":"#6d5a86",fontSize:11.5,fontWeight:700}}>{wasClaimed?"Reward secured":"Keep grinding"}</div>}</div></div>; })}</div><div style={{marginTop:14,background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.14)",borderRadius:18,padding:14,color:"#b6c8e6",fontSize:11.5,lineHeight:1.6}}>More mission categories are now easy to add here later: daily streaks, clan orders, raid tasks, event tickets, ranked objectives, and seasonal ladders.</div></div></div>;
+  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{marginBottom:14}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:6}}>Mission Control</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",marginBottom:6}}>Live quests</div><div style={{color:"#8f7ca7",fontSize:12.5,lineHeight:1.6}}>Now the platform has an actual task loop, not just raw tapping. Finish missions and cash rewards instantly.</div></div>{adminMissions.length>0&&<div style={{marginBottom:14}}><div style={{color:"#f5c842",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:8}}>⭐ Event missions</div><div style={{display:"grid",gap:10}}>{adminMissions.map(m=>{ const wasClaimed=!!claimed[m.id]; return <div key={m.id} className={wasClaimed?"":"shine-card"} style={{background:wasClaimed?"rgba(255,255,255,0.03)":"linear-gradient(135deg,rgba(245,200,66,0.10),rgba(168,85,247,0.06))",border:wasClaimed?"1px solid rgba(255,255,255,0.06)":"1.5px solid rgba(245,200,66,0.32)",borderRadius:20,padding:14}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:8}}><div style={{flex:1,minWidth:0}}><div style={{color:"#f5c842",fontSize:11,fontWeight:900,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5}}>{m.category}</div><div style={{color:"#fff",fontWeight:800,fontSize:13.5,marginBottom:4}}>{m.title}</div><div style={{color:"#8f7ca7",fontSize:11.5,lineHeight:1.5}}>{m.desc}</div></div><div style={{color:wasClaimed?"#22d67a":"#f5c842",fontWeight:900,fontSize:12,whiteSpace:"nowrap"}}>{wasClaimed?"CLAIMED":`💰 ${fmt(m.reward)}`}</div></div>{!wasClaimed&&<button onClick={()=>doClaim(m.id,m.reward)} className="press-fx" style={{width:"100%",background:"linear-gradient(135deg,#f5c842,#f59e0b)",border:"none",borderRadius:12,color:"#1a0f00",fontWeight:900,fontSize:12.5,padding:"11px 0",cursor:"pointer",boxShadow:"0 4px 18px rgba(245,200,66,0.25)"}}>Claim {fmt(m.reward)} coins</button>}</div>; })}</div></div>}<div style={{display:"grid",gap:10}}>{missions.map(m=>{ const pct=Math.max(0,Math.min(100,(m.progress/m.target)*100)); const done=m.progress>=m.target; const wasClaimed=!!claimed[m.id]; return <div key={m.id} style={{background:done&&!wasClaimed?"linear-gradient(135deg,rgba(34,214,122,0.1),rgba(168,85,247,0.08))":"rgba(255,255,255,0.03)",border:done&&!wasClaimed?"1px solid rgba(34,214,122,0.28)":"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:10}}><div><div style={{color:m.color,fontSize:11,fontWeight:900,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5}}>{m.title}</div><div style={{color:"#fff",fontWeight:800,fontSize:13.5,marginBottom:4}}>{m.desc}</div><div style={{color:"#8f7ca7",fontSize:11}}>Reward: 💰 {fmt(m.reward)}</div></div><div style={{color:done?"#22d67a":"#b6a2cf",fontWeight:900,fontSize:12}}>{wasClaimed?"CLAIMED":done?"READY":"IN PROGRESS"}</div></div><div style={{height:8,background:"rgba(255,255,255,0.05)",borderRadius:999,overflow:"hidden",border:"1px solid rgba(255,255,255,0.04)",marginBottom:8}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${m.color}99,${m.color})`,boxShadow:`0 0 12px ${m.color}55`}}/></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{color:"#8f7ca7",fontSize:11}}>{fmt(m.progress)} / {fmt(m.target)}</div>{done&&!wasClaimed?<button onClick={()=>doClaim(m.id,m.reward)} style={{background:"linear-gradient(135deg,#22d67a,#16a34a)",border:"none",borderRadius:12,color:"#fff",fontWeight:900,padding:"9px 12px",cursor:"pointer"}}>Claim reward</button>:<div style={{color:wasClaimed?"#22d67a":"#6d5a86",fontSize:11.5,fontWeight:700}}>{wasClaimed?"Reward secured":"Keep grinding"}</div>}</div></div>; })}</div><div style={{marginTop:14,background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.14)",borderRadius:18,padding:14,color:"#b6c8e6",fontSize:11.5,lineHeight:1.6}}>More mission categories are now easy to add here later: daily streaks, clan orders, raid tasks, event tickets, ranked objectives, and seasonal ladders.</div></div></div>;
 }
 
 function AchievementsTab({achievSet,totalTaps,coins}:{achievSet:Set<string>;totalTaps:number;coins:number;}){
@@ -1238,6 +1255,281 @@ function DailyStreakCard({playerId,level,onClaim}:{playerId:string;level:number;
         fontWeight:900,fontSize:12,padding:"10px 16px",cursor:claimedToday?"default":"pointer",
         boxShadow:claimedToday?"none":"0 4px 18px rgba(245,200,66,0.35)",whiteSpace:"nowrap",
       }}>{claimedToday?"Done":"Open"}</button>
+    </div>
+  );
+}
+
+// ─── TOURNAMENTS + CLANS ─────────────────────────────────────────────────────
+function weekId(d=new Date()){const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));const dayNum=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dayNum+3);const firstThu=new Date(Date.UTC(t.getUTCFullYear(),0,4));const wk=1+Math.round(((t.getTime()-firstThu.getTime())/86400000-3+((firstThu.getUTCDay()+6)%7))/7);return `${t.getUTCFullYear()}-W${wk}`;}
+function prevWeekId(){return weekId(new Date(Date.now()-7*86400000));}
+const TOUR_PRIZES=[5_000_000,2_500_000,1_000_000];
+type TourRow={id:string;player_id:string;data:{week:string;score:number;username:string;charId?:string}};
+type ClanRow={id:string;data:{name:string;tag:string;leader:string;members:string[];created:string}};
+
+function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:string;username:string;charId:string|null;totalEarned:number;onReward:(coins:number,label:string)=>void;}){
+  const [sub,setSub]=useState<"tournament"|"clans">("tournament");
+  const wk=weekId();
+  const joinKey=`degen_tour_${playerId}_${wk}`;
+  const [joined,setJoined]=useState<{start:number;rowId:string}|null>(null);
+  const [standings,setStandings]=useState<TourRow[]>([]);
+  const [loadingT,setLoadingT]=useState(true);
+  const [prizeState,setPrizeState]=useState<{rank:number;prize:number}|null>(null);
+  const [clans,setClans]=useState<ClanRow[]>([]);
+  const [clanScores,setClanScores]=useState<Record<string,number>>({});
+  const [myClan,setMyClan]=useState<ClanRow|null>(null);
+  const [loadingC,setLoadingC]=useState(true);
+  const [cName,setCName]=useState("");const [cTag,setCTag]=useState("");
+  const [busy,setBusy]=useState(false);
+  const earnedRef=useRef(totalEarned);earnedRef.current=totalEarned;
+
+  useEffect(()=>{ try{const raw=localStorage.getItem(joinKey); if(raw)setJoined(JSON.parse(raw));}catch{} },[joinKey]);
+
+  const fetchStandings=useCallback(async()=>{
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      const {data}=await supabase.from("dt_security_events").select("id,player_id,data")
+        .eq("event_type","tournament").eq("data->>week",wk).limit(100);
+      const rows=((data||[]) as TourRow[]).sort((a,b)=>(b.data?.score||0)-(a.data?.score||0));
+      setStandings(rows);
+    }catch{}
+    setLoadingT(false);
+  },[wk]);
+
+  // sync my score to DB while tab is open
+  const syncScore=useCallback(async(j:{start:number;rowId:string})=>{
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      const score=Math.max(0,Math.floor(earnedRef.current-j.start));
+      await supabase.from("dt_security_events").update({data:{week:wk,score,username,charId:charId||"pepe"}}).eq("id",j.rowId);
+    }catch{}
+  },[wk,username,charId]);
+
+  useEffect(()=>{
+    fetchStandings();
+    if(!joined)return;
+    syncScore(joined).then(fetchStandings);
+    const id=setInterval(()=>{syncScore(joined).then(fetchStandings);},20000);
+    return()=>clearInterval(id);
+  },[joined,fetchStandings,syncScore]);
+
+  // previous week prize claim
+  useEffect(()=>{
+    (async()=>{
+      const pw=prevWeekId();
+      const claimKey=`degen_tour_claim_${playerId}_${pw}`;
+      try{
+        if(localStorage.getItem(claimKey))return;
+        const {supabase}=await import("@/lib/supabase");
+        const {data}=await supabase.from("dt_security_events").select("id,player_id,data")
+          .eq("event_type","tournament").eq("data->>week",pw).limit(100);
+        const rows=((data||[]) as TourRow[]).sort((a,b)=>(b.data?.score||0)-(a.data?.score||0));
+        const idx=rows.findIndex(r=>r.player_id===playerId);
+        if(idx>=0&&idx<3&&(rows[idx].data?.score||0)>0)setPrizeState({rank:idx+1,prize:TOUR_PRIZES[idx]});
+      }catch{}
+    })();
+  },[playerId]);
+
+  const joinTournament=async()=>{
+    if(busy||joined)return;setBusy(true);
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      const {data,error}=await supabase.from("dt_security_events").insert({
+        player_id:playerId,event_type:"tournament",severity:"low",
+        data:{week:wk,score:0,username,charId:charId||"pepe"},
+      }).select("id").single();
+      if(!error&&data){
+        const j={start:earnedRef.current,rowId:data.id as string};
+        setJoined(j);try{localStorage.setItem(joinKey,JSON.stringify(j));}catch{}
+        fetchStandings();
+      }
+    }catch{}
+    setBusy(false);
+  };
+
+  const claimPrize=()=>{
+    if(!prizeState)return;
+    try{localStorage.setItem(`degen_tour_claim_${playerId}_${prevWeekId()}`,"1");}catch{}
+    onReward(prizeState.prize,`🏆 Tournament rank #${prizeState.rank} prize`);
+    setPrizeState(null);
+  };
+
+  // ── clans ──
+  const fetchClans=useCallback(async()=>{
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      const {data}=await supabase.from("dt_security_events").select("id,data")
+        .eq("event_type","clan").eq("player_id","__clan__").limit(100);
+      const rows=(data||[]) as ClanRow[];
+      setClans(rows);
+      const mine=rows.find(c=>(c.data?.members||[]).includes(playerId))||null;
+      setMyClan(mine);
+      // clan power = sum of member total_score
+      const allMembers=Array.from(new Set(rows.flatMap(c=>c.data?.members||[]))).slice(0,200);
+      if(allMembers.length){
+        const {data:pl}=await supabase.from("dt_players").select("wallet_address,total_score").in("wallet_address",allMembers);
+        const scoreOf:Record<string,number>={};(pl||[]).forEach((p:{wallet_address:string;total_score:number})=>{scoreOf[p.wallet_address]=Number(p.total_score)||0;});
+        const cs:Record<string,number>={};rows.forEach(c=>{cs[c.id]=(c.data?.members||[]).reduce((s,m)=>s+(scoreOf[m]||0),0);});
+        setClanScores(cs);
+      }
+    }catch{}
+    setLoadingC(false);
+  },[playerId]);
+  useEffect(()=>{fetchClans();},[fetchClans]);
+
+  const createClan=async()=>{
+    const name=cName.trim(),tag=cTag.trim().toUpperCase().slice(0,5);
+    if(!name||name.length<3||!tag||tag.length<2||busy||myClan)return;setBusy(true);
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      await supabase.from("dt_security_events").insert({
+        player_id:"__clan__",event_type:"clan",severity:"low",
+        data:{name,tag,leader:playerId,members:[playerId],created:new Date().toISOString()},
+      });
+      setCName("");setCTag("");await fetchClans();
+    }catch{}
+    setBusy(false);
+  };
+  const joinClan=async(c:ClanRow)=>{
+    if(busy||myClan)return;setBusy(true);
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      const members=Array.from(new Set([...(c.data?.members||[]),playerId]));
+      await supabase.from("dt_security_events").update({data:{...c.data,members}}).eq("id",c.id);
+      await fetchClans();
+    }catch{}
+    setBusy(false);
+  };
+  const leaveClan=async()=>{
+    if(busy||!myClan)return;setBusy(true);
+    try{
+      const {supabase}=await import("@/lib/supabase");
+      const members=(myClan.data?.members||[]).filter(m=>m!==playerId);
+      const leader=myClan.data.leader===playerId?(members[0]||""):myClan.data.leader;
+      await supabase.from("dt_security_events").update({data:{...myClan.data,members,leader}}).eq("id",myClan.id);
+      await fetchClans();
+    }catch{}
+    setBusy(false);
+  };
+
+  const myRank=standings.findIndex(r=>r.player_id===playerId)+1;
+  const myScore=joined?Math.max(0,Math.floor(totalEarned-joined.start)):0;
+  const medal=(i:number)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+  const sortedClans=[...clans].sort((a,b)=>(clanScores[b.id]||0)-(clanScores[a.id]||0));
+
+  return(
+    <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}>
+      <div className="arcade-grid"/>
+      <div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}>
+        <div style={{marginBottom:14}}>
+          <div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:6}}>Compete</div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em"}}>Tournaments & Clans</div>
+        </div>
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          {([["tournament","🏟️ Tournament"],["clans","🛡️ Clans"]] as const).map(([id,label])=>(
+            <button key={id} onClick={()=>setSub(id)} className="press-fx" style={{flex:1,background:sub===id?"linear-gradient(135deg,rgba(168,85,247,0.25),rgba(96,165,250,0.12))":"rgba(255,255,255,0.04)",border:sub===id?"1px solid rgba(168,85,247,0.45)":"1px solid rgba(255,255,255,0.07)",borderRadius:14,color:sub===id?"#fff":"#8f7ca7",fontWeight:900,fontSize:13,padding:"12px 0",cursor:"pointer"}}>{label}</button>
+          ))}
+        </div>
+
+        {sub==="tournament"&&(
+          <div style={{display:"grid",gap:12}}>
+            {prizeState&&(
+              <div className="shine-card" style={{background:"linear-gradient(135deg,rgba(245,200,66,0.16),rgba(168,85,247,0.08))",border:"1.5px solid rgba(245,200,66,0.45)",borderRadius:20,padding:14,boxShadow:"0 0 36px rgba(245,200,66,0.18)"}}>
+                <div style={{color:"#fff",fontWeight:900,marginBottom:4}}>🏆 You placed {medal(prizeState.rank-1)} last week!</div>
+                <div style={{color:"#a794c3",fontSize:11.5,marginBottom:10}}>Prize: <b style={{color:"#f5c842"}}>+{fmt(prizeState.prize)} coins</b></div>
+                <button onClick={claimPrize} className="press-fx" style={{width:"100%",background:"linear-gradient(135deg,#f5c842,#f59e0b)",border:"none",borderRadius:12,color:"#1a0f00",fontWeight:900,fontSize:13,padding:"12px 0",cursor:"pointer"}}>Claim prize</button>
+              </div>
+            )}
+            <div style={{background:"linear-gradient(135deg,rgba(168,85,247,0.10),rgba(96,165,250,0.05))",border:"1px solid rgba(168,85,247,0.25)",borderRadius:20,padding:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <span style={{fontSize:20}}>🏟️</span>
+                <div style={{color:"#fff",fontWeight:900,flex:1}}>Weekly Tap Tournament</div>
+                <span style={{background:"rgba(168,85,247,0.14)",border:"1px solid rgba(168,85,247,0.3)",borderRadius:999,color:"#c084fc",fontSize:10.5,fontWeight:900,padding:"4px 10px"}}>{wk}</span>
+              </div>
+              <div style={{color:"#a794c3",fontSize:11.5,lineHeight:1.55,marginBottom:10}}>
+                Race everyone on <b style={{color:"#fff"}}>coins earned this week</b>. Resets Monday. Prizes: <b style={{color:"#f5c842"}}>🥇 {fmt(TOUR_PRIZES[0])}</b> · <b style={{color:"#e2e8f0"}}>🥈 {fmt(TOUR_PRIZES[1])}</b> · <b style={{color:"#f59e0b"}}>🥉 {fmt(TOUR_PRIZES[2])}</b>
+              </div>
+              {!joined?(
+                <button onClick={joinTournament} disabled={busy} className="press-fx" style={{width:"100%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:12,color:"#fff",fontWeight:900,fontSize:13,padding:"13px 0",cursor:"pointer",boxShadow:"0 4px 20px rgba(168,85,247,0.35)"}}>{busy?"Joining…":"⚔️ Enter tournament — free"}</button>
+              ):(
+                <div style={{display:"flex",gap:10}}>
+                  <div style={{flex:1,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"10px 12px",textAlign:"center"}}>
+                    <div style={{color:"#8f7ca7",fontSize:9.5,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase"}}>Your score</div>
+                    <div style={{color:"#f5c842",fontWeight:900,fontSize:18}}>{fmt(myScore)}</div>
+                  </div>
+                  <div style={{flex:1,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"10px 12px",textAlign:"center"}}>
+                    <div style={{color:"#8f7ca7",fontSize:9.5,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase"}}>Your rank</div>
+                    <div style={{color:"#c084fc",fontWeight:900,fontSize:18}}>{myRank>0?`#${myRank}`:"—"}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}>
+              <div style={{color:"#fff",fontWeight:900,marginBottom:10}}>Live standings</div>
+              {loadingT?<div style={{color:"#8f7ca7",fontSize:12}}>Loading…</div>:
+                standings.length===0?<div style={{color:"#8f7ca7",fontSize:12}}>No entries yet this week — be first 👑</div>:
+                <div style={{display:"grid",gap:8}}>
+                  {standings.slice(0,20).map((r,i)=>{
+                    const me=r.player_id===playerId;
+                    return(
+                      <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,background:me?"linear-gradient(135deg,rgba(168,85,247,0.14),rgba(96,165,250,0.06))":i<3?"rgba(245,200,66,0.05)":"rgba(255,255,255,0.02)",border:me?"1px solid rgba(168,85,247,0.4)":"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"10px 12px"}}>
+                        <span style={{width:30,fontWeight:900,fontSize:i<3?16:12,color:i<3?"#f5c842":"#6d5a86"}}>{medal(i)}</span>
+                        <span style={{flex:1,color:me?"#c084fc":"#fff",fontWeight:800,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.data?.username||"anon"}{me&&" (you)"}</span>
+                        <span style={{color:"#f5c842",fontWeight:900,fontSize:13}}>{fmt(r.data?.score||0)}</span>
+                      </div>
+                    );
+                  })}
+                </div>}
+            </div>
+          </div>
+        )}
+
+        {sub==="clans"&&(
+          <div style={{display:"grid",gap:12}}>
+            {myClan?(
+              <div className="shine-card" style={{background:"linear-gradient(135deg,rgba(34,214,122,0.10),rgba(96,165,250,0.05))",border:"1.5px solid rgba(34,214,122,0.3)",borderRadius:20,padding:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{fontSize:20}}>🛡️</span>
+                  <div style={{color:"#fff",fontWeight:900,flex:1}}>[{myClan.data.tag}] {myClan.data.name}</div>
+                  <span style={{background:"rgba(34,214,122,0.12)",border:"1px solid rgba(34,214,122,0.25)",borderRadius:999,color:"#7ef2b1",fontSize:10.5,fontWeight:900,padding:"4px 10px"}}>Your clan</span>
+                </div>
+                <div style={{color:"#a794c3",fontSize:11.5,marginBottom:10}}>
+                  {myClan.data.members.length} member{myClan.data.members.length!==1?"s":""} · Power <b style={{color:"#f5c842"}}>{fmt(clanScores[myClan.id]||0)}</b>{myClan.data.leader===playerId&&" · 👑 You lead this clan"}
+                </div>
+                <button onClick={leaveClan} disabled={busy} className="press-fx" style={{width:"100%",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:12,color:"#f87171",fontWeight:900,fontSize:12.5,padding:"11px 0",cursor:"pointer"}}>Leave clan</button>
+              </div>
+            ):(
+              <div style={{background:"linear-gradient(135deg,rgba(96,165,250,0.08),rgba(168,85,247,0.05))",border:"1px solid rgba(96,165,250,0.22)",borderRadius:20,padding:14}}>
+                <div style={{color:"#fff",fontWeight:900,marginBottom:8}}>⚒️ Found a clan</div>
+                <div style={{display:"flex",gap:8,marginBottom:8}}>
+                  <input value={cName} onChange={e=>setCName(e.target.value)} placeholder="Clan name" maxLength={24} style={{flex:2,minWidth:0,background:"rgba(0,0,0,0.35)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,color:"#fff",fontSize:13,fontWeight:600,padding:"11px 12px",outline:"none"}}/>
+                  <input value={cTag} onChange={e=>setCTag(e.target.value.toUpperCase())} placeholder="TAG" maxLength={5} style={{flex:1,minWidth:0,background:"rgba(0,0,0,0.35)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,color:"#c084fc",fontSize:13,fontWeight:900,padding:"11px 12px",outline:"none",textTransform:"uppercase"}}/>
+                </div>
+                <button onClick={createClan} disabled={busy||cName.trim().length<3||cTag.trim().length<2} className="press-fx" style={{width:"100%",background:cName.trim().length>=3&&cTag.trim().length>=2?"linear-gradient(135deg,#60a5fa,#a855f7)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:cName.trim().length>=3&&cTag.trim().length>=2?"#fff":"#556",fontWeight:900,fontSize:13,padding:"12px 0",cursor:"pointer"}}>{busy?"Creating…":"Create clan"}</button>
+              </div>
+            )}
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}>
+              <div style={{color:"#fff",fontWeight:900,marginBottom:10}}>Clan leaderboard</div>
+              {loadingC?<div style={{color:"#8f7ca7",fontSize:12}}>Loading…</div>:
+                sortedClans.length===0?<div style={{color:"#8f7ca7",fontSize:12}}>No clans yet — found the first one 🛡️</div>:
+                <div style={{display:"grid",gap:8}}>
+                  {sortedClans.slice(0,25).map((c,i)=>{
+                    const mine=myClan?.id===c.id;
+                    return(
+                      <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,background:mine?"linear-gradient(135deg,rgba(34,214,122,0.1),rgba(96,165,250,0.04))":i<3?"rgba(245,200,66,0.05)":"rgba(255,255,255,0.02)",border:mine?"1px solid rgba(34,214,122,0.35)":"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:"10px 12px"}}>
+                        <span style={{width:30,fontWeight:900,fontSize:i<3?16:12,color:i<3?"#f5c842":"#6d5a86"}}>{medal(i)}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{color:mine?"#7ef2b1":"#fff",fontWeight:800,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>[{c.data?.tag}] {c.data?.name}</div>
+                          <div style={{color:"#6d5a86",fontSize:10.5,fontWeight:600}}>{(c.data?.members||[]).length} members · Power {fmt(clanScores[c.id]||0)}</div>
+                        </div>
+                        {!myClan&&<button onClick={()=>joinClan(c)} disabled={busy} className="press-fx" style={{background:"linear-gradient(135deg,#22d67a,#16a34a)",border:"none",borderRadius:10,color:"#04210f",fontWeight:900,fontSize:11.5,padding:"8px 14px",cursor:"pointer",whiteSpace:"nowrap"}}>Join</button>}
+                      </div>
+                    );
+                  })}
+                </div>}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1864,7 +2156,7 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 // ─── MAIN GAME ────────────────────────────────────────────────────────────────
 export default function TapGame() {
   const {user,signOut}=useAuth();
-  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"shop"|"profile"|"quests"|"achievements"|"ranks"|"settings">("home");
+  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"shop"|"profile"|"quests"|"achievements"|"ranks"|"settings"|"compete">("home");
   const [menuOpen,setMenuOpen]=useState(false);
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
@@ -2630,6 +2922,7 @@ export default function TapGame() {
       {activeTab==="profile"&&<ProfileTab playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} solWallet={solWallet} charId={charId} totalEarned={totalEarned} totalTaps={totalTaps} coins={coins} level={level} rank={rank} nextRank={nextRank} upgrades={upgrades} achievCount={achievSet.size} onOpenSettings={()=>setActiveTab("settings")} onClaimRef={(reward,count)=>{setCoins(c=>c+reward); showToast(`🤝 +${fmt(reward)} coins from ${count} invite${count>1?"s":""}!`);}} onAscend={ascend}/>}
       {activeTab==="quests"&&<MissionsTab playerId={playerId} totalTaps={totalTaps} totalEarned={totalEarned} upgrades={upgrades} charId={charId} onClaim={(id,reward)=>{setCoins(c=>c+reward); showToast(`Mission cleared! +${fmt(reward)} coins`);}}/>}
       {activeTab==="achievements"&&<AchievementsTab achievSet={achievSet} totalTaps={totalTaps} coins={coins}/>}
+      {activeTab==="compete"&&<CompeteTab playerId={playerId} username={username} charId={charId} totalEarned={totalEarned} onReward={(coins,label)=>{setCoins(c=>c+coins); showToast(`${label}: +${fmt(coins)} coins!`);}}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} liveTaps={totalTaps} liveEarned={totalEarned} liveUsername={username} liveAvatarUrl={avatarUrl} liveCharId={charId||"pepe"} key="lb"/>}
       {activeTab==="multi"&&<MultiplayerArena playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} charId={charId} coins={coins} onSpendCoins={spendCoinsExact}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
