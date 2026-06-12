@@ -39,7 +39,7 @@ export default function DailyQuestsPanel({
   const loadQuests = useCallback(async () => {
     const today = new Date().toISOString().slice(0, 10);
     const { data: questDefs } = await supabase
-      .from("daily_quests")
+      .from("dt_daily_quests")
       .select("*")
       .eq("quest_date", today)
       .eq("is_active", true);
@@ -47,7 +47,7 @@ export default function DailyQuestsPanel({
     if (!questDefs?.length) { setLoading(false); return; }
 
     const { data: progress } = await supabase
-      .from("player_quest_progress")
+      .from("dt_player_quest_progress")
       .select("*")
       .eq("user_id", userId)
       .eq("quest_date", today);
@@ -93,7 +93,7 @@ export default function DailyQuestsPanel({
     if (updates.length === 0) return;
 
     updates.forEach(async (u) => {
-      await supabase.from("player_quest_progress").upsert({
+      await supabase.from("dt_player_quest_progress").upsert({
         user_id: userId,
         quest_id: u.quest_id,
         quest_date: today,
@@ -113,7 +113,7 @@ export default function DailyQuestsPanel({
 
   async function claimReward(questId: string, rewardCoins: number) {
     const today = new Date().toISOString().slice(0, 10);
-    await supabase.from("player_quest_progress").upsert({
+    await supabase.from("dt_player_quest_progress").upsert({
       user_id: userId,
       quest_id: questId,
       quest_date: today,

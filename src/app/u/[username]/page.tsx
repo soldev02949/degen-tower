@@ -33,7 +33,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!username) return;
     supabase
-      .from("players")
+      .from("dt_players")
       .select("id,username,avatar_emoji,avatar_url,total_score,total_taps,character_id,prestige_level,created_at")
       .ilike("username", username as string)
       .single()

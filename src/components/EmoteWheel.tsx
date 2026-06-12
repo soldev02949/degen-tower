@@ -37,7 +37,7 @@ export default function EmoteWheel({ roomId, userId, username }: EmoteWheelProps
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
-        table: "game_emotes",
+        table: "dt_game_emotes",
         filter: `room_id=eq.${roomId}`,
       }, (payload) => {
         const msg = payload.new as EmoteMessage;
@@ -63,7 +63,7 @@ export default function EmoteWheel({ roomId, userId, username }: EmoteWheelProps
     const emote = EMOTES.find((e) => e.key === emoteKey);
     if (!emote) return;
 
-    await supabase.from("game_emotes").insert({
+    await supabase.from("dt_game_emotes").insert({
       room_id: roomId,
       user_id: userId,
       username: username || "Degen",

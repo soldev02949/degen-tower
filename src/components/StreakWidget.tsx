@@ -36,7 +36,7 @@ export default function StreakWidget({ userId, onRewardClaimed }: StreakWidgetPr
 
   async function loadStreak() {
     const { data } = await supabase
-      .from("player_streaks")
+      .from("dt_player_streaks")
       .select("current_streak,last_login_date,longest_streak")
       .eq("user_id", userId)
       .single();
@@ -47,7 +47,7 @@ export default function StreakWidget({ userId, onRewardClaimed }: StreakWidgetPr
       setClaimedToday(data.last_login_date === today);
     } else {
       // Initialize streak row
-      await supabase.from("player_streaks").insert({
+      await supabase.from("dt_player_streaks").insert({
         user_id: userId,
         current_streak: 0,
         longest_streak: 0,
@@ -70,7 +70,7 @@ export default function StreakWidget({ userId, onRewardClaimed }: StreakWidgetPr
     const rewardAmounts = [100, 200, 400, 600, 1000, 1500, 3000];
     const rewardCoins = rewardAmounts[dayIndex] || 3000;
 
-    await supabase.from("player_streaks").upsert({
+    await supabase.from("dt_player_streaks").upsert({
       user_id: userId,
       current_streak: newStreak,
       longest_streak: Math.max(newStreak, streak?.longest_streak || 0),
