@@ -24,6 +24,128 @@ async function sendAction(chat_id: number, action = "typing") {
   });
 }
 
+
+// ── Auto-mod blacklist ────────────────────────────────────────────────────────
+// All patterns are lowercased. Checked against every group message.
+const BLACKLIST: RegExp[] = [
+  // DM / contact solicitation
+  /\bdm\s*me\b/,
+  /\bdms?\s*(are\s*)?open\b/,
+  /\b(message|msg|text|contact)\s*me\b/,
+  /\bhit\s*me\s*up\b/,
+  /\bslide\s*into\b/,
+  /\bin\s*my\s*dms?\b/,
+  /\breach\s*(out|me)\b/,
+  /\bfollow\s*me\b/,
+  /\bcheck\s*(out\s*)?my\s*bio\b/,
+  /\blink\s*in\s*(my\s*)?bio\b/,
+  /\bdrop\s*your\s*(address|wallet|ca|contact)\b/,
+
+  // DEX / trending shills
+  /\bdex\s*paid\b/,
+  /\bdex\s*trending\b/,
+  /\bget\s*(us\s*)?trending\b/,
+  /\bbuy\s*trending\b/,
+  /\btrending\s*(package|slot|service|boost|now|soon)\b/,
+  /\bskeleton\s*trending\b/,
+  /\bdextools\s*(trending|paid|boost)\b/,
+  /\bdexscreener\s*(trending|paid|boost)\b/,
+  /\bcmc\s*(fast\s*track|trending|listed|listing)\b/,
+  /\bcg\s*(fast\s*track|trending|listed|listing)\b/,
+  /\bcoingecko\s*(fast\s*track|trending|paid)\b/,
+  /\bcoinmarketcap\s*(fast\s*track|trending|paid)\b/,
+
+  // Project shilling / unsolicited promo
+  /\b(just\s*)?(stealth|fair)\s*launch(ed|ing)?\b/,
+  /\bjust\s*launched\b/,
+  /\blaunch(ing|ed)\s*(today|now|soon|live)\b/,
+  /\bnew\s*(token|coin|project|gem|launch|contract)\b/,
+  /\bhidden\s*gem\b/,
+  /\blow\s*cap\s*gem\b/,
+  /\bmicro\s*cap\s*gem\b/,
+  /\bunder(rated|valued)\s*(gem|project|coin|token)\b/,
+  /\bnext\s*(100x|1000x|10x|moonshot|big\s*thing)\b/,
+  /\b(100|1000|500)x\s*(potential|gem|play|incoming|easy|guaranteed)\b/,
+  /\beasy\s*(100|1000|500)x\b/,
+  /\bget\s*in\s*early\b/,
+  /\bearly\s*(entry|opportunity|investors?)\b/,
+  /\bpresale\b/,
+  /\bprivate\s*sale\b/,
+  /\bwhitelist\s*(spots?|open|now|limited)\b/,
+  /\brug\s*(free|proof|pull)\b/,
+  /\b(no\s*)?rug\s*(pull|proof|free)\b/,
+  /\bsafu\s*(project|team|contract|dev)\b/,
+  /\bdoxxed\s*(team|devs?)\b/,
+  /\baudit(ed|ing)?\s*(contract|by|report)\b/,
+  /\bjoin\s*(our|the)\s*(telegram|tg|group|community|channel)\b/,
+  /\bcheck\s*(out\s*)?(our|this)\s*(project|token|coin|channel|group|tg)\b/,
+  /\b(paid\s*)?promotion\b/,
+  /\bsponsored\s*(post|content|by)\b/,
+  /\baffiliate\s*(link|code)\b/,
+  /\bshilling\b/,
+  /\bshill(s)?\b/,
+
+  // Pump / price manipulation signals
+  /\bpump\s*(it|this|incoming|alert|signal|now|soon|group)\b/,
+  /\b(buy\s*)?the\s*dip\s+(and\s*)?(pump|moon|flip)\b/,
+  /\bcoordinated\s*(buy|pump)\b/,
+  /\bpump\s*and\s*dump\b/,
+  /\bcall(s)?\s*(group|channel|signal)\b/,
+  /\bsignal(s)?\s*(group|channel|call)\b/,
+  /\b(crypto|trading|pump)\s*calls?\b/,
+
+  // Airdrop spam
+  /\bairdrop\s*(live|now|open|claim|free|alert|drop)\b/,
+  /\bfree\s*(tokens?|coins?|airdrop|crypto)\b/,
+  /\bclaim\s*(your\s*)?(free\s*)?(tokens?|airdrop|rewards?|crypto)\b/,
+  /\bdrop\s*(live|now|event|season)\b/,
+  /\bgiveaway\s*(live|now|open|time|event|drop)\b/,
+  /\bwin\s*(free\s*)?(tokens?|crypto|eth|sol|bnb)\b/,
+
+  // Referral / invite spam
+  /\buse\s*(my|our)\s*(ref|referral|code|link|invite)\b/,
+  /\bref\s*code\b/,
+  /\binvite\s*(code|link|bonus)\b/,
+  /\b(earn|make|get)\s*(passive\s*)?income\b/,
+  /\bmake\s*(money|gains)\s*(fast|quick|easy|online|with)\b/,
+
+  // NFT shilling
+  /\bnft\s*(drop|mint|launch|collection|project|sale|presale)\b/,
+  /\bmint(ing)?\s*(live|now|open|soon|free)\b/,
+  /\bwl\s*(spots?|open|limited|giveaway)\b/,
+  /\bwaitlist\s*(open|spots?|limited|giveaway)\b/,
+
+  // Scam / phishing patterns
+  /\bconnect\s*(your\s*)?wallet\s*(to\s*claim|for|now)\b/,
+  /\bverif(y|ication)\s*(required|needed|your\s*wallet)\b/,
+  /\bseed\s*(phrase|words?)\b/,
+  /\bprivate\s*key\b/,
+  /\brecovery\s*(phrase|words?)\b/,
+  /\bcustomer\s*support\b/,
+  /\bofficial\s*support\b/,
+  /\badmin\s*will\s*(never|not)\s*(dm|message)\b/,  // often used before scamming
+
+  // Generic spam indicators
+  /\bt\.me\/(?!degenclicker|degenclickerupdates)/,  // any t.me link that's NOT our own
+  /\bbit\.ly\b/,
+  /\bshorturl\b/,
+  /\btinyurl\b/,
+  /https?:\/\/(?!degen-tower\.vercel\.app|t\.me\/(degenclicker|degenclickerupdates)|x\.com\/degenclickersol|solscan\.io)[^\s]{20,}/,  // long external links
+];
+
+function isBlacklisted(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BLACKLIST.some((re) => re.test(lower));
+}
+
+async function deleteMsg(chat_id: number, message_id: number) {
+  await fetch(`${TG}/deleteMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id, message_id }),
+  });
+}
+
 // ── Command handlers ────────────────────────────────────────────────────────
 
 const CMD_START = `🎮 *Welcome to Degen Clicker!*
@@ -194,8 +316,15 @@ export async function POST(req: NextRequest) {
     if (!message) return NextResponse.json({ ok: true });
 
     const chat_id: number = message.chat.id;
+    const message_id: number = message.message_id;
     const text: string = (message.text ?? "").trim();
     if (!text) return NextResponse.json({ ok: true });
+
+    // ── Auto-mod: silently delete blacklisted messages in group chats ─────────
+    if (message.chat.type !== "private" && isBlacklisted(text)) {
+      await deleteMsg(chat_id, message_id);
+      return NextResponse.json({ ok: true });
+    }
 
     // Extract command (strip @botname suffix if present)
     const raw_cmd = text.split(" ")[0].split("@")[0].toLowerCase();
