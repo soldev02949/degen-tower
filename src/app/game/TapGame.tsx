@@ -2138,8 +2138,20 @@ export default function TapGame() {
     const ids=[playerId,user?.email,user?.id].filter((v):v is string=>!!v);
     const uid=ids[0];
     if(!uid||amount<=0)return false;
-    const current=Math.max(dbNum(liveRef.current.coins),dbNum(coins),dbNum(dbValuesRef.current?.coins));
     const spend=Math.max(0,Math.floor(amount));
+    let current=Math.max(dbNum(liveRef.current.coins),dbNum(coins),dbNum(dbValuesRef.current?.coins));
+    try{
+      const authToken=await getAuthToken();
+      for(const pid of ids){
+        const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=token_balance,wallet_address&wallet_address=eq.${encodeURIComponent(pid)}&limit=1`,{
+          headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache"},
+        });
+        if(!resp.ok)continue;
+        const rows=await resp.json().catch(()=>[] as Array<Record<string,unknown>>);
+        const row=Array.isArray(rows)?rows[0]:null;
+        if(row)current=Math.max(current,dbNum(row.token_balance));
+      }
+    }catch{}
     if(current<spend)return false;
     const nextBalance=Math.max(0,current-spend);
     setCoins(nextBalance);
