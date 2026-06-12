@@ -64,7 +64,22 @@ const GOLD = "#f5c842";
 const GREEN = "#22d67a";
 const RED = "#ef4444";
 
-type TabId = "overview"|"players"|"flagged"|"rewards"|"payouts"|"devices"|"leaderboard"|"submissions";
+type TabId = "overview"|"players"|"flagged"|"rewards"|"payouts"|"devices"|"leaderboard"|"submissions"|"tasks";
+
+type AdminTask = {
+  id: string;
+  created_at: string;
+  data: {
+    title: string;
+    description?: string;
+    category?: string;   // social | gameplay | community | dev | other
+    priority?: string;   // low | medium | high | critical
+    status?: string;     // active | paused | done
+    reward?: string;
+    due?: string;
+    updated_at?: string;
+  };
+};
 
 const STATUS_COLOR: Record<string,string> = {
   pending:"#f5c842", approved:"#22d67a", denied:"#ef4444",
@@ -116,6 +131,10 @@ export default function AdminDashboard() {
   const [ipData, setIpData] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [subLoading, setSubLoading] = useState(false);
+  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [taskModal, setTaskModal] = useState<AdminTask|"new"|null>(null);
+  const [taskForm, setTaskForm] = useState({title:"",description:"",category:"community",priority:"medium",status:"active",reward:"",due:""});
+  const [taskFilter, setTaskFilter] = useState<"all"|"active"|"paused"|"done">("all");
 
   // UI state
   const [search, setSearch] = useState("");
@@ -183,7 +202,39 @@ export default function AdminDashboard() {
     setSubLoading(false);
   }, []);
 
-  useEffect(() => { if (authed) { fetchAll(); fetchSubmissions(); } }, [authed, fetchAll, fetchSubmissions]);
+  const fetchTasks = useCallback(async () => {
+    try {
+      const { data } = await supabase.from("dt_security_events").select("id,created_at,data")
+        .eq("event_type","admin_task").order("created_at",{ascending:false}).limit(300);
+      setTasks((data||[]) as AdminTask[]);
+    } catch(e:any) { showMsg("Tasks fetch error: "+e.message,"err"); }
+  }, []);
+
+  async function createTask() {
+    if (!taskForm.title.trim()) { showMsg("Title required","err"); return; }
+    await supabase.from("dt_security_events").insert({
+      player_id:"__admin_task__", event_type:"admin_task", severity:"low",
+      data:{...taskForm, updated_at:new Date().toISOString()},
+    });
+    showMsg(`✅ Task created: ${taskForm.title}`);
+    setTaskModal(null);
+    setTaskForm({title:"",description:"",category:"community",priority:"medium",status:"active",reward:"",due:""});
+    fetchTasks();
+  }
+  async function updateTask(t: AdminTask, patch: Partial<AdminTask["data"]>) {
+    await supabase.from("dt_security_events").update({ data:{...t.data,...patch,updated_at:new Date().toISOString()} }).eq("id",t.id);
+    showMsg("✅ Task updated");
+    setTaskModal(null);
+    fetchTasks();
+  }
+  async function deleteTask(t: AdminTask) {
+    await supabase.from("dt_security_events").delete().eq("id",t.id);
+    showMsg("🗑 Task deleted");
+    setTaskModal(null);
+    fetchTasks();
+  }
+
+  useEffect(() => { if (authed) { fetchAll(); fetchSubmissions(); fetchTasks(); } }, [authed, fetchAll, fetchSubmissions, fetchTasks]);
 
   // Auto-refresh every 3s
   useEffect(() => {
@@ -344,6 +395,7 @@ export default function AdminDashboard() {
 
   const TABS: {id:TabId;label:string;badge?:number}[] = [
     {id:"overview",   label:"📊 Overview"},
+    {id:"tasks",      label:"🗂 Tasks", badge:tasks.filter(t=>t.data?.status==="active").length},
     {id:"players",    label:"👥 Players"},
     {id:"flagged",    label:"🚨 Flagged", badge:flaggedCount},
     {id:"rewards",    label:"💰 Rewards", badge:pendingRewards},
@@ -352,6 +404,10 @@ export default function AdminDashboard() {
     {id:"leaderboard",label:"🏆 Leaderboard"},
     {id:"submissions",label:"📸 Submissions"},
   ];
+
+  const PRIORITY_COLOR: Record<string,string> = {low:"#7a8aa0",medium:GOLD,high:"#ff8c42",critical:RED};
+  const CATEGORY_EMOJI: Record<string,string> = {social:"📣",gameplay:"🎮",community:"🫂",dev:"🛠",other:"📌"};
+  const filteredTasks = tasks.filter(t=>taskFilter==="all"||t.data?.status===taskFilter);
 
   const filteredPlayers = players.filter(p=>
     !search || (p.username||"").toLowerCase().includes(search.toLowerCase()) ||
@@ -383,10 +439,10 @@ export default function AdminDashboard() {
       )}
 
       {/* Header */}
-      <div style={{background:"rgba(10,0,20,0.97)",borderBottom:`1px solid ${BORDER}`,padding:"12px 24px",display:"flex",alignItems:"center",gap:12}}>
-        <img src="/logo.png" alt="" style={{width:28,height:28,objectFit:"contain",filter:"drop-shadow(0 0 8px rgba(168,85,247,0.6))"}}/>
-        <span style={{fontWeight:900,fontSize:16,color:"#fff",letterSpacing:"-0.02em"}}>Degen Clicker</span>
-        <span style={{color:"#443355",fontSize:12,fontWeight:700}}>Admin · Security Panel</span>
+      <div style={{background:"linear-gradient(180deg,rgba(30,8,60,0.95),rgba(10,0,20,0.97))",borderBottom:"1px solid rgba(168,85,247,0.25)",padding:"14px 24px",display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(14px)"}}>
+        <img src="/logo.png" alt="" style={{width:30,height:30,objectFit:"contain",filter:"drop-shadow(0 0 10px rgba(168,85,247,0.7))"}}/>
+        <span style={{fontWeight:900,fontSize:17,color:"#fff",letterSpacing:"-0.02em"}}>Degen Clicker</span>
+        <span style={{background:"rgba(168,85,247,0.12)",border:"1px solid rgba(168,85,247,0.3)",color:PURPLE,fontSize:10,fontWeight:900,borderRadius:20,padding:"3px 10px",textTransform:"uppercase",letterSpacing:"0.08em"}}>Command Center</span>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
           {loading&&<span style={{color:"#555",fontSize:12}}>⏳ Loading…</span>}
           <button onClick={()=>setAutoRefresh(v=>!v)} style={{background:autoRefresh?"rgba(34,214,122,0.1)":"rgba(255,255,255,0.04)",border:`1px solid ${autoRefresh?"rgba(34,214,122,0.3)":BORDER}`,color:autoRefresh?GREEN:"#888",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:autoRefresh?700:400}}>
@@ -398,14 +454,16 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div style={{borderBottom:`1px solid ${BORDER}`,padding:"0 24px",display:"flex",gap:0,overflowX:"auto"}}>
+      <div style={{borderBottom:`1px solid ${BORDER}`,padding:"10px 24px",display:"flex",gap:6,overflowX:"auto",background:"rgba(8,0,16,0.6)"}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
-            background:"none",border:"none",
-            borderBottom:tab===t.id?"2px solid #a855f7":"2px solid transparent",
-            color:tab===t.id?"#fff":"#444",fontWeight:tab===t.id?700:400,
-            padding:"11px 18px",cursor:"pointer",fontSize:12,whiteSpace:"nowrap",
-            position:"relative",
+            background:tab===t.id?"linear-gradient(135deg,rgba(124,58,237,0.35),rgba(168,85,247,0.18))":"transparent",
+            border:`1px solid ${tab===t.id?"rgba(168,85,247,0.45)":"transparent"}`,
+            borderRadius:10,
+            color:tab===t.id?"#fff":"#556",fontWeight:tab===t.id?800:500,
+            padding:"9px 16px",cursor:"pointer",fontSize:12,whiteSpace:"nowrap",
+            position:"relative",transition:"all 0.15s ease",
+            boxShadow:tab===t.id?"0 2px 12px rgba(168,85,247,0.25)":"none",
           }}>
             {t.label}
             {t.badge!=null&&t.badge>0&&(
@@ -499,6 +557,77 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
+          </>
+        )}
+
+        {/* ── TASKS ── */}
+        {tab==="tasks"&&(
+          <>
+            <div style={{display:"flex",gap:10,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
+              <div>
+                <h3 style={{color:"#fff",fontWeight:900,fontSize:16,margin:"0 0 2px"}}>🗂 Custom Tasks</h3>
+                <p style={{color:"#556",fontSize:12,margin:0}}>{tasks.length} total · {tasks.filter(t=>t.data?.status==="active").length} active</p>
+              </div>
+              <div style={{display:"flex",gap:6,marginLeft:"auto",alignItems:"center"}}>
+                {(["all","active","paused","done"] as const).map(f=>(
+                  <button key={f} onClick={()=>setTaskFilter(f)} style={{
+                    background:taskFilter===f?"rgba(168,85,247,0.15)":"rgba(255,255,255,0.04)",
+                    border:`1px solid ${taskFilter===f?"rgba(168,85,247,0.4)":BORDER}`,
+                    color:taskFilter===f?PURPLE:"#777",borderRadius:8,padding:"6px 12px",cursor:"pointer",
+                    fontSize:11,fontWeight:taskFilter===f?800:500,textTransform:"capitalize",
+                  }}>{f}</button>
+                ))}
+                <button onClick={()=>{setTaskForm({title:"",description:"",category:"community",priority:"medium",status:"active",reward:"",due:""});setTaskModal("new");}}
+                  style={{background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:900,padding:"9px 18px",cursor:"pointer",boxShadow:"0 4px 16px rgba(168,85,247,0.35)"}}>
+                  ＋ New Task
+                </button>
+              </div>
+            </div>
+            {filteredTasks.length===0?(
+              <div style={{textAlign:"center",padding:60,color:"#556"}}>
+                <div style={{fontSize:48,marginBottom:12}}>🗂</div>
+                <div style={{fontWeight:700,fontSize:14,color:"#888"}}>No tasks {taskFilter!=="all"?`with status "${taskFilter}"`:"yet"}</div>
+                <div style={{fontSize:12,marginTop:4}}>Create custom tasks to track community missions, dev work, and ops.</div>
+              </div>
+            ):(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
+                {filteredTasks.map(t=>{
+                  const d=t.data||{} as AdminTask["data"];
+                  const pc=PRIORITY_COLOR[d.priority||"medium"]||GOLD;
+                  return(
+                    <div key={t.id} style={{background:CARD,border:`1px solid ${d.status==="done"?"rgba(34,214,122,0.2)":BORDER}`,borderRadius:16,padding:"16px 18px",opacity:d.status==="done"?0.65:1,display:"flex",flexDirection:"column",gap:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:18}}>{CATEGORY_EMOJI[d.category||"other"]||"📌"}</span>
+                        <span style={{color:"#fff",fontWeight:800,fontSize:14,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.title}</span>
+                        <Pill status={d.status||"active"}/>
+                      </div>
+                      {d.description&&<div style={{color:"#99a",fontSize:12,lineHeight:1.5}}>{d.description}</div>}
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",fontSize:10}}>
+                        <span style={{background:pc+"18",border:`1px solid ${pc}40`,color:pc,borderRadius:6,padding:"2px 8px",fontWeight:800,textTransform:"uppercase"}}>{d.priority||"medium"}</span>
+                        <span style={{color:"#556",textTransform:"capitalize"}}>{d.category||"other"}</span>
+                        {d.reward&&<span style={{color:GOLD,fontWeight:700}}>🎁 {d.reward}</span>}
+                        {d.due&&<span style={{color:"#7a8aa0"}}>📅 {d.due}</span>}
+                        <span style={{color:"#445",marginLeft:"auto"}}>{ago(t.created_at)}</span>
+                      </div>
+                      <div style={{display:"flex",gap:6,marginTop:2}}>
+                        <button onClick={()=>{setTaskForm({title:d.title||"",description:d.description||"",category:d.category||"community",priority:d.priority||"medium",status:d.status||"active",reward:d.reward||"",due:d.due||""});setTaskModal(t);}}
+                          style={{flex:1,background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:8,color:PURPLE,fontSize:11,fontWeight:700,padding:"6px 0",cursor:"pointer"}}>✏️ Edit</button>
+                        {d.status!=="done"&&(
+                          <button onClick={()=>updateTask(t,{status:d.status==="paused"?"active":"paused"})}
+                            style={{flex:1,background:"rgba(245,200,66,0.08)",border:"1px solid rgba(245,200,66,0.25)",borderRadius:8,color:GOLD,fontSize:11,fontWeight:700,padding:"6px 0",cursor:"pointer"}}>
+                            {d.status==="paused"?"▶ Resume":"⏸ Pause"}
+                          </button>
+                        )}
+                        <button onClick={()=>updateTask(t,{status:d.status==="done"?"active":"done"})}
+                          style={{flex:1,background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.25)",borderRadius:8,color:GREEN,fontSize:11,fontWeight:700,padding:"6px 0",cursor:"pointer"}}>
+                          {d.status==="done"?"↩ Reopen":"✅ Done"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 
@@ -981,6 +1110,54 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+      {/* Task create/edit modal */}
+      {taskModal&&(
+        <Modal title={taskModal==="new"?"＋ New Task":"✏️ Edit Task"} onClose={()=>setTaskModal(null)}>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <input value={taskForm.title} onChange={e=>setTaskForm(f=>({...f,title:e.target.value}))} placeholder="Task title *"
+              style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"10px 14px",outline:"none"}}/>
+            <textarea value={taskForm.description} onChange={e=>setTaskForm(f=>({...f,description:e.target.value}))} placeholder="Description" rows={3}
+              style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"10px 14px",outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <label style={{color:"#667",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Category</label>
+                <select value={taskForm.category} onChange={e=>setTaskForm(f=>({...f,category:e.target.value}))}
+                  style={{width:"100%",marginTop:4,background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"9px 12px",outline:"none"}}>
+                  {["community","social","gameplay","dev","other"].map(c=><option key={c} value={c} style={{background:"#0c0418"}}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{color:"#667",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Priority</label>
+                <select value={taskForm.priority} onChange={e=>setTaskForm(f=>({...f,priority:e.target.value}))}
+                  style={{width:"100%",marginTop:4,background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"9px 12px",outline:"none"}}>
+                  {["low","medium","high","critical"].map(p=><option key={p} value={p} style={{background:"#0c0418"}}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{color:"#667",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Reward (optional)</label>
+                <input value={taskForm.reward} onChange={e=>setTaskForm(f=>({...f,reward:e.target.value}))} placeholder="e.g. 50 USDC"
+                  style={{width:"100%",marginTop:4,background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"9px 12px",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{color:"#667",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Due (optional)</label>
+                <input value={taskForm.due} onChange={e=>setTaskForm(f=>({...f,due:e.target.value}))} placeholder="e.g. 2026-06-20"
+                  style={{width:"100%",marginTop:4,background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:10,color:"#fff",fontSize:13,padding:"9px 12px",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:6}}>
+              {taskModal==="new"?(
+                <button onClick={createTask} style={{flex:1,background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:900,padding:"11px 0",cursor:"pointer"}}>Create Task</button>
+              ):(
+                <>
+                  <button onClick={()=>updateTask(taskModal as AdminTask, taskForm)} style={{flex:1,background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:900,padding:"11px 0",cursor:"pointer"}}>Save Changes</button>
+                  <button onClick={()=>deleteTask(taskModal as AdminTask)} style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,color:RED,fontSize:13,fontWeight:800,padding:"11px 18px",cursor:"pointer"}}>Delete</button>
+                </>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ── MODALS ── */}
 
