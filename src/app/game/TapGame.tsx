@@ -1629,6 +1629,8 @@ export default function TapGame() {
               const charId=existing.character as string||"pepe";
               syncDB(authId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
               dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
+              // Auto-start returning players — charId must be set for runSync to sync taps
+              startGame(charId,uname,existing.sol_wallet as string||undefined);
             }
           } else {
             // Try to migrate existing UUID-based record to email-based ID
