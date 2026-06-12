@@ -26,7 +26,9 @@ type Stats = {
   losses: number;
   draws: number;
   streak: number;
+  lossStreak: number;
   bestStreak: number;
+  ladder: number;
   mmr: number;
   seasonWins: number;
   seasonPoints: number;
@@ -70,6 +72,17 @@ type MatchMeta = {
   createdBy: string;
 };
 
+type MPLeaderRow = {
+  playerId: string;
+  username: string;
+  avatarUrl?: string | null;
+  charId: string;
+  wins: number;
+  ladder: number;
+  streak: number;
+  lossStreak: number;
+};
+
 type ArenaProps = {
   playerId: string;
   username: string;
@@ -110,7 +123,7 @@ function seasonKey() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function loadStats(playerId: string): Stats {
-  const defaults: Stats = { wins: 0, losses: 0, draws: 0, streak: 0, bestStreak: 0, mmr: 1000, seasonWins: 0, seasonPoints: 0, totalSpent: 0 };
+  const defaults: Stats = { wins: 0, losses: 0, draws: 0, streak: 0, lossStreak: 0, bestStreak: 0, ladder: 0, mmr: 1000, seasonWins: 0, seasonPoints: 0, totalSpent: 0 };
   if (typeof window === "undefined") return defaults;
   try {
     const raw = localStorage.getItem(statsKey(playerId));
@@ -131,6 +144,7 @@ function saveStats(playerId: string, stats: Stats) {
 
 export default function MultiplayerArena({ playerId, username, avatar, avatarUrl, charId, coins, onSpendCoins }: ArenaProps) {
   const [stats, setStats] = useState<Stats>(() => loadStats(playerId || "anon"));
+  const [mpLeaderboard, setMpLeaderboard] = useState<MPLeaderRow[]>([]);
   const [phase, setPhase] = useState<"hub" | "queue" | "pregame" | "battle" | "result">("hub");
   const [mode, setMode] = useState<"public" | "private">("public");
   const [ranked, setRanked] = useState(true);
@@ -162,6 +176,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
   const statsRef = useRef(stats);
   const lastBroadcastRef = useRef(0);
   const rematchSentRef = useRef(false);
+  const lastRemoteTsRef = useRef(0);
   const localStateRef = useRef({ myTaps: 0, myScore: 0, mySpent: 0, myUpgrades: {} as Partial<Record<UpgradeId, number>> });
 
   useEffect(() => { statsRef.current = stats; saveStats(playerId || "anon", stats); }, [playerId, stats]);
@@ -172,6 +187,113 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
   }, []);
+
+  const refreshMPLeaderboard = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("dt_players")
+      .select("wallet_address,username,character,avatar_url,upgrades")
+      .limit(1000);
+    if (error || !data) return;
+    const board = data
+      .map((row) => {
+        const upgrades = ((row as { upgrades?: Record<string, number> | null }).upgrades || {}) as Record<string, number>;
+        return {
+          playerId: (row as { wallet_address: string }).wallet_address,
+          username: (row as { username?: string | null }).username || "Degen",
+          avatarUrl: (row as { avatar_url?: string | null }).avatar_url || null,
+          charId: (row as { character?: string | null }).character || "pepe",
+          wins: Math.floor(upgrades.mp_wins || 0),
+          ladder: Math.floor(upgrades.mp_ladder || 0),
+          streak: Math.floor(upgrades.mp_streak || 0),
+          lossStreak: Math.floor(upgrades.mp_loss_streak || 0),
+        } satisfies MPLeaderRow;
+      })
+      .filter((row) => row.wins > 0 || row.ladder > 0 || row.streak > 0 || row.lossStreak > 0)
+      .sort((a, b) => (b.ladder - a.ladder) || (b.wins - a.wins) || (b.streak - a.streak) || a.username.localeCompare(b.username))
+      .slice(0, 25);
+    setMpLeaderboard(board);
+  }, []);
+
+  const persistMPStats = useCallback(async (next: Stats) => {
+    if (!playerId) return;
+    const { data, error } = await supabase
+      .from("dt_players")
+      .select("upgrades")
+      .eq("wallet_address", playerId)
+      .limit(1)
+      .maybeSingle();
+    if (error) return;
+    const prevUpgrades = ((data?.upgrades as Record<string, number> | null) || {}) as Record<string, number>;
+    const payload = {
+      ...prevUpgrades,
+      mp_wins: next.wins,
+      mp_losses: next.losses,
+      mp_draws: next.draws,
+      mp_streak: next.streak,
+      mp_loss_streak: next.lossStreak,
+      mp_best_streak: next.bestStreak,
+      mp_ladder: next.ladder,
+      mp_mmr: next.mmr,
+      mp_season_wins: next.seasonWins,
+      mp_season_points: next.seasonPoints,
+      mp_total_spent: next.totalSpent,
+    };
+    await supabase.from("dt_players").update({ upgrades: payload }).eq("wallet_address", playerId);
+    await refreshMPLeaderboard();
+  }, [playerId, refreshMPLeaderboard]);
+
+  useEffect(() => {
+    if (!playerId) return;
+    void refreshMPLeaderboard();
+    void (async () => {
+      const { data, error } = await supabase
+        .from("dt_players")
+        .select("upgrades")
+        .eq("wallet_address", playerId)
+        .limit(1)
+        .maybeSingle();
+      if (error || !data?.upgrades) return;
+      const upgrades = data.upgrades as Record<string, number>;
+      setStats((prev) => ({
+        ...prev,
+        wins: Math.floor(upgrades.mp_wins ?? prev.wins),
+        losses: Math.floor(upgrades.mp_losses ?? prev.losses),
+        draws: Math.floor(upgrades.mp_draws ?? prev.draws),
+        streak: Math.floor(upgrades.mp_streak ?? prev.streak),
+        lossStreak: Math.floor(upgrades.mp_loss_streak ?? prev.lossStreak),
+        bestStreak: Math.floor(upgrades.mp_best_streak ?? prev.bestStreak),
+        ladder: Math.floor(upgrades.mp_ladder ?? prev.ladder),
+        mmr: Math.floor(upgrades.mp_mmr ?? prev.mmr),
+        seasonWins: Math.floor(upgrades.mp_season_wins ?? prev.seasonWins),
+        seasonPoints: Math.floor(upgrades.mp_season_points ?? prev.seasonPoints),
+        totalSpent: Math.floor(upgrades.mp_total_spent ?? prev.totalSpent),
+      }));
+    })();
+  }, [playerId, refreshMPLeaderboard]);
+
+  const pushStateNow = useCallback((override?: Partial<RemoteState>) => {
+    const ch = matchChannelRef.current;
+    if (!ch || !playerId) return;
+    const now = Date.now();
+    lastBroadcastRef.current = now;
+    void ch.send({
+      type: "broadcast",
+      event: "state",
+      payload: {
+        playerId,
+        username: override?.username ?? username ?? "Degen",
+        avatar: override?.avatar ?? avatar ?? charEmoji(charId || "pepe"),
+        avatarUrl: override?.avatarUrl ?? avatarUrl,
+        charId: override?.charId ?? charId ?? "pepe",
+        taps: override?.taps ?? localStateRef.current.myTaps,
+        score: override?.score ?? localStateRef.current.myScore,
+        spent: override?.spent ?? localStateRef.current.mySpent,
+        upgrades: override?.upgrades ?? localStateRef.current.myUpgrades,
+        readyRematch: override?.readyRematch ?? rematchReady,
+        ts: override?.ts ?? now,
+      } satisfies RemoteState,
+    });
+  }, [avatar, avatarUrl, charId, playerId, rematchReady, username]);
 
   const me = useMemo<PlayerMeta>(() => ({
     id: playerId,
@@ -187,7 +309,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
 
   const resetMatchState = useCallback(() => {
     setMyTaps(0); setMyScore(0); setMySpent(0); setMyUpgrades({}); setRemote(null);
-    setResolved(null); setResultLocked(false); setRematchReady(false); setOppRematchReady(false); rematchSentRef.current = false;
+    setResolved(null); setResultLocked(false); setRematchReady(false); setOppRematchReady(false); rematchSentRef.current = false; lastRemoteTsRef.current = 0;
   }, []);
 
   const leaveQueue = useCallback(async () => {
@@ -232,6 +354,8 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     ch.on("broadcast", { event: "state" }, ({ payload }) => {
       const data = payload as RemoteState;
       if (!data || data.playerId === playerId) return;
+      if ((data.ts || 0) < lastRemoteTsRef.current) return;
+      lastRemoteTsRef.current = data.ts || Date.now();
       setRemote(data);
       setOppRematchReady(Boolean(data.readyRematch));
     });
@@ -388,41 +512,29 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
   useEffect(() => {
     if (phase !== "battle") return;
     const iv = setInterval(() => {
-      const autoLevel = myUpgrades.auto || 0;
+      const autoLevel = localStateRef.current.myUpgrades.auto || 0;
       if (!autoLevel) return;
-      const add = autoLevel * 0.2;
-      setMyTaps((v) => v + add);
-      setMyScore((v) => v + add * (1 + (myUpgrades.mult || 0) * 0.25));
-    }, 200);
+      const multLevel = localStateRef.current.myUpgrades.mult || 0;
+      const add = autoLevel * 0.1;
+      const nextTaps = localStateRef.current.myTaps + add;
+      const nextScore = localStateRef.current.myScore + add * (1 + multLevel * 0.25);
+      localStateRef.current = { ...localStateRef.current, myTaps: nextTaps, myScore: nextScore };
+      setMyTaps(nextTaps);
+      setMyScore(nextScore);
+      pushStateNow({ taps: nextTaps, score: nextScore, upgrades: localStateRef.current.myUpgrades, spent: localStateRef.current.mySpent });
+    }, 100);
     return () => clearInterval(iv);
-  }, [phase, myUpgrades]);
+  }, [phase, pushStateNow]);
 
   useEffect(() => {
     if (!matchChannelRef.current || !match || (phase !== "battle" && phase !== "result" && phase !== "pregame")) return;
     const iv = setInterval(() => {
       const now = Date.now();
-      if (now - lastBroadcastRef.current < 220) return;
-      lastBroadcastRef.current = now;
-      void matchChannelRef.current?.send({
-        type: "broadcast",
-        event: "state",
-        payload: {
-          playerId,
-          username: me.username,
-          avatar: me.avatar,
-          avatarUrl: me.avatarUrl,
-          charId: me.charId,
-          taps: localStateRef.current.myTaps,
-          score: localStateRef.current.myScore,
-          spent: localStateRef.current.mySpent,
-          upgrades: localStateRef.current.myUpgrades,
-          readyRematch: rematchReady,
-          ts: now,
-        } satisfies RemoteState,
-      });
-    }, 250);
+      if (now - lastBroadcastRef.current < 90) return;
+      pushStateNow();
+    }, 100);
     return () => clearInterval(iv);
-  }, [match, me, phase, playerId, rematchReady]);
+  }, [match, phase, pushStateNow]);
 
   useEffect(() => {
     if (phase !== "result" || resultLocked) return;
@@ -436,24 +548,37 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
       if (out === "win") {
         next.wins += 1;
         next.streak += 1;
+        next.lossStreak = 0;
         next.bestStreak = Math.max(next.bestStreak, next.streak);
+        next.ladder += 1;
         next.seasonWins += 1;
         next.seasonPoints += match?.ranked ? 25 : 12;
         next.mmr += match?.ranked ? 24 : 8;
       } else if (out === "loss") {
         next.losses += 1;
         next.streak = 0;
+        next.lossStreak += 1;
+        if (next.lossStreak >= 3) {
+          next.ladder = Math.max(0, next.ladder - 1);
+          next.lossStreak = 0;
+        }
         next.seasonPoints += match?.ranked ? 6 : 3;
         next.mmr = Math.max(700, next.mmr - (match?.ranked ? 16 : 4));
       } else {
         next.draws += 1;
         next.streak = 0;
+        next.lossStreak = 0;
         next.seasonPoints += 10;
       }
       next.totalSpent += mySpent;
       return next;
     });
   }, [match?.ranked, myScore, mySpent, phase, remote?.score, resultLocked]);
+
+  useEffect(() => {
+    if (phase !== "result" || !resultLocked) return;
+    void persistMPStats(stats);
+  }, [persistMPStats, phase, resultLocked, stats]);
 
   useEffect(() => {
     if (phase !== "result" || !rematchReady || !oppRematchReady || rematchSentRef.current || !match) return;
@@ -471,29 +596,39 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
 
   const tapNow = useCallback(() => {
     if (phase !== "battle") return;
-    const tapLvl = myUpgrades.tap || 0;
-    const multLvl = myUpgrades.mult || 0;
-    const frenzyLvl = myUpgrades.frenzy || 0;
-    const critLvl = myUpgrades.crit || 0;
+    const tapLvl = localStateRef.current.myUpgrades.tap || 0;
+    const multLvl = localStateRef.current.myUpgrades.mult || 0;
+    const frenzyLvl = localStateRef.current.myUpgrades.frenzy || 0;
+    const critLvl = localStateRef.current.myUpgrades.crit || 0;
+    const currentTaps = localStateRef.current.myTaps;
     let base = baseTapForChar(charId || "pepe") + tapLvl;
     base *= 1 + multLvl * 0.25 + frenzyLvl * 0.4;
     if (Math.random() < critLvl * 0.08) base *= 2.5;
-    if ((charId || "pepe") === "trump" && (myTaps + 1) % 40 < 1) base *= 2;
+    if ((charId || "pepe") === "trump" && (currentTaps + 1) % 40 < 1) base *= 2;
     if ((charId || "pepe") === "troll") base *= 0.8 + Math.random() * 0.8;
-    setMyTaps((v) => v + 1);
-    setMyScore((v) => v + base);
-  }, [charId, myTaps, myUpgrades, phase]);
+    const nextTaps = currentTaps + 1;
+    const nextScore = localStateRef.current.myScore + base;
+    localStateRef.current = { ...localStateRef.current, myTaps: nextTaps, myScore: nextScore };
+    setMyTaps(nextTaps);
+    setMyScore(nextScore);
+    pushStateNow({ taps: nextTaps, score: nextScore, upgrades: localStateRef.current.myUpgrades, spent: localStateRef.current.mySpent });
+  }, [charId, phase, pushStateNow]);
 
   const buyUpgrade = useCallback(async (id: UpgradeId) => {
+    if (phase !== "battle") return;
     const item = MP_UPGRADES.find((u) => u.id === id)!;
-    const owned = myUpgrades[id] || 0;
+    const owned = localStateRef.current.myUpgrades[id] || 0;
     const price = Math.floor(item.cost * Math.pow(1.65, owned));
     const ok = await onSpendCoins(price);
     if (!ok) { showToast("Not enough real coins"); return; }
-    setMySpent((v) => v + price);
-    setMyUpgrades((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-    showToast(`${item.emoji} ${item.name} bought for ${formatNum(price)}`);
-  }, [myUpgrades, onSpendCoins, showToast]);
+    const nextSpent = localStateRef.current.mySpent + price;
+    const nextUpgrades = { ...localStateRef.current.myUpgrades, [id]: owned + 1 };
+    localStateRef.current = { ...localStateRef.current, mySpent: nextSpent, myUpgrades: nextUpgrades };
+    setMySpent(nextSpent);
+    setMyUpgrades(nextUpgrades);
+    pushStateNow({ spent: nextSpent, upgrades: nextUpgrades, taps: localStateRef.current.myTaps, score: localStateRef.current.myScore });
+    showToast(`${item.emoji} ${item.name} Lv.${owned + 1} bought for ${formatNum(price)}`);
+  }, [onSpendCoins, phase, pushStateNow, showToast]);
 
   const opponent = useMemo(() => match?.players.find((p) => p.id !== playerId) || null, [match, playerId]);
   const battleLeft = match ? Math.max(0, match.startAt + match.durationMs - Date.now()) : 0;
@@ -514,8 +649,8 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
               {[
                 { label: "Wins", value: stats.wins, color: BG.green },
-                { label: "Best Streak", value: stats.bestStreak, color: BG.gold },
-                { label: "MMR", value: stats.mmr, color: "#c084fc" },
+                { label: "Ladder", value: stats.ladder, color: BG.gold },
+                { label: "Win Streak", value: stats.streak, color: "#c084fc" },
                 { label: "Season", value: stats.seasonPoints, color: "#60a5fa" },
               ].map((s) => (
                 <div key={s.label} className="shine-card" style={{ background: BG.glass, border: `1px solid ${BG.border}`, borderRadius: 18, padding: "14px 12px", textAlign: "center" }}>
@@ -554,9 +689,35 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
               <button onClick={createPrivate} className="press-fx" style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", fontWeight: 900, borderRadius: 16, padding: "14px 16px", fontSize: 14 }}>Create Private Code</button>
             </div>
 
+            <div style={{ background: BG.glass, border: `1px solid ${BG.border}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ color: BG.gold, fontWeight: 900, fontSize: 16 }}>🏆 Multiplayer Leaderboard</div>
+                <button onClick={() => void refreshMPLeaderboard()} className="press-fx" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 800 }}>Refresh</button>
+              </div>
+              {mpLeaderboard.length === 0 ? (
+                <div style={{ color: "#7f6c97", fontSize: 11.5 }}>No ranked multiplayer wins yet. First winners will appear here.</div>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {mpLeaderboard.map((row, idx) => (
+                    <div key={row.playerId} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center", background: idx < 3 ? "linear-gradient(135deg,rgba(245,200,66,0.12),rgba(168,85,247,0.06))" : "rgba(255,255,255,0.03)", border: `1px solid ${idx < 3 ? "rgba(245,200,66,0.22)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "10px 12px" }}>
+                      <div style={{ color: idx === 0 ? BG.gold : idx === 1 ? "#cbd5e1" : idx === 2 ? "#f59e0b" : "#8b7aa3", fontWeight: 900, fontSize: 13, minWidth: 26 }}>#{idx + 1}</div>
+                      <div>
+                        <div style={{ color: "#fff", fontWeight: 800, fontSize: 12.5 }}>{row.username}</div>
+                        <div style={{ color: "#7f6c97", fontSize: 10.5 }}>{charEmoji(row.charId)} {row.charId} · {row.wins} wins · W streak {row.streak}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ color: BG.green, fontWeight: 900, fontSize: 14 }}>Ladder {row.ladder}</div>
+                        <div style={{ color: "#6f5f86", fontSize: 10 }}>L streak {row.lossStreak}/3</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ background: "rgba(34,214,122,0.05)", border: "1px solid rgba(34,214,122,0.14)", borderRadius: 18, padding: 14 }}>
               <div style={{ color: BG.green, fontWeight: 900, marginBottom: 8 }}>How this mode works</div>
-              <div style={{ color: "#8b7aa3", fontSize: 11.5, lineHeight: 1.6 }}>• Public = instant 2-player pairing<br/>• Private = code lobbies + rematches<br/>• Matches last 3 minutes<br/>• Multiplayer upgrades are temporary<br/>• The coins spent to buy them are permanently deducted from your real balance</div>
+              <div style={{ color: "#8b7aa3", fontSize: 11.5, lineHeight: 1.6 }}>• Public = instant 2-player pairing<br/>• Private = code lobbies + rematches<br/>• Matches last 3 minutes<br/>• Multiplayer upgrades are temporary<br/>• *Leaderboard ranks up by wins*<br/>• *3 losses in a row drops your ladder by 1*<br/>• The coins spent to buy them are permanently deducted from your real balance</div>
             </div>
           </>
         )}
