@@ -1113,11 +1113,64 @@ function AchievementsTab({achievSet,totalTaps,coins}:{achievSet:Set<string>;tota
   return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{marginBottom:14}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:6}}>Achievement Hall</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",marginBottom:6}}>Your flex board</div><div style={{color:"#8f7ca7",fontSize:12.5,lineHeight:1.6}}>This gives players another reason to grind besides raw score. Unlocked achievements now have their own surface.</div></div><div style={{display:"grid",gap:10}}>{items.map((a)=>{ const unlocked=achievSet.has(a.id) || !!a.live; return <div key={a.id} style={{background:unlocked?"linear-gradient(135deg,rgba(245,200,66,0.11),rgba(168,85,247,0.07))":"rgba(255,255,255,0.03)",border:unlocked?"1px solid rgba(245,200,66,0.24)":"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:14,display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",background:unlocked?"rgba(245,200,66,0.12)":"rgba(255,255,255,0.04)",fontSize:22}}>{unlocked?"🏅":"🔒"}</div><div style={{flex:1}}><div style={{color:unlocked?"#f5c842":"#fff",fontWeight:900,fontSize:13.5}}>{a.title}</div><div style={{color:"#8f7ca7",fontSize:11.5,lineHeight:1.5}}>{a.desc}</div></div><div style={{color:unlocked?"#22d67a":"#6d5a86",fontSize:10.5,fontWeight:900,letterSpacing:"0.08em"}}>{unlocked?"UNLOCKED":"LOCKED"}</div></div>; })}</div><div style={{marginTop:14,background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.14)",borderRadius:18,padding:14,color:"#b6a2cf",fontSize:11.5,lineHeight:1.6}}>Next easy expansion: rare hidden achievements, seasonal badges, clan achievements, PvP mastery medals, and profile showcase slots.</div></div></div>;
 }
 
+// ─── DAILY STREAK CHEST ──────────────────────────────────────────────────────
+const STREAK_REWARDS=[10000,25000,50000,100000,200000,400000,1000000]; // day 1..7+, day7 repeats
+function dayKey(d:Date){return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
+function DailyStreakCard({playerId,level,onClaim}:{playerId:string;level:number;onClaim:(reward:number,streak:number)=>void;}){
+  const storageKey=`degen_daily_${playerId}`;
+  const [state,setState]=useState<{streak:number;last:string}>({streak:0,last:""});
+  const [justClaimed,setJustClaimed]=useState(false);
+  useEffect(()=>{ try{const raw=localStorage.getItem(storageKey); if(raw)setState(JSON.parse(raw));}catch{} },[storageKey]);
+  const today=dayKey(new Date());
+  const yesterday=dayKey(new Date(Date.now()-86400000));
+  const claimedToday=state.last===today;
+  const effectiveStreak=state.last===today?state.streak:(state.last===yesterday?state.streak:0);
+  const nextStreak=claimedToday?state.streak:effectiveStreak+1;
+  const baseReward=STREAK_REWARDS[Math.min(nextStreak-1,6)];
+  const reward=Math.round(baseReward*(1+level*0.1));
+  const claim=()=>{
+    if(claimedToday)return;
+    const ns={streak:nextStreak,last:today};
+    setState(ns);
+    try{localStorage.setItem(storageKey,JSON.stringify(ns));}catch{}
+    setJustClaimed(true);
+    onClaim(reward,nextStreak);
+  };
+  return(
+    <div className="anim-slideup shine-card" style={{
+      background:claimedToday?"linear-gradient(135deg,rgba(34,214,122,0.06),rgba(34,214,122,0.02))":"linear-gradient(135deg,rgba(245,200,66,0.12),rgba(245,160,30,0.04))",
+      border:`1.5px solid ${claimedToday?"rgba(34,214,122,0.25)":"rgba(245,200,66,0.4)"}`,
+      borderRadius:20,padding:"14px 16px",marginBottom:12,
+      boxShadow:claimedToday?"none":"0 0 30px rgba(245,200,66,0.12)",
+      display:"flex",alignItems:"center",gap:14,animationDelay:"0.16s",
+    }}>
+      <div style={{fontSize:36,filter:claimedToday?"grayscale(0.6)":"drop-shadow(0 0 12px rgba(245,200,66,0.7))",animation:claimedToday?"none":"charFloat 2.4s ease-in-out infinite"}}>{claimedToday?"✅":"🎁"}</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{color:"#fff",fontWeight:900,fontSize:14,marginBottom:2}}>Daily Chest {justClaimed&&"— claimed!"}</div>
+        <div style={{color:"#8a7aa8",fontSize:11,fontWeight:600}}>
+          {claimedToday?`🔥 ${state.streak}-day streak · come back tomorrow`:`🔥 Streak ${effectiveStreak} → ${nextStreak} · +${fmt(reward)} coins`}
+        </div>
+        <div style={{display:"flex",gap:3,marginTop:6}}>
+          {Array.from({length:7}).map((_,i)=>(
+            <div key={i} style={{flex:1,height:4,borderRadius:2,background:i<((claimedToday?state.streak:effectiveStreak)%7||((claimedToday?state.streak:effectiveStreak)>0&&(claimedToday?state.streak:effectiveStreak)%7===0?7:0))?"linear-gradient(90deg,#f5c842,#f59e0b)":"rgba(255,255,255,0.07)"}}/>
+          ))}
+        </div>
+      </div>
+      <button onClick={claim} disabled={claimedToday} style={{
+        background:claimedToday?"rgba(255,255,255,0.05)":"linear-gradient(135deg,#f5c842,#f59e0b)",
+        border:"none",borderRadius:12,color:claimedToday?"#556":"#1a0f00",
+        fontWeight:900,fontSize:12,padding:"10px 16px",cursor:claimedToday?"default":"pointer",
+        boxShadow:claimedToday?"none":"0 4px 18px rgba(245,200,66,0.35)",whiteSpace:"nowrap",
+      }}>{claimedToday?"Done":"Open"}</button>
+    </div>
+  );
+}
+
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
-function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId}:{
+function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily}:{
   onPlay:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
   level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
-  nextRank:ReturnType<typeof getNextRank>;charId:string|null;
+  nextRank:ReturnType<typeof getNextRank>;charId:string|null;playerId:string;onClaimDaily:(reward:number,streak:number)=>void;
 }){
   const cd=useCountdown();
   const char=CHARACTERS.find(c=>c.id===charId);
@@ -1188,6 +1241,9 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
             <span style={{color:"#4d3d6b",fontSize:10,fontWeight:600}}>{fmt(xpProgress.needed)} XP to level up</span>
           </div>
         </div>
+
+        {/* ── Daily streak chest ── */}
+        <DailyStreakCard playerId={playerId} level={level} onClaim={onClaimDaily}/>
 
         {/* ── Stats row ── */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
@@ -2459,7 +2515,7 @@ export default function TapGame() {
       {critFlash&&<div style={{position:"fixed",inset:0,background:"rgba(255,50,50,0.06)",zIndex:150,pointerEvents:"none"}}/>}
 
       {/* Tab content */}
-      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
+      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId} playerId={playerId} onClaimDaily={(reward,streak)=>{setCoins(c=>c+reward); showToast(`🎁 Day ${streak} chest! +${fmt(reward)} coins`);}}/>}
       {activeTab==="profile"&&<ProfileTab playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} solWallet={solWallet} charId={charId} totalEarned={totalEarned} totalTaps={totalTaps} coins={coins} level={level} rank={rank} nextRank={nextRank} upgrades={upgrades} achievCount={achievSet.size} onOpenSettings={()=>setActiveTab("settings")}/>}
       {activeTab==="quests"&&<MissionsTab playerId={playerId} totalTaps={totalTaps} totalEarned={totalEarned} upgrades={upgrades} charId={charId} onClaim={(id,reward)=>{setCoins(c=>c+reward); showToast(`Mission cleared! +${fmt(reward)} coins`);}}/>}
       {activeTab==="achievements"&&<AchievementsTab achievSet={achievSet} totalTaps={totalTaps} coins={coins}/>}
