@@ -93,6 +93,8 @@ type ArenaProps = {
   onSpendCoins: (amount: number) => Promise<boolean>;
 };
 
+const MATCH_BANK_START = 100_000_000;
+
 function randId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -157,6 +159,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
   const [myTaps, setMyTaps] = useState(0);
   const [myScore, setMyScore] = useState(0);
   const [mySpent, setMySpent] = useState(0);
+  const [bankCoins, setBankCoins] = useState(MATCH_BANK_START);
   const [myUpgrades, setMyUpgrades] = useState<Partial<Record<UpgradeId, number>>>({});
   const [remote, setRemote] = useState<RemoteState | null>(null);
   const [resolved, setResolved] = useState<"win" | "loss" | "draw" | null>(null);
@@ -308,7 +311,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
   }), [playerId, username, avatar, avatarUrl, charId, stats]);
 
   const resetMatchState = useCallback(() => {
-    setMyTaps(0); setMyScore(0); setMySpent(0); setMyUpgrades({}); setRemote(null);
+    setMyTaps(0); setMyScore(0); setMySpent(0); setMyUpgrades({}); setBankCoins(MATCH_BANK_START); setRemote(null);
     setResolved(null); setResultLocked(false); setRematchReady(false); setOppRematchReady(false); rematchSentRef.current = false; lastRemoteTsRef.current = 0;
   }, []);
 
@@ -594,6 +597,15 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     void matchChannelRef.current?.send({ type: "broadcast", event: "rematch_start", payload: next });
   }, [match, oppRematchReady, phase, playerId, rematchReady]);
 
+
+  const spendMatchCoins = useCallback(async (amount: number) => {
+    if (amount <= 0) return false;
+    if (bankCoins < amount) return false;
+    setBankCoins((prev) => Math.max(0, prev - amount));
+    return true;
+  }, [bankCoins]);
+
+
   const tapNow = useCallback(() => {
     if (phase !== "battle") return;
     const tapLvl = localStateRef.current.myUpgrades.tap || 0;
@@ -619,8 +631,8 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     const item = MP_UPGRADES.find((u) => u.id === id)!;
     const owned = localStateRef.current.myUpgrades[id] || 0;
     const price = Math.floor(item.cost * Math.pow(1.65, owned));
-    const ok = await onSpendCoins(price);
-    if (!ok) { showToast(coins >= price ? "Coin sync failed — retrying against your real balance" : "Not enough real coins"); return; }
+    const ok = await spendMatchCoins(price);
+    if (!ok) { showToast("Not enough match coins"); return; }
     const nextSpent = localStateRef.current.mySpent + price;
     const nextUpgrades = { ...localStateRef.current.myUpgrades, [id]: owned + 1 };
     localStateRef.current = { ...localStateRef.current, mySpent: nextSpent, myUpgrades: nextUpgrades };
@@ -628,7 +640,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
     setMyUpgrades(nextUpgrades);
     pushStateNow({ spent: nextSpent, upgrades: nextUpgrades, taps: localStateRef.current.myTaps, score: localStateRef.current.myScore });
     showToast(`${item.emoji} ${item.name} Lv.${owned + 1} bought for ${formatNum(price)}`);
-  }, [onSpendCoins, phase, pushStateNow, showToast]);
+  }, [bankCoins, phase, pushStateNow, showToast, spendMatchCoins]);
 
   const opponent = useMemo(() => match?.players.find((p) => p.id !== playerId) || null, [match, playerId]);
   const battleLeft = match ? Math.max(0, match.startAt + match.durationMs - Date.now()) : 0;
@@ -796,7 +808,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
                 {MP_UPGRADES.map((u) => {
                   const owned = myUpgrades[u.id] || 0;
                   const price = Math.floor(u.cost * Math.pow(1.65, owned));
-                  const can = coins >= price;
+                  const can = bankCoins >= price;
                   return (
                     <button key={u.id} onClick={() => void buyUpgrade(u.id)} className="press-fx" style={{ textAlign: "left", background: can ? `linear-gradient(135deg,rgba(168,85,247,0.14),rgba(168,85,247,0.05))` : "rgba(255,255,255,0.03)", border: `1px solid ${can ? "rgba(168,85,247,0.24)" : "rgba(255,255,255,0.06)"}`, borderRadius: 18, padding: 12, cursor: "pointer", opacity: can ? 1 : 0.72 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 5 }}>
@@ -813,7 +825,7 @@ export default function MultiplayerArena({ playerId, username, avatar, avatarUrl
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               {[
-                { label: "Real Coins Left", value: formatNum(coins), color: BG.gold },
+                { label: "Match Coins Left", value: formatNum(bankCoins), color: BG.gold },
                 { label: "Spent This Match", value: formatNum(mySpent), color: BG.red },
                 { label: "Queue Type", value: match.mode === "public" ? (match.ranked ? "RANKED" : "PUBLIC") : "PRIVATE", color: match.mode === "public" ? BG.green : "#93c5fd" },
               ].map((s) => (
