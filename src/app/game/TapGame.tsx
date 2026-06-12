@@ -577,7 +577,15 @@ function AvatarDisplay({emoji,url,size=28}:{emoji:string;url?:string;size?:numbe
   return <span style={{fontSize:Math.round(size*0.65),lineHeight:1,flexShrink:0}}>{emoji||"🐸"}</span>;
 }
 
-function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string;avatar:string;avatarUrl?:string;onSettings:()=>void;onLogout:()=>void}){
+function maskWallet(addr:string){ if(!addr) return "Not linked"; return addr.length>12?`${addr.slice(0,4)}...${addr.slice(-4)}`:addr; }
+function totalUpgradeLevels(upgrades:Record<string,number>){ return Object.values(upgrades||{}).reduce((sum,v)=>sum+(Number(v)||0),0); }
+function loadMpProfileStats(playerId:string){
+  const defaults={wins:0,losses:0,draws:0,streak:0,lossStreak:0,bestStreak:0,ladder:0,mmr:1000,seasonWins:0,seasonPoints:0,totalSpent:0};
+  if(typeof window==="undefined"||!playerId)return defaults;
+  try{ const raw=localStorage.getItem(`degen_mp_stats_${playerId}`); if(!raw)return defaults; return {...defaults,...JSON.parse(raw)}; }catch{return defaults;}
+}
+
+function TopBar({username,avatar,avatarUrl,onSettings,onProfile,onMenu,onLogout}:{username:string;avatar:string;avatarUrl?:string;onSettings:()=>void;onProfile:()=>void;onMenu:()=>void;onLogout:()=>void}){
   return(
     <div style={{
       position:"fixed",top:0,left:0,right:0,zIndex:200,
@@ -618,83 +626,88 @@ function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string
   );
 }
 
-// ─── BOTTOM BAR (glass) ──────────────────────────────────────────────────────
-const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"multi",label:"PvP",emoji:"⚔️"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
+// ─── NAV + SIDEBAR ────────────────────────────────────────────────────────────
+const CORE_TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"multi",label:"PvP",emoji:"⚔️"},{id:"shop",label:"Shop",emoji:"⚡"}];
+const MENU_TABS=[
+  {id:"profile",label:"Profile",emoji:"👤",desc:"Identity, stats, fighter setup"},
+  {id:"quests",label:"Missions",emoji:"🧭",desc:"Progress tasks and rewards"},
+  {id:"achievements",label:"Achievements",emoji:"🏅",desc:"Unlocked milestones and flex"},
+  {id:"ranks",label:"Leaderboard",emoji:"🏆",desc:"Live global climb"},
+  {id:"settings",label:"Settings",emoji:"⚙️",desc:"Wallet, avatar, account"},
+];
 
-function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
-  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="multi"?"#f87171":id==="settings"?"#9aa0b5":"#c084fc";
-  const side=[TABS[0],TABS[4],TABS[2],null,TABS[3],TABS[5]]; // home, ranks, PvP, [PLAY], shop, settings
+function BottomBar({active,onTab,onMenu}:{active:string;onTab:(t:string)=>void;onMenu:()=>void}){
+  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="multi"?"#f87171":id==="profile"?"#60a5fa":"#c084fc";
   return(
     <div style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:100,
       background:"linear-gradient(to top, rgba(4,0,12,0.98), rgba(8,2,20,0.92))",
       borderTop:"1px solid rgba(168,85,247,0.18)",
-      backdropFilter:G.blur,
-      display:"flex",alignItems:"flex-end",
-      paddingBottom:"env(safe-area-inset-bottom,0px)",
-      boxShadow:"0 -8px 32px rgba(0,0,0,0.5)",
+      backdropFilter:G.blur,display:"grid",gridTemplateColumns:"repeat(5,1fr)",alignItems:"end",
+      paddingBottom:"env(safe-area-inset-bottom,0px)",boxShadow:"0 -8px 32px rgba(0,0,0,0.5)",
     }}>
-      {side.map((tab,idx)=>{
-        if(!tab){
-          // ── Center PLAY button ──
-          const isActive=active==="play";
-          return(
-            <div key="play" style={{flex:1,display:"flex",justifyContent:"center",position:"relative"}}>
-              <button onClick={()=>onTab("play")} className="press-fx" style={{
-                position:"relative",top:-18,width:62,height:62,borderRadius:"50%",
-                background:isActive
-                  ?"linear-gradient(135deg,#7c3aed,#a855f7,#c084fc)"
-                  :"linear-gradient(135deg,#4c1d95,#6d28d9,#8b5cf6)",
-                border:"2.5px solid rgba(192,132,252,0.6)",cursor:"pointer",
-                display:"flex",alignItems:"center",justifyContent:"center",
-                boxShadow:isActive
-                  ?"0 0 30px rgba(168,85,247,0.8), 0 0 60px rgba(168,85,247,0.3), 0 8px 20px rgba(0,0,0,0.5)"
-                  :"0 0 18px rgba(168,85,247,0.4), 0 8px 20px rgba(0,0,0,0.5)",
-                transition:"box-shadow 0.3s, background 0.3s",
-              }}>
-                <span style={{fontSize:26,filter:"drop-shadow(0 0 8px rgba(255,255,255,0.5))",lineHeight:1}}>🎮</span>
-                {isActive&&<span style={{position:"absolute",inset:-7,borderRadius:"50%",border:"1.5px solid rgba(192,132,252,0.4)",animation:"glowPulse 2s ease-in-out infinite"}}/>}
-              </button>
-            </div>
-          );
-        }
+      {CORE_TABS.map((tab)=>{
         const ac=accentFor(tab.id);
         const isActive=active===tab.id;
+        const isPlay=tab.id==="play";
         return(
           <button key={tab.id} onClick={()=>onTab(tab.id)} style={{
-            flex:1,background:"none",border:"none",padding:"11px 0 9px",
-            display:"flex",flexDirection:"column",alignItems:"center",gap:3,
-            cursor:"pointer",position:"relative",
+            background:"none",border:"none",padding:isPlay?"0 0 6px":"11px 0 9px",
+            display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",gap:3,cursor:"pointer",position:"relative",minHeight:74,
           }}>
-            {isActive&&(
-              <div style={{
-                position:"absolute",top:0,left:"28%",right:"28%",height:2.5,
-                background:`linear-gradient(90deg,transparent,${ac},transparent)`,
-                borderRadius:"0 0 3px 3px",
-                boxShadow:`0 0 10px ${ac}, 0 2px 14px ${ac}66`,
-              }}/>
+            {isPlay?(
+              <div style={{position:"relative",top:-12,width:60,height:60,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isActive?"linear-gradient(135deg,#7c3aed,#a855f7,#c084fc)":"linear-gradient(135deg,#4c1d95,#6d28d9,#8b5cf6)",border:"2.5px solid rgba(192,132,252,0.6)",boxShadow:isActive?"0 0 30px rgba(168,85,247,0.8), 0 0 60px rgba(168,85,247,0.3), 0 8px 20px rgba(0,0,0,0.5)":"0 0 18px rgba(168,85,247,0.4), 0 8px 20px rgba(0,0,0,0.5)"}}>
+                <span style={{fontSize:26,filter:"drop-shadow(0 0 8px rgba(255,255,255,0.5))",lineHeight:1}}>🎮</span>
+                {isActive&&<span style={{position:"absolute",inset:-7,borderRadius:"50%",border:"1.5px solid rgba(192,132,252,0.4)",animation:"glowPulse 2s ease-in-out infinite"}}/>}
+              </div>
+            ):(
+              <>
+                {isActive&&<div style={{position:"absolute",top:0,left:"22%",right:"22%",height:2.5,background:`linear-gradient(90deg,transparent,${ac},transparent)`,borderRadius:"0 0 3px 3px",boxShadow:`0 0 10px ${ac}, 0 2px 14px ${ac}66`}}/>}
+                <span style={{fontSize:21,lineHeight:1,filter:isActive?`drop-shadow(0 0 7px ${ac})`:"grayscale(0.35) opacity(0.68)",transform:isActive?"translateY(-1px)":"none",transition:"filter 0.25s, transform 0.25s",animation:isActive?"tabPop 0.35s ease":"none"}}>{tab.emoji}</span>
+              </>
             )}
-            <span style={{
-              fontSize:21,lineHeight:1,
-              filter:isActive?`drop-shadow(0 0 7px ${ac})`:"grayscale(0.6) opacity(0.55)",
-              transform:isActive?"translateY(-1px)":"none",
-              transition:"filter 0.25s, transform 0.25s",
-              animation:isActive?"tabPop 0.35s ease":"none",
-            }}>{tab.emoji}</span>
-            <span style={{
-              fontSize:8.5,fontWeight:isActive?900:600,
-              color:isActive?ac:"#3d3d55",
-              textTransform:"uppercase",letterSpacing:"0.08em",
-              transition:"color 0.25s",
-              textShadow:isActive?`0 0 12px ${ac}88`:"none",
-            }}>{tab.label}</span>
+            <span style={{fontSize:8.5,fontWeight:isActive?900:600,color:isActive?ac:"#4b4762",textTransform:"uppercase",letterSpacing:"0.08em",transition:"color 0.25s",textShadow:isActive?`0 0 12px ${ac}88`:"none"}}>{tab.label}</span>
           </button>
         );
       })}
+      <button onClick={onMenu} style={{background:"none",border:"none",padding:"11px 0 9px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",gap:3,cursor:"pointer",position:"relative",minHeight:74}}>
+        <span style={{fontSize:21,lineHeight:1,filter:"opacity(0.75)",transition:"filter 0.25s"}}>🧩</span>
+        <span style={{fontSize:8.5,fontWeight:700,color:"#8b79a9",textTransform:"uppercase",letterSpacing:"0.08em"}}>Menu</span>
+      </button>
     </div>
   );
 }
 
+function SideDrawer({open,active,onClose,onOpenTab}:{open:boolean;active:string;onClose:()=>void;onOpenTab:(tab:string)=>void}){
+  return(
+    <>
+      {open&&<div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.56)",backdropFilter:"blur(10px)",zIndex:230}}/>}
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:"min(88vw,380px)",zIndex:231,transform:open?"translateX(0)":"translateX(104%)",transition:"transform 0.28s ease",background:"linear-gradient(180deg,rgba(12,6,24,0.98),rgba(6,2,16,0.98))",borderLeft:"1px solid rgba(168,85,247,0.18)",boxShadow:"-20px 0 60px rgba(0,0,0,0.45)",padding:"22px 18px 26px",overflowY:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+          <div>
+            <div style={{color:"#c084fc",fontSize:11,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase"}}>Game Hub</div>
+            <div style={{color:"#fff",fontSize:24,fontWeight:900,letterSpacing:"-0.03em"}}>Control Center</div>
+          </div>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,color:"#ddd",width:38,height:38,cursor:"pointer",fontSize:18}}>×</button>
+        </div>
+        <div style={{display:"grid",gap:10,marginBottom:18}}>
+          {MENU_TABS.map(tab=>{
+            const activeNow=active===tab.id;
+            return <button key={tab.id} onClick={()=>{onOpenTab(tab.id);onClose();}} style={{textAlign:"left",background:activeNow?"linear-gradient(135deg,rgba(168,85,247,0.18),rgba(96,165,250,0.08))":"rgba(255,255,255,0.03)",border:activeNow?"1px solid rgba(168,85,247,0.35)":"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:"14px 14px",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}><span style={{fontSize:20}}>{tab.emoji}</span><span style={{color:"#fff",fontWeight:900,fontSize:14}}>{tab.label}</span></div>
+              <div style={{color:"#7f6c97",fontSize:11.5,lineHeight:1.45}}>{tab.desc}</div>
+            </button>;
+          })}
+        </div>
+        <div style={{background:"rgba(245,200,66,0.06)",border:"1px solid rgba(245,200,66,0.16)",borderRadius:20,padding:14,marginBottom:14}}>
+          <div style={{color:"#f5c842",fontWeight:900,marginBottom:8}}>Platform expansion queued</div>
+          <div style={{color:"#b6a2cf",fontSize:11.5,lineHeight:1.6}}>Quests, clans, tournaments, cosmetics, raids, prestige, rival systems, and deeper PvP abilities are being organized behind this new nav so the app can scale without feeling messy.</div>
+        </div>
+        <a href="/whitepaper" target="_blank" rel="noopener noreferrer" style={{display:"block",textAlign:"center",textDecoration:"none",background:"linear-gradient(135deg,rgba(96,165,250,0.18),rgba(168,85,247,0.12))",border:"1px solid rgba(96,165,250,0.22)",borderRadius:16,padding:"12px 14px",color:"#dbeafe",fontWeight:800}}>Open docs</a>
+      </div>
+    </>
+  );
+}
 // ─── USERNAME MODAL (glass) ───────────────────────────────────────────────────
 function UsernameModal({onConfirm}:{onConfirm:(name:string,wallet:string)=>void}){
   const [name,setName]=useState("");
@@ -1070,6 +1083,34 @@ function OnlineStrip(){
       </div>
     </div>
   );
+}
+
+function ProfileTab({playerId,username,avatar,avatarUrl,solWallet,charId,totalEarned,totalTaps,coins,level,rank,nextRank,upgrades,achievCount,onOpenSettings}:{playerId:string;username:string;avatar:string;avatarUrl?:string;solWallet:string;charId:string|null;totalEarned:number;totalTaps:number;coins:number;level:number;rank:ReturnType<typeof getRankFromLevel>;nextRank:ReturnType<typeof getNextRank>;upgrades:Record<string,number>;achievCount:number;onOpenSettings:()=>void;}){
+  const mp=useMemo(()=>loadMpProfileStats(playerId),[playerId]);
+  const fighter=CHARACTERS.find(c=>c.id===charId);
+  const stats=[
+    {label:"Coins",value:fmt(coins),color:G.gold},
+    {label:"Lifetime Earned",value:fmt(totalEarned),color:"#22d67a"},
+    {label:"Total Taps",value:fmt(totalTaps),color:"#c084fc"},
+    {label:"Upgrade Levels",value:fmt(totalUpgradeLevels(upgrades)),color:"#60a5fa"},
+    {label:"PvP Wins",value:fmt(mp.wins),color:"#f87171"},
+    {label:"Ladder",value:fmt(mp.ladder),color:"#f5c842"},
+  ];
+  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{background:"linear-gradient(160deg,rgba(168,85,247,0.18),rgba(96,165,250,0.08) 60%,rgba(255,255,255,0.02))",border:"1px solid rgba(168,85,247,0.22)",borderRadius:28,padding:"18px 18px 20px",boxShadow:"0 20px 50px rgba(0,0,0,0.32)"}}><div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}><div style={{width:78,height:78,borderRadius:"50%",overflow:"hidden",background:"radial-gradient(circle at 50% 30%,rgba(168,85,247,0.25),rgba(6,0,15,0.95))",border:"2px solid rgba(192,132,252,0.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,boxShadow:"0 0 30px rgba(168,85,247,0.25)"}}>{avatarUrl?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span>{avatar||"🐸"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:4}}>Player Profile</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</div><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:8}}><span style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:999,padding:"5px 10px",color:rank.color,fontWeight:900,fontSize:11}}>{rank.emoji} {rank.name}</span><span style={{background:"rgba(34,214,122,0.08)",border:"1px solid rgba(34,214,122,0.18)",borderRadius:999,padding:"5px 10px",color:"#7ef2b1",fontWeight:800,fontSize:11}}>Level {level}</span><span style={{background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.18)",borderRadius:999,padding:"5px 10px",color:"#93c5fd",fontWeight:800,fontSize:11}}>{achievCount} achievements</span></div></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:12}}><div style={{color:"#7f6c97",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Equipped Fighter</div><div style={{color:"#fff",fontWeight:900,fontSize:15}}>{fighter?`${fighter.emoji} ${fighter.name}`:"No fighter selected"}</div><div style={{color:"#8f7ca7",fontSize:11,marginTop:4}}>{fighter?.ability||"Choose a legend in Play"}</div></div><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:12}}><div style={{color:"#7f6c97",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Wallet</div><div style={{color:"#22d67a",fontWeight:900,fontSize:14,wordBreak:"break-all"}}>{maskWallet(solWallet)}</div><div style={{color:"#8f7ca7",fontSize:11,marginTop:4}}>Admin shows email + username. App shows username only.</div></div></div><div style={{height:10,background:"rgba(255,255,255,0.05)",borderRadius:999,overflow:"hidden",marginBottom:8,border:"1px solid rgba(255,255,255,0.04)"}}><div style={{height:"100%",width:`${Math.min(100,(level%10)*10)}%`,background:`linear-gradient(90deg,${rank.color}77,${rank.color})`,boxShadow:`0 0 16px ${rank.color}66`}}/></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{color:"#8f7ca7",fontSize:11}}>Current rank: {rank.name}</span><span style={{color:nextRank?.color||"#8f7ca7",fontSize:11}}>Next: {nextRank?`${nextRank.emoji} ${nextRank.name}`:"MAX"}</span></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{stats.map(s=><div key={s.label} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:16,padding:"12px 10px"}}><div style={{color:s.color,fontWeight:900,fontSize:17}}>{s.value}</div><div style={{color:"#7f6c97",fontSize:10.5,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>{s.label}</div></div>)}</div></div><div style={{display:"grid",gap:12,marginTop:14}}><div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}><div style={{color:"#fff",fontWeight:900,marginBottom:8}}>PvP snapshot</div><div style={{color:"#a794c3",fontSize:11.5,lineHeight:1.65}}>Wins: <b style={{color:'#fff'}}>{mp.wins}</b> · Losses: <b style={{color:'#fff'}}>{mp.losses}</b> · Draws: <b style={{color:'#fff'}}>{mp.draws}</b><br/>Best streak: <b style={{color:'#fff'}}>{mp.bestStreak}</b> · MMR: <b style={{color:'#fff'}}>{mp.mmr}</b> · Season points: <b style={{color:'#fff'}}>{mp.seasonPoints}</b></div></div><button onClick={onOpenSettings} className="press-fx" style={{background:"linear-gradient(135deg,rgba(168,85,247,0.92),rgba(96,165,250,0.75))",border:"1px solid rgba(255,255,255,0.12)",borderRadius:18,color:"#fff",fontWeight:900,fontSize:14,padding:"14px 16px",cursor:"pointer",boxShadow:"0 12px 26px rgba(96,165,250,0.18)"}}>Customize profile</button></div></div></div>;
+}
+
+function MissionsTab({playerId,totalTaps,totalEarned,upgrades,charId,onClaim}:{playerId:string;totalTaps:number;totalEarned:number;upgrades:Record<string,number>;charId:string|null;onClaim:(id:string,reward:number)=>void;}){
+  const [claimed,setClaimed]=useState<Record<string,boolean>>({});
+  const mp=useMemo(()=>loadMpProfileStats(playerId),[playerId]);
+  useEffect(()=>{ if(typeof window==="undefined"||!playerId)return; try{setClaimed(JSON.parse(localStorage.getItem(`degen_missions_${playerId}`)||"{}"));}catch{} },[playerId]);
+  const missions=[{id:"tap_1k",title:"Finger Warmup",desc:"Reach 1,000 taps",progress:totalTaps,target:1000,reward:15000,color:"#c084fc"},{id:"tap_100k",title:"Tower Maniac",desc:"Reach 100,000 taps",progress:totalTaps,target:100000,reward:500000,color:"#a855f7"},{id:"earn_1m",title:"First Million",desc:"Earn 1M total coins",progress:totalEarned,target:1_000_000,reward:200000,color:"#22d67a"},{id:"upgrade_25",title:"Build the Machine",desc:"Buy 25 upgrade levels",progress:totalUpgradeLevels(upgrades),target:25,reward:300000,color:"#60a5fa"},{id:"pvp_3",title:"Arena Rookie",desc:"Win 3 PvP matches",progress:mp.wins,target:3,reward:750000,color:"#f87171"},{id:"legend_pick",title:"Choose Your Legend",desc:"Equip any fighter",progress:charId?1:0,target:1,reward:25000,color:"#f5c842"}];
+  const doClaim=(id:string,reward:number)=>{ const next={...claimed,[id]:true}; setClaimed(next); try{localStorage.setItem(`degen_missions_${playerId}`,JSON.stringify(next));}catch{}; onClaim(id,reward); };
+  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{marginBottom:14}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:6}}>Mission Control</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",marginBottom:6}}>Live quests</div><div style={{color:"#8f7ca7",fontSize:12.5,lineHeight:1.6}}>Now the platform has an actual task loop, not just raw tapping. Finish missions and cash rewards instantly.</div></div><div style={{display:"grid",gap:10}}>{missions.map(m=>{ const pct=Math.max(0,Math.min(100,(m.progress/m.target)*100)); const done=m.progress>=m.target; const wasClaimed=!!claimed[m.id]; return <div key={m.id} style={{background:done&&!wasClaimed?"linear-gradient(135deg,rgba(34,214,122,0.1),rgba(168,85,247,0.08))":"rgba(255,255,255,0.03)",border:done&&!wasClaimed?"1px solid rgba(34,214,122,0.28)":"1px solid rgba(255,255,255,0.06)",borderRadius:20,padding:14}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:10}}><div><div style={{color:m.color,fontSize:11,fontWeight:900,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5}}>{m.title}</div><div style={{color:"#fff",fontWeight:800,fontSize:13.5,marginBottom:4}}>{m.desc}</div><div style={{color:"#8f7ca7",fontSize:11}}>Reward: 💰 {fmt(m.reward)}</div></div><div style={{color:done?"#22d67a":"#b6a2cf",fontWeight:900,fontSize:12}}>{wasClaimed?"CLAIMED":done?"READY":"IN PROGRESS"}</div></div><div style={{height:8,background:"rgba(255,255,255,0.05)",borderRadius:999,overflow:"hidden",border:"1px solid rgba(255,255,255,0.04)",marginBottom:8}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${m.color}99,${m.color})`,boxShadow:`0 0 12px ${m.color}55`}}/></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{color:"#8f7ca7",fontSize:11}}>{fmt(m.progress)} / {fmt(m.target)}</div>{done&&!wasClaimed?<button onClick={()=>doClaim(m.id,m.reward)} style={{background:"linear-gradient(135deg,#22d67a,#16a34a)",border:"none",borderRadius:12,color:"#fff",fontWeight:900,padding:"9px 12px",cursor:"pointer"}}>Claim reward</button>:<div style={{color:wasClaimed?"#22d67a":"#6d5a86",fontSize:11.5,fontWeight:700}}>{wasClaimed?"Reward secured":"Keep grinding"}</div>}</div></div>; })}</div><div style={{marginTop:14,background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.14)",borderRadius:18,padding:14,color:"#b6c8e6",fontSize:11.5,lineHeight:1.6}}>More mission categories are now easy to add here later: daily streaks, clan orders, raid tasks, event tickets, ranked objectives, and seasonal ladders.</div></div></div>;
+}
+
+function AchievementsTab({achievSet,totalTaps,coins}:{achievSet:Set<string>;totalTaps:number;coins:number;}){
+  const items=[{id:"first_tap",title:"First Tap",desc:"Land your first tap"},{id:"taps_100",title:"100 Taps",desc:"Hit 100 taps"},{id:"taps_1000",title:"1,000 Taps",desc:"Hit 1,000 taps"},{id:"taps_10k",title:"10K Grinder",desc:"Hit 10,000 taps"},{id:"coins_100k",title:"Stack Starter",desc:"Earn 100K coins"},{id:"coins_1m",title:"Millionaire",desc:"Earn 1M coins"},{id:"coins_1b_live",title:"Whale Energy",desc:"Hold 1B coins live",live:coins>=1_000_000_000},{id:"taps_1m_live",title:"Tap Monster",desc:"Reach 1M lifetime taps",live:totalTaps>=1_000_000}];
+  return <div style={{minHeight:"100vh",padding:"76px 16px 110px",background:G.bg,position:"relative"}}><div className="arcade-grid"/><div style={{maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}><div style={{marginBottom:14}}><div style={{color:"#c084fc",fontSize:10,fontWeight:900,letterSpacing:"0.18em",textTransform:"uppercase",marginBottom:6}}>Achievement Hall</div><div style={{color:"#fff",fontWeight:900,fontSize:26,letterSpacing:"-0.03em",marginBottom:6}}>Your flex board</div><div style={{color:"#8f7ca7",fontSize:12.5,lineHeight:1.6}}>This gives players another reason to grind besides raw score. Unlocked achievements now have their own surface.</div></div><div style={{display:"grid",gap:10}}>{items.map((a)=>{ const unlocked=achievSet.has(a.id) || !!a.live; return <div key={a.id} style={{background:unlocked?"linear-gradient(135deg,rgba(245,200,66,0.11),rgba(168,85,247,0.07))":"rgba(255,255,255,0.03)",border:unlocked?"1px solid rgba(245,200,66,0.24)":"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:14,display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",background:unlocked?"rgba(245,200,66,0.12)":"rgba(255,255,255,0.04)",fontSize:22}}>{unlocked?"🏅":"🔒"}</div><div style={{flex:1}}><div style={{color:unlocked?"#f5c842":"#fff",fontWeight:900,fontSize:13.5}}>{a.title}</div><div style={{color:"#8f7ca7",fontSize:11.5,lineHeight:1.5}}>{a.desc}</div></div><div style={{color:unlocked?"#22d67a":"#6d5a86",fontSize:10.5,fontWeight:900,letterSpacing:"0.08em"}}>{unlocked?"UNLOCKED":"LOCKED"}</div></div>; })}</div><div style={{marginTop:14,background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.14)",borderRadius:18,padding:14,color:"#b6a2cf",fontSize:11.5,lineHeight:1.6}}>Next easy expansion: rare hidden achievements, seasonal badges, clan achievements, PvP mastery medals, and profile showcase slots.</div></div></div>;
 }
 
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
@@ -1691,7 +1732,8 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 // ─── MAIN GAME ────────────────────────────────────────────────────────────────
 export default function TapGame() {
   const {user,signOut}=useAuth();
-  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"shop"|"ranks"|"settings">("home");
+  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"shop"|"profile"|"quests"|"achievements"|"ranks"|"settings">("home");
+  const [menuOpen,setMenuOpen]=useState(false);
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
   // DB-loaded values — source of truth for taps/coins (never overwrite with local zeros)
@@ -2383,7 +2425,8 @@ export default function TapGame() {
   // ─── RENDER ─────────────────────────────────────────────────────────────────
   return(
     <div style={{background:G.bg,minHeight:"100vh",position:"relative"}}>
-      <TopBar username={username} avatar={avatar} avatarUrl={avatarUrl} onSettings={()=>setActiveTab("settings")} onLogout={signOut}/>
+      <TopBar username={username} avatar={avatar} avatarUrl={avatarUrl} onSettings={()=>setActiveTab("settings")} onProfile={()=>setActiveTab("profile")} onMenu={()=>setMenuOpen(true)} onLogout={signOut}/>
+      <SideDrawer open={menuOpen} active={activeTab} onClose={()=>setMenuOpen(false)} onOpenTab={t=>setActiveTab(t as any)}/>
       {showModal&&<UsernameModal onConfirm={onUsername}/>}
 
       {/* Achievement toast */}
@@ -2413,6 +2456,9 @@ export default function TapGame() {
 
       {/* Tab content */}
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId}/>}
+      {activeTab==="profile"&&<ProfileTab playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} solWallet={solWallet} charId={charId} totalEarned={totalEarned} totalTaps={totalTaps} coins={coins} level={level} rank={rank} nextRank={nextRank} upgrades={upgrades} achievCount={achievSet.size} onOpenSettings={()=>setActiveTab("settings")}/>}
+      {activeTab==="quests"&&<MissionsTab playerId={playerId} totalTaps={totalTaps} totalEarned={totalEarned} upgrades={upgrades} charId={charId} onClaim={(id,reward)=>{setCoins(c=>c+reward); showToast(`Mission cleared! +${fmt(reward)} coins`);}}/>}
+      {activeTab==="achievements"&&<AchievementsTab achievSet={achievSet} totalTaps={totalTaps} coins={coins}/>}
       {activeTab==="ranks"&&<LeaderboardTab myPlayerId={playerId} liveTaps={totalTaps} liveEarned={totalEarned} liveUsername={username} liveAvatarUrl={avatarUrl} liveCharId={charId||"pepe"} key="lb"/>}
       {activeTab==="multi"&&<MultiplayerArena playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} charId={charId} coins={coins} onSpendCoins={spendCoinsExact}/>}
       {activeTab==="shop"&&<ShopTab coins={coins} charId={charId} upgrades={upgrades} onBuyUpgrade={buyUpgrade} playerLevel={level}/>}
@@ -2623,13 +2669,14 @@ export default function TapGame() {
         </>
       )}
 
-      <BottomBar active={activeTab} onTab={t=>setActiveTab(t as any)}/>
+      <BottomBar active={activeTab} onTab={t=>setActiveTab(t as any)} onMenu={()=>setMenuOpen(true)}/>
 
       <style>{`
         @keyframes floatUp { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,calc(-50% - 110px)) scale(0.5)} }
         @keyframes slideDown { 0%{opacity:0;transform:translateX(-50%) translateY(-14px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
         @keyframes pulseBanner { 0%,100%{opacity:1} 50%{opacity:0.75} }
         @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.8)} }
+        @keyframes tabPop { 0%{transform:scale(0.92)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
         @keyframes floatHint { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-6px)} }
         @keyframes orbit1 { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes orbit2 { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
