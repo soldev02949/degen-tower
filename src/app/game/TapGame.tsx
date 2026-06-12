@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { getLevelFromXP, getLevelProgress, getRankFromLevel, getNextRank } from "@/lib/progression";
 import { useAuth } from "@/lib/auth";
 import MultiplayerArena from "./MultiplayerArena";
+import { useSound } from "@/lib/sound";
+import SoundControls from "@/components/SoundControls";
 
 // ─── Characters ───────────────────────────────────────────────────────────────
 export const CHARACTERS = [
@@ -614,6 +616,7 @@ function TopBar({username,avatar,avatarUrl,onSettings,onProfile,onMenu,onLogout}
         <AvatarDisplay emoji={avatar} url={avatarUrl} size={28}/>
         <span style={{color:"#ddd",fontSize:12,fontWeight:800,maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
       </div>
+      <SoundControls compact={true}/>
       <button onClick={onSettings} className="press-fx" style={{
         background:G.glass,border:`1px solid ${G.glassBorder}`,
         borderRadius:11,color:"#999",fontSize:13,padding:"6px 10px",cursor:"pointer",
@@ -3052,6 +3055,9 @@ export default function TapGame() {
   const [toast,setToast]=useState<string|null>(null);
   const [newAchiev,setNewAchiev]=useState<string|null>(null);
   const [achievSet,setAchievSet]=useState<Set<string>>(new Set());
+  const [bestCombo,setBestCombo]=useState(1);
+  const [comboMilestoneMsg,setComboMilestoneMsg]=useState<string|null>(null);
+  const { playTap, playComboMilestone, playLevelUp, playSpecial, playPurchase } = useSound();
 
   const pidRef=useRef(0);
   const saveRef=useRef<SaveData|null>(null);
@@ -3648,6 +3654,25 @@ export default function TapGame() {
     const spCharge=2+(upgrades["special_cd"]||0)*1+(upgrades["special_cd2"]||0)*2+(upgrades["special_cd3"]||0)*4+(upgrades["special_cd4"]||0)*8+(upgrades["special_cd5"]||0)*16+(upgrades["special_cd6"]||0)*40+upgradeEffectTotal(upgrades,"specialCharge");
     setSpecialCharge(s=>Math.min(100,s+spCharge));
     setCharPulse(true);setTimeout(()=>setCharPulse(false),90);
+    // Vibration feedback on mobile
+    if(typeof navigator!=="undefined"&&navigator.vibrate){
+      navigator.vibrate(isCrit?[30,10,30]:[12]);
+    }
+    // Sound feedback
+    playTap(isCrit);
+    // Combo milestone notifications (5, 10, 15, 20, 25...)
+    setCombo(prev=>{
+      const next=Math.min(char.comboMax+(upgrades["combo_max"]||0)*5,prev+0.001);
+      const milestone=Math.floor(next/5)*5;
+      const prevMilestone=Math.floor(prev/5)*5;
+      if(milestone>prevMilestone&&milestone>=5){
+        setBestCombo(b=>Math.max(b,milestone));
+        playComboMilestone(Math.min(4,Math.floor(milestone/5)));
+        setComboMilestoneMsg(`🔥 ${milestone}× COMBO!`);
+        setTimeout(()=>setComboMilestoneMsg(null),2000);
+      }
+      return prev; // actual combo set handled below
+    });
     if(earned>tapBase*5){setShaking(true);setTimeout(()=>setShaking(false),180);}
   },[char,energy,combo,tapCount,upgrades,specialActive,checkAchievements,spawn]);
 
@@ -3847,6 +3872,17 @@ export default function TapGame() {
       <SideDrawer open={menuOpen} active={activeTab} onClose={()=>setMenuOpen(false)} onOpenTab={t=>setActiveTab(t as any)}/>
       {showModal&&<UsernameModal onConfirm={onUsername}/>}
 
+      {/* Combo Milestone Notification */}
+      {comboMilestoneMsg&&(
+        <div style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:301,
+          background:"linear-gradient(135deg,#b45309,#f59e0b)",borderRadius:20,
+          padding:"10px 22px",color:"#fff",fontWeight:900,fontSize:15,
+          boxShadow:"0 0 40px rgba(245,158,11,0.7), 0 8px 24px rgba(0,0,0,0.4)",
+          whiteSpace:"nowrap",animation:"comboMilestone 0.4s ease-out",
+        }}>
+          {comboMilestoneMsg}
+        </div>
+      )}
       {/* Achievement toast */}
       {newAchiev&&(
         <div style={{position:"fixed",top:64,left:"50%",transform:"translateX(-50%)",zIndex:300,
