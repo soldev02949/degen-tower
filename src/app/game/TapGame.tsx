@@ -1776,7 +1776,7 @@ export default function TapGame() {
 
   // Heartbeat — update last_seen every 30s so online presence is accurate
   useEffect(()=>{
-    const uid=user?.email||user?.id;
+    const uid=playerId||user?.email||user?.id;
     if(!uid)return;
     async function ping(){
       try{
@@ -1787,7 +1787,7 @@ export default function TapGame() {
     ping();// immediate ping on mount
     const id=setInterval(ping,30000);
     return()=>clearInterval(id);
-  },[user?.id,user?.email]);
+  },[playerId,user?.id,user?.email]);
 
   // ── REAL-TIME DB SYNC ───────────────────────────────────────────────────────
   // Runs every 1s. Fires immediately on mount (no initial delay).
@@ -1797,7 +1797,7 @@ export default function TapGame() {
   // 4. Drains any queued retries from previous failures
   // 5. Full syncDB (earned/coins/upgrades) runs in parallel — won't block tap sync
   useEffect(()=>{
-    const uid=user?.email||user?.id;
+    const uid=playerId||user?.email||user?.id;
     if(!uid)return;
     const safeUid:string=uid;
 
@@ -1870,7 +1870,7 @@ export default function TapGame() {
       clearInterval(interval);
       window.removeEventListener("beforeunload",handleBeforeUnload);
     };
-  },[user?.id,user?.email]);// eslint-disable-line react-hooks/exhaustive-deps
+  },[playerId,user?.id,user?.email]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const char=CHARACTERS.find(c=>c.id===charId);
   const level=getLevelFromXP(totalEarned);
@@ -1884,11 +1884,12 @@ export default function TapGame() {
     return sum+lvl*rate*autoBoostMult;
   },0);
   // Keep liveRef in sync so stable doSave always reads fresh values
-  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:user?.email||user?.id||playerId,username,solWallet,avatarUrl};
+  liveRef.current={charId:charId||"",coins,totalEarned,totalTaps,upgrades,uid:playerId||user?.email||user?.id||"",username,solWallet,avatarUrl};
 
   useEffect(()=>{
     if(!user?.id)return;
-    const authId=user.email||user.id;
+    const authCandidates=Array.from(new Set([user.email,user.id].filter(Boolean) as string[]));
+    const authId=authCandidates[0]||user.id;
     setPlayerId(authId);
     // Device fingerprinting — runs silently in background
     import("@/lib/security").then(async({getDeviceFingerprint,registerDeviceFingerprint,checkPlayerStatus})=>{
@@ -1916,7 +1917,8 @@ export default function TapGame() {
           const{data:{session}}=await supabase.auth.getSession();
           if(session?.access_token)authToken=session.access_token;
         }catch{}
-        const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(authId)}&limit=1`,{
+        const idFilter=authCandidates.map(id=>`wallet_address.eq.${encodeURIComponent(id)}`).join(",");
+        const resp=await fetch(`${SUPA_URL}/rest/v1/dt_players?or=(${idFilter})&limit=1`,{
           headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store","Pragma":"no-cache"},
           cache:"no-store",
         });
@@ -1924,9 +1926,11 @@ export default function TapGame() {
           const arr=await resp.json() as Record<string,unknown>[];
           const existing=arr[0];
           if(existing){
-            if(existing.username){setUsername(existing.username as string);setPlayerName(existing.username as string,authId);}
-            if(existing.sol_wallet){setSolWallet(existing.sol_wallet as string);setPlayerWallet(existing.sol_wallet as string,authId);}
-            const savedAv=getAvatar(authId);
+            const resolvedId=(existing.wallet_address as string)||authId;
+            setPlayerId(resolvedId);
+            if(existing.username){setUsername(existing.username as string);setPlayerName(existing.username as string,resolvedId);}
+            if(existing.sol_wallet){setSolWallet(existing.sol_wallet as string);setPlayerWallet(existing.sol_wallet as string,resolvedId);}
+            const savedAv=getAvatar(resolvedId);
             if(savedAv){setAvatar(savedAv);}
             if(existing.avatar_url){setAvatarUrl(existing.avatar_url as string);}
             const dbTaps=Number(existing.games_played)||0;
@@ -1936,11 +1940,11 @@ export default function TapGame() {
             dbValuesRef.current={totalEarned:dbEarned,totalTaps:dbTaps,coins:dbCoins,upgrades:dbUpgrades};
             // Always push local state to DB on load — GREATEST RPC makes it safe (DB only goes up).
             // This ensures the leaderboard always reflects the player's real count without manual fixes.
-            const globalLocal=getGlobalTaps(authId);
+            const globalLocal=getGlobalTaps(resolvedId);
             const localTaps=globalLocal.totalTaps||0;
             const localEarned=globalLocal.totalEarned||0;
             // Also scan all character saves for highest tap count
-            const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${authId}_`));
+            const saves=Object.keys(localStorage).filter(k=>k.startsWith(`degen_save_${resolvedId}_`));
             let bestTaps=localTaps;let bestEarned=localEarned;let bestCoins=dbCoins;
             for(const sk of saves){
               try{const sv=JSON.parse(localStorage.getItem(sk)||"{}");
@@ -1953,9 +1957,9 @@ export default function TapGame() {
               const pushedTaps=Math.max(bestTaps,dbTaps);
               const pushedEarned=Math.max(bestEarned,dbEarned);
               const pushedCoins=Math.max(bestCoins,dbCoins);
-              const uname=existing.username as string||getPlayerName(authId);
+              const uname=existing.username as string||getPlayerName(resolvedId);
               const charId=existing.character as string||"pepe";
-              syncDB(authId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
+              syncDB(resolvedId,uname,charId,pushedEarned,pushedTaps,pushedCoins,dbUpgrades,existing.sol_wallet as string||undefined,existing.avatar_url as string||undefined);
               dbValuesRef.current={totalEarned:pushedEarned,totalTaps:pushedTaps,coins:pushedCoins,upgrades:dbUpgrades};
               // Auto-start returning players — charId must be set for runSync to sync taps
               startGame(charId,uname,existing.sol_wallet as string||undefined);
@@ -2049,22 +2053,22 @@ export default function TapGame() {
     };
     window.addEventListener("focus",onFocus);
     return()=>window.removeEventListener("focus",onFocus);
-  },[user?.id,user?.email]);
+  },[playerId,user?.id,user?.email]);
 
   function tryStart(id:string){
-    const uid=user?.email||user?.id||playerId;
+    const uid=playerId||user?.email||user?.id||"";
     if(!username&&!getPlayerName(uid)){setPendingChar(id);setShowModal(true);}
     else startGame(id,username||getPlayerName(uid),solWallet||getPlayerWallet(uid));
   }
   function onUsername(name:string,wallet:string){
-    const uid=user?.email||user?.id||playerId;
+    const uid=playerId||user?.email||user?.id||"";
     setPlayerName(name,uid);setUsername(name);
     setPlayerWallet(wallet,uid);setSolWallet(wallet);
     setShowModal(false);
     if(pendingChar)startGame(pendingChar,name,wallet);
   }
   function startGame(id:string,name:string,wallet?:string){
-    const uid=user?.email||user?.id||playerId;
+    const uid=playerId||user?.email||user?.id||"";
     const s=loadSave(uid,id);
     const globalLocal=getGlobalTaps(uid);
     // DB is always the authoritative floor — local can only be HIGHER (new taps since last sync)
@@ -2414,7 +2418,7 @@ export default function TapGame() {
   void comboTimer;
 
   function handleSettingsSave(u:string,w:string,av:string,url?:string){
-    const uid=user?.email||user?.id||playerId;
+    const uid=playerId||user?.email||user?.id||"";
     setUsername(u);setPlayerName(u,uid);
     setSolWallet(w);setPlayerWallet(w,uid);
     setAvatar(av);setAvatarStore(av,uid);
