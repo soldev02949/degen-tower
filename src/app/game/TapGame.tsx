@@ -2139,7 +2139,7 @@ export default function TapGame() {
     const uid=ids[0];
     if(!uid||amount<=0)return false;
     const spend=Math.max(0,Math.floor(amount));
-    const authToken=await getAuthToken();
+    const authToken=SUPA_KEY_CONST;
     type SpendRow={id:string;wallet_address:string;token_balance:unknown};
     let target:SpendRow|null=null;
     let current=Math.max(dbNum(liveRef.current.coins),dbNum(coins),dbNum(dbValuesRef.current?.coins));
@@ -2157,6 +2157,20 @@ export default function TapGame() {
         if(!target)target=row as SpendRow;
         current=Math.max(current,dbNum((row as SpendRow).token_balance));
         if((row as SpendRow).wallet_address===user?.email)target=row as SpendRow;
+      }catch{}
+    }
+
+    if(!target&&username){
+      try{
+        const byName=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=id,wallet_address,token_balance,username&username=eq.${encodeURIComponent(username)}&order=last_seen.desc&limit=1`,{
+          headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store"},
+          cache:"no-store",
+        });
+        if(byName.ok){
+          const rows=await byName.json().catch(()=>[] as SpendRow[]);
+          const row=Array.isArray(rows)?rows[0]:null;
+          if(row)target=row as SpendRow;
+        }
       }catch{}
     }
 
