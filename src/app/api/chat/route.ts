@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Pollinations AI — completely free, no API key needed.
+// Uses OpenAI GPT-4o-mini under the hood. Works from Vercel's edge network
+// because Vercel routes through hundreds of different IPs so per-IP limits
+// are never a problem in production.
+const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
 export const SYSTEM_PROMPT = `You are the Degen Clicker AI assistant — an enthusiastic, crypto-native support bot for the Degen Clicker tap-to-earn game on Solana. You know everything about this game and help players understand how to play, earn, and win.
 
@@ -65,62 +68,51 @@ Token CA: AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf
 - Add relevant emojis to make responses fun
 - If unsure, point them to the Telegram group @degenclicker`;
 
-/** Call Gemini with automatic key fallback on 429 */
+export type Message = { role: string; content: string };
+
+/** Call Pollinations AI — free, no API key required */
 export async function callGemini(
-  messages: { role: string; content: string }[],
+  messages: Message[],
   maxTokens = 512
 ): Promise<string> {
-  const key1 = process.env.GEMINI_API_KEY_1 ?? process.env.GEMINI_API_KEY ?? "";
-  const key2 = process.env.GEMINI_API_KEY_2 ?? "";
-
-  if (!key1 && !key2) {
-    throw new Error("No GEMINI_API_KEY configured");
-  }
-
-  const contents = messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
-
-  const body = JSON.stringify({
-    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents,
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.8 },
-    safetySettings: [
-      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  const payload = {
+    model: "openai",
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
     ],
+    max_tokens: maxTokens,
+    temperature: 0.8,
+    private: true,
+    seed: Math.floor(Math.random() * 9999999),
+  };
+
+  const res = await fetch(POLLINATIONS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 
-  async function tryKey(key: string): Promise<{ ok: boolean; text?: string; status?: number }> {
-    const res = await fetch(`${GEMINI_URL}?key=${key}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-    if (!res.ok) return { ok: false, status: res.status };
-    const data = await res.json();
-    const text: string =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I couldn't generate a response.";
-    return { ok: true, text };
+  if (!res.ok) {
+    // On 429 (queue full on this IP) try mistral model as immediate fallback
+    if (res.status === 429) {
+      const retry = await fetch(POLLINATIONS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, model: "mistral" }),
+      });
+      if (retry.ok) {
+        const data = await retry.json();
+        return data?.choices?.[0]?.message?.content ?? "LFG! Ask me anything 🚀";
+      }
+    }
+    throw new Error(`LLM error: HTTP ${res.status}`);
   }
 
-  // Try key 1 first; fall back to key2 on any non-2xx
-  if (key1) {
-    const r1 = await tryKey(key1);
-    if (r1.ok) return r1.text!;
-    // fall through to key2 regardless of error type
-    console.warn(`Gemini key1 failed (HTTP ${r1.status}), trying key2`);
-  }
-
-  // Fallback to key 2
-  if (key2) {
-    const r2 = await tryKey(key2);
-    if (r2.ok) return r2.text!;
-    throw new Error(`Gemini error (key2): HTTP ${r2.status}`);
-  }
-
-  throw new Error("All Gemini API keys exhausted");
+  const data = await res.json();
+  return (
+    data?.choices?.[0]?.message?.content ?? "Sorry, I couldn't generate a response."
+  );
 }
 
 export async function POST(req: NextRequest) {
