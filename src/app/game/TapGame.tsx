@@ -2139,21 +2139,57 @@ export default function TapGame() {
     const uid=ids[0];
     if(!uid||amount<=0)return false;
     const spend=Math.max(0,Math.floor(amount));
+    const authToken=await getAuthToken();
+    type SpendRow={id:string;wallet_address:string;token_balance:unknown};
+    let target:SpendRow|null=null;
     let current=Math.max(dbNum(liveRef.current.coins),dbNum(coins),dbNum(dbValuesRef.current?.coins));
-    try{
-      const authToken=await getAuthToken();
-      for(const pid of ids){
-        const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=token_balance,wallet_address&wallet_address=eq.${encodeURIComponent(pid)}&limit=1`,{
-          headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache"},
+
+    for(const pid of ids){
+      try{
+        const resp=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=id,wallet_address,token_balance&wallet_address=eq.${encodeURIComponent(pid)}&limit=1`,{
+          headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store"},
+          cache:"no-store",
         });
         if(!resp.ok)continue;
-        const rows=await resp.json().catch(()=>[] as Array<Record<string,unknown>>);
+        const rows=await resp.json().catch(()=>[] as SpendRow[]);
         const row=Array.isArray(rows)?rows[0]:null;
-        if(row)current=Math.max(current,dbNum(row.token_balance));
-      }
-    }catch{}
+        if(!row)continue;
+        if(!target)target=row as SpendRow;
+        current=Math.max(current,dbNum((row as SpendRow).token_balance));
+        if((row as SpendRow).wallet_address===user?.email)target=row as SpendRow;
+      }catch{}
+    }
+
+    if(!target&&liveRef.current.charId){
+      try{
+        await syncPlayerDirect({
+          pid:uid,
+          uname:username||getPlayerName(uid)||(`Degen_${uid.slice(-6)}`),
+          charId:liveRef.current.charId,
+          totalEarned:liveRef.current.totalEarned,
+          totalTaps:liveRef.current.totalTaps,
+          coins:current,
+          upgrades:liveRef.current.upgrades,
+          solWallet:solWallet||undefined,
+          avatarUrl:avatarUrl||undefined,
+        },authToken);
+        const created=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?select=id,wallet_address,token_balance&wallet_address=eq.${encodeURIComponent(uid)}&limit=1`,{
+          headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Cache-Control":"no-cache, no-store"},
+          cache:"no-store",
+        });
+        if(created.ok){
+          const rows=await created.json().catch(()=>[] as SpendRow[]);
+          const row=Array.isArray(rows)?rows[0]:null;
+          if(row)target=row as SpendRow;
+        }
+      }catch{}
+    }
+
     if(current<spend)return false;
+    if(!target)return false;
+
     const nextBalance=Math.max(0,current-spend);
+    const prevBalance=current;
     setCoins(nextBalance);
     liveRef.current.coins=nextBalance;
     dbValuesRef.current={
@@ -2175,54 +2211,55 @@ export default function TapGame() {
       saveRef.current=s;
       setGlobalTaps(uid,liveRef.current.totalTaps,liveRef.current.totalEarned);
     }
+
     try{
-      const authToken=await getAuthToken();
       const payload:Record<string,unknown>={token_balance:nextBalance,last_seen:new Date().toISOString()};
       if(liveRef.current.charId)payload.character=liveRef.current.charId;
-      let patched=false;
-      let lastErr:Error|null=null;
-      for(const pid of ids){
-        try{
-          const patch=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?wallet_address=eq.${encodeURIComponent(pid)}`,{
-            method:"PATCH",
-            headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=representation"},
-            body:JSON.stringify(payload),
-          });
-          if(!patch.ok)throw new Error(`coin spend patch failed ${patch.status}`);
-          const rows=await patch.json().catch(()=>[] as unknown[]);
-          if(Array.isArray(rows)&&rows.length>0){patched=true;break;}
-        }catch(err){
-          lastErr=err instanceof Error?err:new Error(String(err));
-        }
-      }
-      if(!patched&&lastErr)throw lastErr;
-      if(!patched)throw new Error("coin spend patch affected 0 rows");
-      return true;
-    }catch(e){
-      console.error("spendCoinsExact failed",e);
-      setCoins(current);
-      liveRef.current.coins=current;
+      const patch=await fetch(`${SUPA_URL_CONST}/rest/v1/dt_players?id=eq.${encodeURIComponent(target.id)}`,{
+        method:"PATCH",
+        headers:{"apikey":SUPA_KEY_CONST,"Authorization":`Bearer ${authToken}`,"Content-Type":"application/json","Prefer":"return=representation","Cache-Control":"no-cache, no-store"},
+        body:JSON.stringify(payload),
+        cache:"no-store",
+      });
+      if(!patch.ok)throw new Error(`coin spend patch failed ${patch.status}`);
+      const rows=await patch.json().catch(()=>[] as Array<Record<string,unknown>>);
+      const saved=Array.isArray(rows)?rows[0]:null;
+      if(!saved)throw new Error("coin spend patch returned no row");
+      const verified=dbNum(saved.token_balance);
+      setCoins(verified);
+      liveRef.current.coins=verified;
       dbValuesRef.current={
         totalTaps:liveRef.current.totalTaps,
         totalEarned:liveRef.current.totalEarned,
-        coins:current,
+        coins:verified,
+        upgrades:liveRef.current.upgrades,
+      };
+      return true;
+    }catch(e){
+      console.error("spendCoinsExact failed",e);
+      setCoins(prevBalance);
+      liveRef.current.coins=prevBalance;
+      dbValuesRef.current={
+        totalTaps:liveRef.current.totalTaps,
+        totalEarned:liveRef.current.totalEarned,
+        coins:prevBalance,
         upgrades:liveRef.current.upgrades,
       };
       if(liveRef.current.charId){
         const rollback:SaveData={
           charId:liveRef.current.charId,
-          coins:current,
+          coins:prevBalance,
           totalEarned:liveRef.current.totalEarned,
           totalTaps:liveRef.current.totalTaps,
           upgrades:liveRef.current.upgrades,
-          highScore:Math.max(current,saveRef.current?.highScore||0),
+          highScore:Math.max(prevBalance,saveRef.current?.highScore||0),
         };
         persistSave(uid,rollback);
         saveRef.current=rollback;
       }
       return false;
     }
-  },[playerId,user?.email,user?.id]);
+  },[avatarUrl,coins,playerId,solWallet,user?.email,user?.id,username]);
 
   void comboTimer;
 
