@@ -51,6 +51,12 @@ export default function SignupPage() {
       if (refCode) {
         import("@/lib/referral").then(({ clearReferralCode }) => clearReferralCode());
       }
+      // Notify Telegram group — fire-and-forget, never block the UI
+      fetch("/api/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email.split("@")[0] }),
+      }).catch(() => {});
       setSuccess(true);
     }
   }

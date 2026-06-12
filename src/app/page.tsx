@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 const TOKEN_CA = "AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf";
 
 const SOCIALS = [
+  { label:"ℹ️ FAQ / Info",  href:"/faq",                               emoji:"ℹ️" },
   { label:"𝕏 Twitter", href:"https://x.com/degenclickersol", emoji:"𝕏" },
   { label:"Telegram",  href:"https://t.me/degenclicker",      emoji:"✈️" },
 ];
