@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGemini } from "../../chat/route";
+import {
+  fetchLeaderboard,
+  formatLeaderboardTelegram,
+  isLeaderboardQuery,
+} from "@/lib/leaderboard";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const TG = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -146,6 +151,15 @@ async function deleteMsg(chat_id: number, message_id: number) {
   });
 }
 
+// ── Live leaderboard command ─────────────────────────────────────────────────
+
+async function handleLeaderboard(chat_id: number) {
+  await sendAction(chat_id);
+  const players = await fetchLeaderboard(20).catch(() => []);
+  const msg = formatLeaderboardTelegram(players);
+  await send(chat_id, msg, { disable_web_page_preview: true });
+}
+
 // ── Command handlers ────────────────────────────────────────────────────────
 
 const CMD_START = `🎮 *Welcome to Degen Clicker!*
@@ -163,6 +177,7 @@ Type any question or use a command below 👇`;
 const CMD_HELP = `🤖 *Degen Clicker Bot Commands*
 
 /start \\- Welcome message & links
+/leaderboard \\- Live season standings 🏆
 /play \\- Get the game link
 /faq \\- Frequently asked questions
 /features \\- All game features
@@ -307,6 +322,15 @@ const COMMANDS: Record<string, string> = {
   "/combo": CMD_COMBOS,
 };
 
+// Commands that require live data (handled dynamically)
+const LIVE_COMMANDS = new Set([
+  "/leaderboard",
+  "/leaderboardog",
+  "/lb",
+  "/top",
+  "/standings",
+]);
+
 // ── Webhook handler ─────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -330,14 +354,19 @@ export async function POST(req: NextRequest) {
     const raw_cmd = text.split(" ")[0].split("@")[0].toLowerCase();
     const is_command = raw_cmd.startsWith("/");
 
+    // Live leaderboard command
+    if (is_command && LIVE_COMMANDS.has(raw_cmd)) {
+      await handleLeaderboard(chat_id);
+      return NextResponse.json({ ok: true });
+    }
+
     // Static command
     if (is_command && COMMANDS[raw_cmd]) {
       await send(chat_id, COMMANDS[raw_cmd], { disable_web_page_preview: true });
       return NextResponse.json({ ok: true });
     }
 
-    // Unknown command — treat as regular message, fall through to AI
-    // (or give a tip in groups so we don't spam)
+    // Unknown command — give a helpful tip
     if (is_command) {
       await send(chat_id, `🤔 Unknown command\\. Try /help to see what I can do\\!`);
       return NextResponse.json({ ok: true });
@@ -351,9 +380,19 @@ export async function POST(req: NextRequest) {
       if (!mentioned) return NextResponse.json({ ok: true }); // ignore group chatter
     }
 
-    // AI chat — maintain per-user history
+    // ── AI chat path ──────────────────────────────────────────────────────────
     await sendAction(chat_id);
     const clean_text = text.replace(/@soldegenagentbot/gi, "").trim();
+
+    // Short-circuit leaderboard natural language queries with live data
+    if (isLeaderboardQuery(clean_text)) {
+      const players = await fetchLeaderboard(20).catch(() => []);
+      if (players.length > 0) {
+        const msg = formatLeaderboardTelegram(players);
+        await send(chat_id, msg, { disable_web_page_preview: true });
+        return NextResponse.json({ ok: true });
+      }
+    }
 
     const history = sessions.get(chat_id) ?? [];
     history.push({ role: "user", content: clean_text });
