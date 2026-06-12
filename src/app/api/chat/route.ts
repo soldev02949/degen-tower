@@ -1,3 +1,8 @@
+import {
+  fetchLeaderboard,
+  formatLeaderboardText,
+  isLeaderboardQuery,
+} from "@/lib/leaderboard";
 import { NextRequest, NextResponse } from "next/server";
 
 // OpenAI-compatible LLM endpoint (configured via env vars)
@@ -77,16 +82,32 @@ export async function callGemini(
     throw new Error("LLM_API_KEY not configured");
   }
 
-  const res = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+  // Detect leaderboard queries — inject live Supabase data as system context
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  let systemPrompt = SYSTEM_PROMPT;
+  if (lastUser && isLeaderboardQuery(lastUser.content)) {
+    const players = await fetchLeaderboard(20).catch(() => []);
+    if (players.length > 0) {
+      const lbText = formatLeaderboardText(players);
+      systemPrompt =
+        SYSTEM_PROMPT +
+        "\n\n## LIVE LEADERBOARD (real-time data, right now)\n" +
+        lbText +
+        "\n\nWhen asked about the leaderboard, standings, rankings, or who is winning, use ONLY this live data.";
+    }
+  }
+
+  const endpoint = LLM_BASE_URL + "/chat/completions";
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${LLM_API_KEY}`,
+      Authorization: "Bearer " + LLM_API_KEY,
     },
     body: JSON.stringify({
       model: "MiniMax-M3",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         ...messages.map((m) => ({ role: m.role, content: m.content })),
       ],
       max_tokens: maxTokens,
@@ -96,7 +117,7 @@ export async function callGemini(
 
   if (!res.ok) {
     const err = await res.text().catch(() => "");
-    throw new Error(`LLM error HTTP ${res.status}: ${err.slice(0, 200)}`);
+    throw new Error("LLM error HTTP " + res.status + ": " + err.slice(0, 200));
   }
 
   const data = await res.json();
