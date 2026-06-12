@@ -627,7 +627,7 @@ function TopBar({username,avatar,avatarUrl,onSettings,onProfile,onMenu,onLogout}
 }
 
 // ─── NAV + SIDEBAR ────────────────────────────────────────────────────────────
-const CORE_TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"multi",label:"PvP",emoji:"⚔️"},{id:"shop",label:"Shop",emoji:"⚡"}];
+const CORE_TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"multi",label:"PvP",emoji:"⚔️"},{id:"games",label:"Games",emoji:"🎰"},{id:"shop",label:"Shop",emoji:"⚡"}];
 const MENU_TABS=[
   {id:"profile",label:"Profile",emoji:"👤",desc:"Identity, stats, fighter setup"},
   {id:"quests",label:"Missions",emoji:"🧭",desc:"Progress tasks and rewards"},
@@ -638,13 +638,13 @@ const MENU_TABS=[
 ];
 
 function BottomBar({active,onTab,onMenu}:{active:string;onTab:(t:string)=>void;onMenu:()=>void}){
-  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="multi"?"#f87171":id==="profile"?"#60a5fa":"#c084fc";
+  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="games"?"#f5c842":id==="shop"?"#22d67a":id==="multi"?"#f87171":id==="profile"?"#60a5fa":"#c084fc";
   return(
     <div style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:100,
       background:"linear-gradient(to top, rgba(4,0,12,0.98), rgba(8,2,20,0.92))",
       borderTop:"1px solid rgba(168,85,247,0.18)",
-      backdropFilter:G.blur,display:"grid",gridTemplateColumns:"repeat(5,1fr)",alignItems:"end",
+      backdropFilter:G.blur,display:"grid",gridTemplateColumns:"repeat(6,1fr)",alignItems:"end",
       paddingBottom:"env(safe-area-inset-bottom,0px)",boxShadow:"0 -8px 32px rgba(0,0,0,0.5)",
     }}>
       {CORE_TABS.map((tab)=>{
@@ -738,24 +738,24 @@ function UsernameModal({onConfirm}:{onConfirm:(name:string,wallet:string)=>void}
       }}>
         <div style={{fontSize:52,marginBottom:12,filter:"drop-shadow(0 0 20px rgba(168,85,247,0.6))"}}>🎮</div>
         <h2 style={{color:"#fff",fontWeight:900,fontSize:22,marginBottom:6,letterSpacing:"-0.02em"}}>Set Up Your Profile</h2>
-        <p style={{color:"#5a3a7a",fontSize:13,marginBottom:24,lineHeight:1.6}}>Choose a name for the leaderboard.<br/>Add your Solana wallet to receive prize payouts.</p>
+        <p style={{color:"#9b8ab8",fontSize:13,marginBottom:24,lineHeight:1.6}}>Choose a name for the leaderboard.<br/>Add your Solana wallet to receive prize payouts.</p>
 
         <div style={{marginBottom:14,textAlign:"left"}}>
           <label style={{color:"#7844bb",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:6}}>Display Name</label>
           <input value={name} onChange={e=>setName(e.target.value.slice(0,18))} onKeyDown={e=>e.key==="Enter"&&validate()} placeholder={sug} autoFocus
             style={{width:"100%",background:"rgba(255,255,255,0.05)",border:`1px solid rgba(168,85,247,0.3)`,borderRadius:12,color:"#fff",fontSize:15,fontWeight:700,padding:"12px 14px",outline:"none",boxSizing:"border-box",transition:"border 0.2s"}}/>
-          <div style={{color:"#3a2255",fontSize:10,marginTop:4}}>Suggestion: {sug}</div>
+          <div style={{color:"#6b5a8a",fontSize:10,marginTop:4}}>Suggestion: {sug}</div>
         </div>
 
         <div style={{marginBottom:24,textAlign:"left"}}>
           <label style={{color:"#7844bb",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:6}}>
-            Solana Wallet <span style={{color:"#3a2255",fontWeight:500,textTransform:"none"}}>— optional</span>
+            Solana Wallet <span style={{color:"#6b5a8a",fontWeight:500,textTransform:"none"}}>— optional</span>
           </label>
           <input value={wallet} onChange={e=>{setWallet(e.target.value);setWalletErr("");}} placeholder="e.g. 7xKXt…qF2P" onKeyDown={e=>e.key==="Enter"&&validate()}
             style={{width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${walletErr?"rgba(255,60,60,0.5)":"rgba(168,85,247,0.2)"}`,borderRadius:12,color:"#22d67a",fontSize:12,fontWeight:600,padding:"12px 14px",outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
           {walletErr
             ?<div style={{color:"#ff6060",fontSize:10,marginTop:4}}>⚠ {walletErr}</div>
-            :<div style={{color:"#3a2255",fontSize:10,marginTop:4}}>Required to receive USDC prize payouts 🏆</div>
+            :<div style={{color:"#6b5a8a",fontSize:10,marginTop:4}}>Required to receive USDC prize payouts 🏆</div>
           }
         </div>
 
@@ -778,7 +778,7 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
   char:typeof CHARACTERS[0]; specialActive:boolean; charPulse:boolean;
   onTap:(e:React.MouseEvent|React.TouchEvent)=>void; firstPlay:boolean;
 }){
-  const SIZE=260;
+  const SIZE=300;
   // deterministic spark positions per character
   const sparks=[
     {left:"8%",bottom:"20%",size:5,delay:"0s",dur:"2.4s"},
@@ -905,7 +905,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
   }
 
   const card = {background:G.glass,border:`1px solid ${G.border}`,borderRadius:18,padding:"18px 16px",marginBottom:12} as const;
-  const label = {color:"#5a3a7a",fontSize:10,fontWeight:700 as const,textTransform:"uppercase" as const,letterSpacing:"0.08em",display:"block" as const,marginBottom:8};
+  const label = {color:"#9b8ab8",fontSize:10,fontWeight:700 as const,textTransform:"uppercase" as const,letterSpacing:"0.08em",display:"block" as const,marginBottom:8};
   const input = {width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid rgba(255,255,255,0.1)`,borderRadius:12,color:"#fff",fontSize:14,fontWeight:700 as const,padding:"11px 14px",outline:"none",boxSizing:"border-box" as const,transition:"border 0.2s"};
 
   return(
@@ -929,7 +929,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
             }
           </div>
           <div style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:4}}>{name||"Degen"}</div>
-          {user?.email&&<div style={{color:"#3a2255",fontSize:11}}>{user.email}</div>}
+          {user?.email&&<div style={{color:"#6b5a8a",fontSize:11}}>{user.email}</div>}
         </div>
 
         {/* Profile picture upload */}
@@ -950,7 +950,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
             {avatarUrl&&<button onClick={()=>setAvatarUrl("")} style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,color:"#ef4444",fontSize:11,fontWeight:700,padding:"8px 12px",cursor:"pointer"}}>✕ Remove</button>}
           </div>
           {uploadErr&&<div style={{color:uploadErr.startsWith("✅")?"#22d67a":"#ef4444",fontSize:12,marginTop:8}}>{uploadErr}</div>}
-          <div style={{color:"#3a2255",fontSize:10,marginTop:6}}>Max 2MB · JPG, PNG, GIF, WEBP</div>
+          <div style={{color:"#6b5a8a",fontSize:10,marginTop:6}}>Max 2MB · JPG, PNG, GIF, WEBP</div>
         </div>
 
         {/* Avatar picker */}
@@ -977,7 +977,7 @@ function SettingsTab({username,solWallet,currentAvatarUrl,onSave}:{username:stri
         {/* Wallet */}
         <div style={card}>
           <label style={label}>Solana Wallet Address</label>
-          <div style={{color:"#3a2255",fontSize:10,marginBottom:8}}>Required for prize payouts</div>
+          <div style={{color:"#6b5a8a",fontSize:10,marginBottom:8}}>Required for prize payouts</div>
           <input value={wallet} onChange={e=>setWallet(e.target.value)} placeholder="Your Solana wallet address"
             style={{...input,color:"#22d67a",fontSize:12,fontFamily:"monospace"}}/>
         </div>
@@ -2241,12 +2241,41 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
 }
 
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
-function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily,coins,boostMult,boostLeft,onChestOpen,onWheelWin,dayStats,onQuestClaim,onCasino}:{
-  onPlay:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
+// ─── GAMES TAB (minigames hub) ──────────────────────────────────────────────
+function GamesTab({playerId,coins,boostMult,boostLeft,onChestOpen,onWheelWin,dayStats,onQuestClaim,onCasino}:{
+  playerId:string;coins:number;boostMult:number;boostLeft:number;
+  onChestOpen:(cost:number,res:ChestResult)=>void;onWheelWin:(coins:number,paid:number)=>void;
+  dayStats:Record<string,number>;onQuestClaim:(reward:number,allDone:boolean)=>void;onCasino:(delta:number,msg:string)=>void;
+}){
+  return(
+    <div style={{minHeight:"100vh",background:G.bg,paddingTop:52,paddingBottom:110,overflowY:"auto",position:"relative"}}>
+      <div className="arcade-grid"/>
+      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -10%,rgba(245,200,66,0.14) 0%,transparent 55%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"0 auto",padding:"0 16px"}}>
+        {/* Header */}
+        <div style={{textAlign:"center",padding:"24px 0 6px"}} className="anim-slideup">
+          <div className="neon-flicker" style={{color:"rgba(245,200,66,0.8)",fontSize:10.5,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.24em",marginBottom:6,textShadow:"0 0 16px rgba(245,200,66,0.6)"}}>◆ DEGEN ARCADE ◆</div>
+          <h2 style={{color:"#fff",fontWeight:900,fontSize:30,margin:"0 0 6px",letterSpacing:"-0.03em"}}>🎰 Game Room</h2>
+          <div style={{color:"#8b79a9",fontSize:12.5,fontWeight:600,marginBottom:8}}>Spin, gamble, open chests & clear quests</div>
+          <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"linear-gradient(135deg,rgba(245,200,66,0.12),rgba(245,200,66,0.04))",border:"1px solid rgba(245,200,66,0.3)",borderRadius:16,padding:"8px 18px",boxShadow:"0 0 20px rgba(245,200,66,0.1)",marginBottom:14}}>
+            <span style={{fontSize:17}}>💰</span>
+            <span style={{fontSize:16,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums",textShadow:"0 0 14px rgba(245,200,66,0.4)"}}>{fmt(coins)}</span>
+            <span style={{fontSize:9,color:"#8b79a9",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700}}>$DEGEN</span>
+          </div>
+        </div>
+        <DailyQuestsCard playerId={playerId} dayStats={dayStats} onClaim={onQuestClaim}/>
+        <WheelCard playerId={playerId} coins={coins} onWin={onWheelWin}/>
+        <CasinoCard coins={coins} onResult={onCasino}/>
+        <LuckyChests coins={coins} boostMult={boostMult} boostLeft={boostLeft} onOpen={onChestOpen}/>
+      </div>
+    </div>
+  );
+}
+
+function HomeTab({onPlay,onGames,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily}:{
+  onPlay:()=>void;onGames:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
   level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
   nextRank:ReturnType<typeof getNextRank>;charId:string|null;playerId:string;onClaimDaily:(reward:number,streak:number)=>void;
-  coins:number;boostMult:number;boostLeft:number;onChestOpen:(cost:number,res:ChestResult)=>void;onWheelWin:(coins:number,paid:number)=>void;
-  dayStats:Record<string,number>;onQuestClaim:(reward:number,allDone:boolean)=>void;onCasino:(delta:number,msg:string)=>void;
 }){
   const cd=useCountdown();
   const char=CHARACTERS.find(c=>c.id===charId);
@@ -2306,24 +2335,37 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
         {/* ── XP bar ── */}
         <div className="anim-slideup" style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"15px 16px",marginBottom:12,animationDelay:"0.06s"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <span style={{color:"#5a4a7a",fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em"}}>XP Progress</span>
+            <span style={{color:"#8b79a9",fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em"}}>XP Progress</span>
             {nextRank&&<span style={{color:nextRank.color,fontSize:10.5,fontWeight:800}}>{nextRank.emoji} Next: {nextRank.name}</span>}
           </div>
           <div style={{height:10,background:"rgba(255,255,255,0.05)",borderRadius:6,overflow:"hidden",marginBottom:7,border:"1px solid rgba(255,255,255,0.04)"}}>
             <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}77,${rank.color})`,borderRadius:6,transition:"width 0.8s ease",boxShadow:`0 0 16px ${rank.color}88`,animation:"xpFill 1.2s cubic-bezier(0.16,1,0.3,1)"}}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
-            <span style={{color:"#4d3d6b",fontSize:10,fontWeight:600}}>{fmt(xpProgress.current)} XP</span>
-            <span style={{color:"#4d3d6b",fontSize:10,fontWeight:600}}>{fmt(xpProgress.needed)} XP to level up</span>
+            <span style={{color:"#8b79a9",fontSize:10,fontWeight:600}}>{fmt(xpProgress.current)} XP</span>
+            <span style={{color:"#8b79a9",fontSize:10,fontWeight:600}}>{fmt(xpProgress.needed)} XP to level up</span>
           </div>
         </div>
 
         {/* ── Daily streak chest ── */}
         <DailyStreakCard playerId={playerId} level={level} onClaim={onClaimDaily}/>
-        <DailyQuestsCard playerId={playerId} dayStats={dayStats} onClaim={onQuestClaim}/>
-        <LuckyChests coins={coins} boostMult={boostMult} boostLeft={boostLeft} onOpen={onChestOpen}/>
-        <WheelCard playerId={playerId} coins={coins} onWin={onWheelWin}/>
-        <CasinoCard coins={coins} onResult={onCasino}/>
+
+        {/* ── Game Room teaser ── */}
+        <button onClick={onGames} className="press-fx anim-slideup shine-card" style={{
+          width:"100%",textAlign:"left",display:"flex",alignItems:"center",gap:14,
+          background:"linear-gradient(135deg,rgba(245,200,66,0.1),rgba(245,158,11,0.04))",
+          border:"1.5px solid rgba(245,200,66,0.3)",
+          borderRadius:20,padding:"15px 16px",marginBottom:12,cursor:"pointer",
+          boxShadow:"0 0 28px rgba(245,200,66,0.08)",animationDelay:"0.08s",
+        }}>
+          <span style={{fontSize:34,filter:"drop-shadow(0 0 12px rgba(245,200,66,0.5))"}}>🎰</span>
+          <span style={{flex:1,minWidth:0}}>
+            <span style={{display:"block",color:"#f5c842",fontWeight:900,fontSize:15,letterSpacing:"-0.01em",marginBottom:2}}>Game Room</span>
+            <span style={{display:"block",color:"#8b79a9",fontSize:11,lineHeight:1.4}}>Daily quests · Wheel · Casino · Lucky chests</span>
+          </span>
+          <span style={{color:"#f5c842",fontWeight:900,fontSize:18}}>→</span>
+        </button>
+
         <FriendsCard playerId={playerId} username={username} totalEarned={totalEarned}/>
 
         {/* ── Stats row ── */}
@@ -2342,7 +2384,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
             }}>
               <div style={{fontSize:23,marginBottom:6,filter:`drop-shadow(0 0 10px rgba(${s.glow},0.5))`}}>{s.emoji}</div>
               <div style={{color:s.color,fontWeight:900,fontSize:13.5,fontVariantNumeric:"tabular-nums",marginBottom:3,textShadow:`0 0 14px rgba(${s.glow},0.4)`}}>{s.value}</div>
-              <div style={{color:"#4d3d6b",fontSize:8.5,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700}}>{s.label}</div>
+              <div style={{color:"#8b79a9",fontSize:8.5,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700}}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -2433,7 +2475,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
             }}>
               <div style={{fontSize:27,marginBottom:8,filter:`drop-shadow(0 0 10px rgba(${f.glow},0.45))`}}>{f.emoji}</div>
               <div style={{color:"#eee",fontWeight:900,fontSize:13,marginBottom:4,letterSpacing:"-0.01em"}}>{f.title}</div>
-              <div style={{color:"#4d3d6b",fontSize:10.5,lineHeight:1.5}}>{f.desc}</div>
+              <div style={{color:"#8b79a9",fontSize:10.5,lineHeight:1.5}}>{f.desc}</div>
             </div>
           ))}
         </div>
@@ -2763,11 +2805,11 @@ function ShopTab({coins,charId,upgrades,onBuyUpgrade,playerLevel}:{
         <div style={{padding:70,textAlign:"center",position:"relative",zIndex:1}}>
           <div style={{fontSize:56,marginBottom:14,filter:"grayscale(0.5)",animation:"charFloat 3s ease-in-out infinite"}}>🛒</div>
           <div style={{color:"#6b5a8a",fontSize:15,fontWeight:800}}>Start a game first</div>
-          <div style={{color:"#3d3d55",fontSize:12,marginTop:5}}>Head to the Play tab to pick your character</div>
+          <div style={{color:"#7a7a9a",fontSize:12,marginTop:5}}>Head to the Play tab to pick your character</div>
         </div>
       ):(
         <div style={{maxWidth:480,margin:"0 auto",padding:"12px 14px",position:"relative",zIndex:1}}>
-          {catInfo&&<div style={{color:"#5a4a7a",fontSize:11.5,padding:"2px 4px 12px",fontWeight:600}}>{catInfo.desc}</div>}
+          {catInfo&&<div style={{color:"#8b79a9",fontSize:11.5,padding:"2px 4px 12px",fontWeight:600}}>{catInfo.desc}</div>}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
             {catItems.map((u,idx)=>{
               const lv=upgrades[u.id]||0,cost=getUpgCost(u,lv);
@@ -2804,7 +2846,7 @@ function ShopTab({coins,charId,upgrades,onBuyUpgrade,playerLevel}:{
                   <div style={{fontSize:32,margin:"14px 0 9px",filter:locked?"grayscale(1)":`drop-shadow(0 0 10px rgba(${r.color},0.4))`,lineHeight:1}}>{locked?"🔒":u.emoji}</div>
                   <div style={{fontWeight:900,fontSize:12.5,color:"#fff",marginBottom:3,lineHeight:1.3,letterSpacing:"-0.01em"}}>{u.name}</div>
                   {u.tapsPerSec&&<div style={{fontSize:9.5,color:"#22d67a",fontWeight:800,marginBottom:4,textShadow:"0 0 8px rgba(34,214,122,0.4)"}}>⚡ +{u.tapsPerSec}/sec auto</div>}
-                  <div style={{color:"#5a4a7a",fontSize:10,marginBottom:10,lineHeight:1.45,minHeight:28}}>{u.desc}</div>
+                  <div style={{color:"#8b79a9",fontSize:10,marginBottom:10,lineHeight:1.45,minHeight:28}}>{u.desc}</div>
                   {locked?(
                     <div style={{
                       background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.18)",
@@ -2819,7 +2861,7 @@ function ShopTab({coins,charId,upgrades,onBuyUpgrade,playerLevel}:{
                       boxShadow:can?`0 0 14px rgba(${r.color},0.12)`:"none",
                     }}>
                       <span style={{fontSize:12}}>💰</span>
-                      <span style={{color:can?r.text:"#3d3d55",fontWeight:900,fontSize:12.5,fontVariantNumeric:"tabular-nums"}}>{fmt(cost)}</span>
+                      <span style={{color:can?r.text:"#7a7a9a",fontWeight:900,fontSize:12.5,fontVariantNumeric:"tabular-nums"}}>{fmt(cost)}</span>
                     </div>
                   )}
                 </button>
@@ -2839,25 +2881,30 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 }){
   return(
     <div style={{width:"100%"}}>
-      <div style={{color:"#2a1540",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",padding:"4px 14px 4px"}}>⚡ Quick Upgrades</div>
-      <div style={{overflowX:"auto",display:"flex",gap:7,padding:"4px 14px 10px",WebkitOverflowScrolling:"touch" as any}}>
-        {UPGRADES.map(u=>{
+      <div style={{color:"#9b8ab8",fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",padding:"4px 16px 5px"}}>⚡ Quick Upgrades</div>
+      <div style={{overflowX:"auto",display:"flex",gap:8,padding:"4px 16px 10px",WebkitOverflowScrolling:"touch" as any}}>
+        {[...UPGRADES].sort((a,b)=>{
+          const ca=getUpgCost(a,upgrades[a.id]||0),cb=getUpgCost(b,upgrades[b.id]||0);
+          const aa=coins>=ca?0:1,ab=coins>=cb?0:1;
+          return aa!==ab?aa-ab:ca-cb;
+        }).map(u=>{
           const lv=upgrades[u.id]||0,cost=getUpgCost(u,lv),can=coins>=cost;
           return(
-            <button key={u.id} onClick={()=>can&&onBuyUpgrade(u.id)} style={{
-              flex:"0 0 76px",height:84,
-              background:can?"rgba(245,200,66,0.05)":G.glass,
-              border:`1px solid ${can?"rgba(245,200,66,0.2)":G.border}`,
-              borderRadius:14,padding:"7px 5px",
+            <button key={u.id} onClick={()=>can&&onBuyUpgrade(u.id)} className={can?"press-fx":""} style={{
+              flex:"0 0 86px",height:96,
+              background:can?"linear-gradient(160deg,rgba(245,200,66,0.1),rgba(245,200,66,0.03))":G.glass,
+              border:`1.5px solid ${can?"rgba(245,200,66,0.35)":G.border}`,
+              borderRadius:16,padding:"9px 6px",
               cursor:can?"pointer":"not-allowed",
               display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",
-              opacity:can?1:0.35,position:"relative",
+              opacity:can?1:0.4,position:"relative",
               transition:"all 0.1s",
+              boxShadow:can?"0 0 14px rgba(245,200,66,0.1)":"none",
             }}>
-              {lv>0&&<div style={{position:"absolute",top:3,right:4,background:"rgba(168,85,247,0.7)",borderRadius:4,fontSize:7,fontWeight:900,color:"#fff",padding:"1px 4px"}}>Lv{lv}</div>}
-              <div style={{fontSize:22}}>{u.emoji}</div>
-              <div style={{color:"#bbb",fontSize:9,fontWeight:700,textAlign:"center",lineHeight:1.2}}>{u.name}</div>
-              <div style={{color:can?G.gold:"#2a1540",fontSize:10,fontWeight:900}}>💰{fmt(cost)}</div>
+              {lv>0&&<div style={{position:"absolute",top:4,right:5,background:"rgba(168,85,247,0.75)",borderRadius:5,fontSize:7.5,fontWeight:900,color:"#fff",padding:"1.5px 5px"}}>Lv{lv}</div>}
+              <div style={{fontSize:25,filter:can?"drop-shadow(0 0 8px rgba(245,200,66,0.35))":"grayscale(0.6)"}}>{u.emoji}</div>
+              <div style={{color:can?"#e8e0f5":"#8b79a9",fontSize:9.5,fontWeight:700,textAlign:"center",lineHeight:1.2}}>{u.name}</div>
+              <div style={{color:can?G.gold:"#8b79a9",fontSize:10.5,fontWeight:900,fontVariantNumeric:"tabular-nums"}}>💰{fmt(cost)}</div>
             </button>
           );
         })}
@@ -2869,7 +2916,7 @@ function QuickStrip({coins,upgrades,onBuyUpgrade}:{
 // ─── MAIN GAME ────────────────────────────────────────────────────────────────
 export default function TapGame() {
   const {user,signOut}=useAuth();
-  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"shop"|"profile"|"quests"|"achievements"|"ranks"|"settings"|"compete">("home");
+  const [activeTab,setActiveTab]=useState<"home"|"play"|"multi"|"games"|"shop"|"profile"|"quests"|"achievements"|"ranks"|"settings"|"compete">("home");
   const [menuOpen,setMenuOpen]=useState(false);
   const [screen,setScreen]=useState<"select"|"game">("select");
   const [charId,setCharId]=useState<string|null>(null);
@@ -3534,7 +3581,7 @@ export default function TapGame() {
 
   const handleTap=useCallback((e:React.MouseEvent|React.TouchEvent)=>{
     if(!char)return;
-    e.preventDefault();
+    e.preventDefault();e.stopPropagation();
     let tx=window.innerWidth/2,ty=window.innerHeight/2;
     if("touches" in e&&e.touches.length>0){tx=e.touches[0].clientX;ty=e.touches[0].clientY;}
     else if("clientX" in e){tx=(e as React.MouseEvent).clientX;ty=(e as React.MouseEvent).clientY;}
@@ -3846,7 +3893,8 @@ export default function TapGame() {
       )}
 
       {/* Tab content */}
-      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId} playerId={playerId} onClaimDaily={(reward,streak)=>{setCoins(c=>c+reward); showToast(`🎁 Day ${streak} chest! +${fmt(reward)} coins`);}} coins={coins} boostMult={boost.until>Date.now()?boost.mult:1} boostLeft={boostLeft} onChestOpen={(cost,res)=>{
+      {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} onGames={()=>setActiveTab("games")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId} playerId={playerId} onClaimDaily={(reward,streak)=>{setCoins(c=>c+reward); showToast(`🎁 Day ${streak} chest! +${fmt(reward)} coins`);}}/>}
+      {activeTab==="games"&&<GamesTab playerId={playerId} coins={coins} boostMult={boost.until>Date.now()?boost.mult:1} boostLeft={boostLeft} onChestOpen={(cost,res)=>{
         bumpDayEvent("chest");
         setCoins(c=>c-cost+(res.coins||0));
         if(res.boostMult&&res.boostMins){
@@ -3879,7 +3927,7 @@ export default function TapGame() {
                   style={{width:96,height:96,objectFit:"contain",marginBottom:6,filter:"drop-shadow(0 0 34px rgba(168,85,247,0.8))",animation:"charFloat 3.6s ease-in-out infinite"}}/>
                 <div className="neon-flicker" style={{color:"rgba(192,132,252,0.75)",fontSize:10,fontWeight:800,letterSpacing:"0.26em",textTransform:"uppercase",marginBottom:5,textShadow:"0 0 16px rgba(168,85,247,0.7)"}}>◆ SELECT YOUR FIGHTER ◆</div>
                 <h2 style={{color:"#fff",fontWeight:900,fontSize:24,margin:"0 0 5px",letterSpacing:"-0.03em"}}>Choose Your Legend</h2>
-                <p style={{color:"#5a4a7a",fontSize:12,margin:0,fontWeight:600}}>Each legend has unique abilities and passives</p>
+                <p style={{color:"#8b79a9",fontSize:12,margin:0,fontWeight:600}}>Each legend has unique abilities and passives</p>
               </div>
               {!dbLoaded&&<div style={{color:"#f5c842",fontSize:13,fontWeight:800,marginBottom:10,letterSpacing:"0.06em",textShadow:"0 0 14px rgba(245,200,66,0.5)",position:"relative",zIndex:1}}>⏳ Loading your account…</div>}
               <div style={{display:"flex",gap:13,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
@@ -3923,7 +3971,7 @@ export default function TapGame() {
                         borderRadius:9,padding:"4px 10px",fontSize:9.5,color:`rgb(${c.glow})`,
                         fontWeight:800,textAlign:"center",lineHeight:1.3,
                       }}>⚡ {c.ability}</div>
-                      <div style={{fontSize:9,color:"#4d3d6b",lineHeight:1.45,textAlign:"center",minHeight:26}}>{c.abilityDesc}</div>
+                      <div style={{fontSize:9,color:"#8b79a9",lineHeight:1.45,textAlign:"center",minHeight:26}}>{c.abilityDesc}</div>
                       {s.totalEarned>0&&(
                         <div style={{fontSize:9,color:"#f5c842",background:"rgba(245,200,66,0.07)",border:"1px solid rgba(245,200,66,0.18)",borderRadius:7,padding:"3px 8px",fontWeight:700}}>💰 {fmt(s.totalEarned)} saved</div>
                       )}
@@ -3937,9 +3985,9 @@ export default function TapGame() {
           {/* ── GAME SCREEN ── */}
           {screen==="game"&&char&&(
             <div style={{
-              minHeight:"100vh",background:G.bg,
-              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-              paddingBottom:88,position:"relative",overflow:"hidden",
+              minHeight:"100vh",height:"100vh",background:G.bg,
+              display:"flex",flexDirection:"column",alignItems:"center",
+              paddingBottom:88,position:"relative",overflow:"hidden",boxSizing:"border-box",
               userSelect:"none",WebkitUserSelect:"none",
             }} className={shaking?"shake":""}>
               <div style={{position:"fixed",inset:0,pointerEvents:"none",background:`radial-gradient(ellipse at 50% 40%,rgba(${char.glow},${specialActive?0.3:0.12}) 0%,transparent 60%)`,transition:"background 0.6s"}}/>
@@ -3948,7 +3996,7 @@ export default function TapGame() {
               <div style={{width:"100%",maxWidth:480,padding:"58px 16px 6px",zIndex:10,position:"relative"}}>
                 {/* Coins + rank row */}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                  <button onClick={()=>setScreen("select")} style={{background:G.glass,border:`1px solid ${G.border}`,color:"#555",borderRadius:10,padding:"6px 10px",cursor:"pointer",fontSize:12}}>⬅ Back</button>
+                  <button onClick={()=>setScreen("select")} className="press-fx" style={{background:G.glass,border:`1px solid ${G.border}`,color:"#9b8ab8",borderRadius:12,padding:"8px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>⬅ Back</button>
 
                   {/* Big coin display */}
                   <div style={{
@@ -3957,20 +4005,20 @@ export default function TapGame() {
                     borderRadius:16,padding:"6px 16px",
                     textAlign:"center",
                   }}>
-                    <div style={{fontSize:20,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>💰 {fmt(coins)}</div>
-                    <div style={{fontSize:8,color:"#3a2255",textTransform:"uppercase",letterSpacing:"0.08em"}}>$DEGEN</div>
+                    <div style={{fontSize:24,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",textShadow:"0 0 18px rgba(245,200,66,0.45)"}}>💰 {fmt(coins)}</div>
+                    <div style={{fontSize:8.5,color:"#9b8ab8",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700}}>$DEGEN</div>
                   </div>
 
                   {/* Rank */}
                   <div style={{textAlign:"right"}}>
                     <div style={{color:rank.color,fontWeight:800,fontSize:12,marginBottom:1}}>{rank.emoji} {rank.name}</div>
-                    <div style={{color:"#2a1540",fontSize:9}}>Level {level}</div>
+                    <div style={{color:"#7a6a9a",fontSize:9}}>Level {level}</div>
                   </div>
                 </div>
 
                 {/* XP bar */}
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                  <span style={{fontSize:8,color:"#2a1540",fontWeight:700,flexShrink:0}}>Lv.{level}</span>
+                  <span style={{fontSize:8,color:"#7a6a9a",fontWeight:700,flexShrink:0}}>Lv.{level}</span>
                   <div style={{flex:1,height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}55,${rank.color})`,borderRadius:2,transition:"width 0.5s",boxShadow:`0 0 6px ${rank.color}66`}}/>
                   </div>
@@ -3986,9 +4034,9 @@ export default function TapGame() {
                     ...(combo>1.5?[{label:"Combo",value:`×${(Math.floor(combo*10)/10).toFixed(1)}`}]:[]),
                     ...(boostLeft>0?[{label:"Boost",value:`⚡${boost.mult}× ${Math.ceil(boostLeft/60)}m`}]:[]),
                   ].map(s=>(
-                    <div key={s.label} style={{flex:1,background:G.glass,border:`1px solid ${G.border}`,borderRadius:8,padding:"4px 6px",textAlign:"center"}}>
-                      <div style={{color:"#2a1540",fontSize:6,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:1}}>{s.label}</div>
-                      <div style={{color:"#ccc",fontWeight:800,fontSize:10}}>{s.value}</div>
+                    <div key={s.label} style={{flex:1,background:G.glass,border:`1px solid ${G.border}`,borderRadius:10,padding:"5px 6px",textAlign:"center"}}>
+                      <div style={{color:"#8b79a9",fontSize:7.5,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:2,fontWeight:700}}>{s.label}</div>
+                      <div style={{color:"#e8e0f5",fontWeight:800,fontSize:11.5}}>{s.value}</div>
                     </div>
                   ))}
                 </div>
@@ -4020,18 +4068,22 @@ export default function TapGame() {
                 </div>
               )}
 
-              {/* Character */}
-              <div style={{position:"relative",zIndex:10,width:"100%",maxWidth:280,height:270,margin:"0 auto 8px"}}>
-                <ModelStage char={char} specialActive={specialActive} charPulse={charPulse} onTap={handleTap} firstPlay={totalTaps<3}/>
+              {/* Character — whole zone is tappable */}
+              <div onMouseDown={handleTap} onTouchStart={handleTap} style={{position:"relative",zIndex:10,width:"100%",flex:1,minHeight:330,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",WebkitTapHighlightColor:"transparent"}}>
+                <div style={{position:"relative",width:300,height:310,pointerEvents:"none"}}>
+                  <div style={{pointerEvents:"auto"}}>
+                    <ModelStage char={char} specialActive={specialActive} charPulse={charPulse} onTap={handleTap} firstPlay={totalTaps<3}/>
+                  </div>
+                </div>
               </div>
 
               {/* Energy bar */}
-              <div style={{width:"100%",maxWidth:300,padding:"0 0 5px",position:"relative",zIndex:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:8,color:"#2a1540",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>⚡ Energy</span>
-                  <span style={{fontSize:8,color:"#2a1540"}}>{Math.floor(energy)}/{maxEnergy}</span>
+              <div style={{width:"100%",maxWidth:340,padding:"0 16px 7px",position:"relative",zIndex:10,boxSizing:"border-box"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:10,color:"#9b8ab8",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em"}}>⚡ Energy</span>
+                  <span style={{fontSize:10,color:"#9b8ab8",fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{Math.floor(energy)}/{maxEnergy}</span>
                 </div>
-                <div style={{height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden",border:`1px solid ${G.border}`}}>
+                <div style={{height:9,background:"rgba(255,255,255,0.05)",borderRadius:5,overflow:"hidden",border:`1px solid ${G.border}`}}>
                   <div style={{
                     height:"100%",borderRadius:3,width:`${(energy/maxEnergy)*100}%`,
                     background:(energy/maxEnergy)>0.5
@@ -4040,18 +4092,18 @@ export default function TapGame() {
                         ?"linear-gradient(90deg,#cc8800,#ffaa00)"
                         :"linear-gradient(90deg,#aa2233,#ff4455)",
                     transition:"width 0.15s",
-                    boxShadow:`0 0 8px rgba(${char.glow},0.4)`,
+                    boxShadow:`0 0 10px rgba(${char.glow},0.45)`,
                   }}/>
                 </div>
               </div>
 
               {/* Special charge */}
-              <div style={{width:"100%",maxWidth:300,padding:"0 0 6px",position:"relative",zIndex:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:8,color:"#2a1540",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>✨ {char.specialName}</span>
-                  <span style={{fontSize:8,color:specialCharge>=100?`rgb(${char.glow})`:"#2a1540"}}>{Math.floor(specialCharge)}%</span>
+              <div style={{width:"100%",maxWidth:340,padding:"0 16px 8px",position:"relative",zIndex:10,boxSizing:"border-box"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:10,color:"#9b8ab8",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em"}}>✨ {char.specialName}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:specialCharge>=100?`rgb(${char.glow})`:"#9b8ab8"}}>{Math.floor(specialCharge)}%</span>
                 </div>
-                <div onClick={launchSpecial} style={{height:7,background:"rgba(255,255,255,0.04)",borderRadius:4,overflow:"hidden",cursor:specialCharge>=100&&!specialActive?"pointer":"default",border:specialCharge>=100&&!specialActive?`1px solid rgba(${char.glow},0.5)`:`1px solid ${G.border}`}}>
+                <div onClick={launchSpecial} style={{height:10,background:"rgba(255,255,255,0.04)",borderRadius:4,overflow:"hidden",cursor:specialCharge>=100&&!specialActive?"pointer":"default",border:specialCharge>=100&&!specialActive?`1px solid rgba(${char.glow},0.5)`:`1px solid ${G.border}`}}>
                   <div style={{height:"100%",borderRadius:4,width:`${specialCharge}%`,background:`linear-gradient(90deg,rgba(${char.glow},0.5),rgb(${char.glow}))`,transition:"width 0.2s",boxShadow:specialCharge>=100?`0 0 12px rgba(${char.glow},0.6)`:"none"}}/>
                 </div>
                 {specialCharge>=100&&!specialActive&&(
