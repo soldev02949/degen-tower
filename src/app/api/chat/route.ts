@@ -84,7 +84,7 @@ export async function callGemini(
       Authorization: `Bearer ${LLM_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "MiniMax-M3",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         ...messages.map((m) => ({ role: m.role, content: m.content })),
