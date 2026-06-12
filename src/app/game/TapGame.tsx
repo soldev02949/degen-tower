@@ -1274,6 +1274,146 @@ function DailyStreakCard({playerId,level,onClaim}:{playerId:string;level:number;
 }
 
 // ─── WHEEL OF FORTUNE ────────────────────────────────────────────────────────
+// ─── DEGEN CASINO ─────────────────────────────────────────────────────────────
+function CasinoCard({coins,onResult}:{coins:number;onResult:(delta:number,msg:string)=>void;}){
+  const [game,setGame]=useState<"flip"|"dice"|"moon">("flip");
+  const [bet,setBet]=useState(10000);
+  const [busy,setBusy]=useState(false);
+  const [last,setLast]=useState<{win:boolean;text:string}|null>(null);
+  const [anim,setAnim]=useState("");
+  const canBet=bet>0&&bet<=coins&&!busy;
+  const play=(pick?:string)=>{
+    if(!canBet)return;
+    setBusy(true);setLast(null);
+    setAnim(game==="flip"?"🪙":game==="dice"?"🎲":"🚀");
+    setTimeout(()=>{
+      let win=false,mult=0,text="";
+      if(game==="flip"){
+        const side=Math.random()<0.5?"heads":"tails";
+        win=side===pick;mult=2;
+        text=win?`${side.toUpperCase()}! You called it 🔥`:`${side.toUpperCase()} — wrong call 💀`;
+      }else if(game==="dice"){
+        const roll=1+Math.floor(Math.random()*6);
+        win=pick==="high"?roll>=4:roll<=3;mult=2;
+        text=win?`Rolled ${roll} — winner! 🎲`:`Rolled ${roll} — busted 💀`;
+      }else{
+        const r=Math.random();
+        if(r<0.05){win=true;mult=10;text="🌕 FULL MOON! 10× payout!!";}
+        else if(r<0.20){win=true;mult=3;text="🚀 Lift-off! 3× payout!";}
+        else{text="💥 Rocket exploded on the pad";}
+      }
+      const delta=win?bet*(mult-1):-bet;
+      setLast({win,text});setAnim("");setBusy(false);
+      onResult(delta,text);
+    },1400);
+  };
+  const bets=[10000,100000,1000000,10000000];
+  return(
+    <div className="shine-card" style={{background:"linear-gradient(135deg,rgba(248,113,113,0.10),rgba(245,200,66,0.06))",border:"1.5px solid rgba(248,113,113,0.3)",borderRadius:20,padding:14}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <span style={{fontSize:20}}>🎰</span>
+        <div style={{flex:1}}>
+          <div style={{color:"#fff",fontWeight:900,fontSize:14}}>Degen Casino</div>
+          <div style={{color:"#8f7ca7",fontSize:10.5}}>Bet your coins. Win big or go home.</div>
+        </div>
+        <span style={{background:"rgba(248,113,113,0.12)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:999,color:"#fca5a5",fontSize:9.5,fontWeight:900,padding:"4px 10px"}}>18+ DEGEN ONLY</span>
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        {([["flip","🪙 Coinflip"],["dice","🎲 Dice"],["moon","🚀 Moonshot"]] as const).map(([id,label])=>(
+          <button key={id} onClick={()=>{setGame(id);setLast(null);}} className="press-fx" style={{flex:1,background:game===id?"linear-gradient(135deg,#f87171,#f5c842)":"rgba(255,255,255,0.04)",border:game===id?"none":"1px solid rgba(255,255,255,0.08)",borderRadius:10,color:game===id?"#1a0f00":"#8f7ca7",fontWeight:900,fontSize:11,padding:"8px 0",cursor:"pointer"}}>{label}</button>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        {bets.map(b=>(
+          <button key={b} onClick={()=>setBet(b)} disabled={b>coins} className="press-fx" style={{flex:1,background:bet===b?"rgba(245,200,66,0.15)":"rgba(255,255,255,0.03)",border:bet===b?"1px solid rgba(245,200,66,0.5)":"1px solid rgba(255,255,255,0.07)",borderRadius:10,color:b>coins?"#554":"#f5c842",fontWeight:900,fontSize:11,padding:"7px 0",cursor:b>coins?"default":"pointer",opacity:b>coins?0.4:1}}>{fmt(b)}</button>
+        ))}
+      </div>
+      {anim&&<div style={{textAlign:"center",fontSize:44,padding:"10px 0",animation:"goldenFloat 0.5s ease-in-out infinite"}}>{anim}</div>}
+      {last&&!anim&&(
+        <div style={{textAlign:"center",padding:"8px 0",marginBottom:8,color:last.win?"#22d67a":"#f87171",fontWeight:900,fontSize:13}}>{last.text}</div>
+      )}
+      {!busy&&(
+        game==="flip"?(
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>play("heads")} disabled={!canBet} className="press-fx" style={{flex:1,background:canBet?"linear-gradient(135deg,#f5c842,#f59e0b)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:canBet?"#1a0f00":"#556",fontWeight:900,fontSize:12.5,padding:"12px 0",cursor:canBet?"pointer":"default"}}>👑 HEADS</button>
+            <button onClick={()=>play("tails")} disabled={!canBet} className="press-fx" style={{flex:1,background:canBet?"linear-gradient(135deg,#60a5fa,#a855f7)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:canBet?"#fff":"#556",fontWeight:900,fontSize:12.5,padding:"12px 0",cursor:canBet?"pointer":"default"}}>🦅 TAILS</button>
+          </div>
+        ):game==="dice"?(
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>play("low")} disabled={!canBet} className="press-fx" style={{flex:1,background:canBet?"linear-gradient(135deg,#60a5fa,#22d67a)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:canBet?"#04210f":"#556",fontWeight:900,fontSize:12.5,padding:"12px 0",cursor:canBet?"pointer":"default"}}>⬇️ LOW (1-3)</button>
+            <button onClick={()=>play("high")} disabled={!canBet} className="press-fx" style={{flex:1,background:canBet?"linear-gradient(135deg,#f87171,#f5c842)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:canBet?"#1a0f00":"#556",fontWeight:900,fontSize:12.5,padding:"12px 0",cursor:canBet?"pointer":"default"}}>⬆️ HIGH (4-6)</button>
+          </div>
+        ):(
+          <button onClick={()=>play()} disabled={!canBet} className="press-fx" style={{width:"100%",background:canBet?"linear-gradient(135deg,#f87171,#a855f7)":"rgba(255,255,255,0.05)",border:"none",borderRadius:12,color:canBet?"#fff":"#556",fontWeight:900,fontSize:12.5,padding:"12px 0",cursor:canBet?"pointer":"default"}}>🚀 LAUNCH — 5% chance 10×, 15% chance 3×</button>
+        )
+      )}
+      {busy&&<div style={{textAlign:"center",color:"#8f7ca7",fontSize:11.5,fontWeight:800}}>Rolling…</div>}
+    </div>
+  );
+}
+
+// ─── DAILY QUESTS ROTATION ────────────────────────────────────────────────────
+const DAILY_QUEST_POOL=[
+  {id:"dq_taps",title:"Tap 500 times today",target:500,metric:"taps",reward:100_000,emoji:"👆"},
+  {id:"dq_taps_big",title:"Tap 2,000 times today",target:2000,metric:"taps",reward:400_000,emoji:"🔥"},
+  {id:"dq_earn",title:"Earn 1M coins today",target:1_000_000,metric:"earned",reward:250_000,emoji:"💰"},
+  {id:"dq_earn_big",title:"Earn 10M coins today",target:10_000_000,metric:"earned",reward:1_000_000,emoji:"🤑"},
+  {id:"dq_chest",title:"Open a lucky chest",target:1,metric:"chest",reward:150_000,emoji:"📦"},
+  {id:"dq_wheel",title:"Spin the wheel",target:1,metric:"wheel",reward:100_000,emoji:"🎡"},
+  {id:"dq_casino",title:"Place a casino bet",target:1,metric:"casino",reward:150_000,emoji:"🎰"},
+  {id:"dq_golden",title:"Grab a golden coin",target:1,metric:"golden",reward:300_000,emoji:"🪙"},
+];
+function questsForDay(day:string){
+  let h=0;for(let i=0;i<day.length;i++)h=(h*31+day.charCodeAt(i))>>>0;
+  const pool=[...DAILY_QUEST_POOL];const picked:typeof DAILY_QUEST_POOL=[];
+  for(let i=0;i<3;i++){const idx=(h+i*7)%pool.length;picked.push(pool.splice(idx,1)[0]);}
+  return picked;
+}
+function DailyQuestsCard({playerId,dayStats,onClaim}:{playerId:string;dayStats:Record<string,number>;onClaim:(reward:number,allDone:boolean)=>void;}){
+  const day=new Date().toISOString().slice(0,10);
+  const quests=useMemo(()=>questsForDay(day),[day]);
+  const key=`degen_dq_${playerId}_${day}`;
+  const [claimed,setClaimed]=useState<Record<string,boolean>>({});
+  useEffect(()=>{try{setClaimed(JSON.parse(localStorage.getItem(key)||"{}"));}catch{}},[key]);
+  const claim=(q:typeof DAILY_QUEST_POOL[number])=>{
+    const next={...claimed,[q.id]:true};
+    setClaimed(next);try{localStorage.setItem(key,JSON.stringify(next));}catch{}
+    const allDone=quests.every(x=>next[x.id]);
+    onClaim(q.reward+(allDone?500_000:0),allDone);
+  };
+  return(
+    <div style={{background:"linear-gradient(135deg,rgba(96,165,250,0.08),rgba(34,214,122,0.05))",border:"1px solid rgba(96,165,250,0.24)",borderRadius:20,padding:14}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <span style={{fontSize:20}}>📋</span>
+        <div style={{flex:1}}>
+          <div style={{color:"#fff",fontWeight:900,fontSize:14}}>Daily quests</div>
+          <div style={{color:"#8f7ca7",fontSize:10.5}}>3 fresh quests every day · clear all 3 for +500K bonus</div>
+        </div>
+        <span style={{background:"rgba(96,165,250,0.12)",border:"1px solid rgba(96,165,250,0.3)",borderRadius:999,color:"#93c5fd",fontSize:10,fontWeight:900,padding:"4px 10px"}}>{quests.filter(q=>claimed[q.id]).length}/3</span>
+      </div>
+      <div style={{display:"grid",gap:8}}>
+        {quests.map(q=>{
+          const prog=dayStats[q.metric]||0;
+          const done=prog>=q.target;
+          const was=!!claimed[q.id];
+          return(
+            <div key={q.id} style={{display:"flex",alignItems:"center",gap:10,background:was?"rgba(34,214,122,0.06)":"rgba(0,0,0,0.25)",border:was?"1px solid rgba(34,214,122,0.2)":"1px solid rgba(255,255,255,0.06)",borderRadius:12,padding:"9px 12px"}}>
+              <span style={{fontSize:18}}>{q.emoji}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:"#fff",fontWeight:800,fontSize:12}}>{q.title}</div>
+                <div style={{color:"#8f7ca7",fontSize:10}}>{fmt(Math.min(prog,q.target))} / {fmt(q.target)} · 💰 {fmt(q.reward)}</div>
+              </div>
+              {was?<span style={{color:"#22d67a",fontWeight:900,fontSize:10.5}}>✓ DONE</span>:
+                done?<button onClick={()=>claim(q)} className="press-fx" style={{background:"linear-gradient(135deg,#22d67a,#16a34a)",border:"none",borderRadius:10,color:"#04210f",fontWeight:900,fontSize:10.5,padding:"7px 12px",cursor:"pointer"}}>CLAIM</button>:
+                <span style={{color:"#6d5a86",fontWeight:800,fontSize:10}}>{Math.min(100,Math.floor(prog/q.target*100))}%</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const WHEEL_SEGS=[
   {label:"10K",emoji:"🪙",coins:10_000},
   {label:"100K",emoji:"💰",coins:100_000},
@@ -2101,11 +2241,12 @@ function CompeteTab({playerId,username,charId,totalEarned,onReward}:{playerId:st
 }
 
 // ─── HOME TAB (glass) ────────────────────────────────────────────────────────
-function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily,coins,boostMult,boostLeft,onChestOpen,onWheelWin}:{
+function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,rank,xpProgress,nextRank,charId,playerId,onClaimDaily,coins,boostMult,boostLeft,onChestOpen,onWheelWin,dayStats,onQuestClaim,onCasino}:{
   onPlay:()=>void;username:string;avatar:string;avatarUrl?:string;totalEarned:number;totalTaps:number;
   level:number;rank:ReturnType<typeof getRankFromLevel>;xpProgress:{pct:number;current:number;needed:number};
   nextRank:ReturnType<typeof getNextRank>;charId:string|null;playerId:string;onClaimDaily:(reward:number,streak:number)=>void;
   coins:number;boostMult:number;boostLeft:number;onChestOpen:(cost:number,res:ChestResult)=>void;onWheelWin:(coins:number,paid:number)=>void;
+  dayStats:Record<string,number>;onQuestClaim:(reward:number,allDone:boolean)=>void;onCasino:(delta:number,msg:string)=>void;
 }){
   const cd=useCountdown();
   const char=CHARACTERS.find(c=>c.id===charId);
@@ -2179,8 +2320,10 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 
         {/* ── Daily streak chest ── */}
         <DailyStreakCard playerId={playerId} level={level} onClaim={onClaimDaily}/>
+        <DailyQuestsCard playerId={playerId} dayStats={dayStats} onClaim={onQuestClaim}/>
         <LuckyChests coins={coins} boostMult={boostMult} boostLeft={boostLeft} onOpen={onChestOpen}/>
         <WheelCard playerId={playerId} coins={coins} onWin={onWheelWin}/>
+        <CasinoCard coins={coins} onResult={onCasino}/>
         <FriendsCard playerId={playerId} username={username} totalEarned={totalEarned}/>
 
         {/* ── Stats row ── */}
@@ -2816,6 +2959,17 @@ export default function TapGame() {
   },[]);
   // ── golden coin random event ──
   const [goldCoin,setGoldCoin]=useState<{x:number;y:number}|null>(null);
+  // ── daily quest tracking ──
+  const [dayEvents,setDayEvents]=useState<Record<string,number>>({});
+  const dayBaseRef=useRef<{day:string;taps:number;earned:number}|null>(null);
+  const bumpDayEvent=useCallback((metric:string)=>{
+    if(!playerId)return;
+    setDayEvents(prev=>{
+      const next={...prev,[metric]:(prev[metric]||0)+1};
+      try{localStorage.setItem(`degen_dayev_${playerId}`,JSON.stringify(next));}catch{}
+      return next;
+    });
+  },[playerId]);
   useEffect(()=>{ // clan tap bonus check (+10% income while in a clan)
     if(!playerId)return;
     (async()=>{
@@ -2987,6 +3141,36 @@ export default function TapGame() {
       }
     }catch{}
   },[dbLoaded,playerId,autoRate]);
+
+  // daily quest baseline: snapshot taps/earned at start of each day
+  useEffect(()=>{
+    if(!dbLoaded||!playerId)return;
+    const day=new Date().toISOString().slice(0,10);
+    const bKey=`degen_daybase_${playerId}`;
+    try{
+      const raw=localStorage.getItem(bKey);
+      let base=raw?JSON.parse(raw):null;
+      if(!base||base.day!==day){
+        base={day,taps:totalTaps,earned:totalEarned};
+        localStorage.setItem(bKey,JSON.stringify(base));
+        localStorage.setItem(`degen_dayev_${playerId}`,"{}");
+        setDayEvents({});
+      }else{
+        try{setDayEvents(JSON.parse(localStorage.getItem(`degen_dayev_${playerId}`)||"{}"));}catch{}
+      }
+      dayBaseRef.current=base;
+    }catch{}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[dbLoaded,playerId]);
+  const dayStats=useMemo(()=>{
+    const b=dayBaseRef.current;
+    return{
+      taps:b?Math.max(0,totalTaps-b.taps):0,
+      earned:b?Math.max(0,totalEarned-b.earned):0,
+      ...dayEvents,
+    };
+  },[totalTaps,totalEarned,dayEvents]);
+
   useEffect(()=>{
     if(!playerId)return;
     const key=`degen_lastseen_${playerId}`;
@@ -3017,6 +3201,7 @@ export default function TapGame() {
   const grabGoldCoin=useCallback(()=>{
     if(!goldCoin)return;
     setGoldCoin(null);
+    bumpDayEvent("golden");
     const r=Math.random();
     if(r<0.45){
       const f={mult:5,until:Date.now()+10000};
@@ -3662,13 +3847,17 @@ export default function TapGame() {
 
       {/* Tab content */}
       {activeTab==="home"&&<HomeTab onPlay={()=>setActiveTab("play")} username={username} avatar={avatar} avatarUrl={avatarUrl} totalEarned={totalEarned} totalTaps={totalTaps} level={level} rank={rank} xpProgress={xpProgress} nextRank={nextRank} charId={charId} playerId={playerId} onClaimDaily={(reward,streak)=>{setCoins(c=>c+reward); showToast(`🎁 Day ${streak} chest! +${fmt(reward)} coins`);}} coins={coins} boostMult={boost.until>Date.now()?boost.mult:1} boostLeft={boostLeft} onChestOpen={(cost,res)=>{
+        bumpDayEvent("chest");
         setCoins(c=>c-cost+(res.coins||0));
         if(res.boostMult&&res.boostMins){
           const b={mult:res.boostMult,until:Date.now()+res.boostMins*60000};
           setBoost(b);try{localStorage.setItem(`degen_boost_${playerId}`,JSON.stringify(b));}catch{}
           showToast(`⚡ ${res.boostMult}× tap boost for ${res.boostMins} min!`);
         }else if(res.jackpot){showToast(`🎉 JACKPOT! +${fmt(res.coins)} coins!`);}
-      }} onWheelWin={(won,paid)=>{setCoins(c=>c-paid+won);setTotalEarned(t=>t+won);showToast(`🎡 Wheel: +${fmt(won)} coins!`);}}/>}
+      }} onWheelWin={(won,paid)=>{setCoins(c=>c-paid+won);setTotalEarned(t=>t+won);showToast(`🎡 Wheel: +${fmt(won)} coins!`);bumpDayEvent("wheel");}}
+      dayStats={dayStats}
+      onQuestClaim={(reward,allDone)=>{setCoins(c=>c+reward);setTotalEarned(t=>t+reward);showToast(allDone?`📋 ALL QUESTS CLEARED! +${fmt(reward)} (incl. 500K bonus)`:`📋 Quest done! +${fmt(reward)} coins`);}}
+      onCasino={(delta,msg)=>{setCoins(c=>c+delta);if(delta>0)setTotalEarned(t=>t+delta);showToast(delta>0?`🎰 ${msg} +${fmt(delta)}`:`🎰 ${msg} -${fmt(-delta)}`);bumpDayEvent("casino");}}/>}
       {activeTab==="profile"&&<ProfileTab playerId={playerId} username={username} avatar={avatar} avatarUrl={avatarUrl} solWallet={solWallet} charId={charId} totalEarned={totalEarned} totalTaps={totalTaps} coins={coins} level={level} rank={rank} nextRank={nextRank} upgrades={upgrades} achievCount={achievSet.size} onOpenSettings={()=>setActiveTab("settings")} onClaimRef={(reward,count)=>{setCoins(c=>c+reward); showToast(`🤝 +${fmt(reward)} coins from ${count} invite${count>1?"s":""}!`);}} onAscend={ascend}/>}
       {activeTab==="quests"&&<MissionsTab playerId={playerId} totalTaps={totalTaps} totalEarned={totalEarned} upgrades={upgrades} charId={charId} onClaim={(id,reward)=>{setCoins(c=>c+reward); showToast(`Mission cleared! +${fmt(reward)} coins`);}}/>}
       {activeTab==="achievements"&&<AchievementsTab achievSet={achievSet} totalTaps={totalTaps} coins={coins}/>}
