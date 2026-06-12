@@ -495,38 +495,39 @@ function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string
   return(
     <div style={{
       position:"fixed",top:0,left:0,right:0,zIndex:200,
-      background:"rgba(6,0,15,0.85)",
+      background:"linear-gradient(to bottom, rgba(4,0,12,0.97), rgba(8,2,20,0.88))",
       backdropFilter:G.blur,
-      borderBottom:`1px solid ${G.border}`,
-      padding:"0 16px",height:52,
-      display:"flex",alignItems:"center",gap:10,
+      borderBottom:"1px solid rgba(168,85,247,0.16)",
+      padding:"0 14px",height:54,
+      display:"flex",alignItems:"center",gap:9,
+      boxShadow:"0 4px 24px rgba(0,0,0,0.4)",
     }}>
       <img src="/logo.png" alt="" onError={e=>{(e.target as HTMLImageElement).style.display="none";}}
-        style={{width:28,height:28,objectFit:"contain",filter:"drop-shadow(0 0 8px rgba(168,85,247,0.7))"}}/>
-      <span style={{color:"#fff",fontWeight:900,fontSize:14,letterSpacing:"-0.03em",flex:1,background:"linear-gradient(90deg,#fff,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
+        style={{width:30,height:30,objectFit:"contain",filter:"drop-shadow(0 0 10px rgba(168,85,247,0.8))"}}/>
+      <span className="neon-flicker" style={{fontWeight:900,fontSize:14,letterSpacing:"0.02em",flex:1,background:"linear-gradient(90deg,#fff,#c084fc 60%,#a855f7)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
         DEGEN CLICKER
       </span>
       <a href="/whitepaper" target="_blank" rel="noopener noreferrer" style={{
-        background:G.purpleDim,border:`1px solid rgba(168,85,247,0.25)`,
-        borderRadius:20,color:"#c084fc",fontSize:10,fontWeight:700,
-        padding:"5px 10px",cursor:"pointer",textDecoration:"none",whiteSpace:"nowrap",
-      }}>📄 Whitepaper</a>
+        background:G.purpleDim,border:`1px solid rgba(168,85,247,0.3)`,
+        borderRadius:20,color:"#c084fc",fontSize:10,fontWeight:800,
+        padding:"5px 11px",cursor:"pointer",textDecoration:"none",whiteSpace:"nowrap",
+      }}>📄 Docs</a>
       <div style={{
         display:"flex",alignItems:"center",gap:6,
-        background:G.glass,border:`1px solid ${G.glassBorder}`,
-        borderRadius:20,padding:"4px 10px 4px 6px",
+        background:"rgba(168,85,247,0.07)",border:"1px solid rgba(168,85,247,0.2)",
+        borderRadius:20,padding:"4px 11px 4px 5px",
       }}>
         <AvatarDisplay emoji={avatar} url={avatarUrl} size={28}/>
-        <span style={{color:"#ccc",fontSize:12,fontWeight:700,maxWidth:72,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
+        <span style={{color:"#ddd",fontSize:12,fontWeight:800,maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{username||"Degen"}</span>
       </div>
-      <button onClick={onSettings} style={{
+      <button onClick={onSettings} className="press-fx" style={{
         background:G.glass,border:`1px solid ${G.glassBorder}`,
-        borderRadius:10,color:"#888",fontSize:13,padding:"6px 10px",cursor:"pointer",
+        borderRadius:11,color:"#999",fontSize:13,padding:"6px 10px",cursor:"pointer",
       }}>⚙️</button>
-      <button onClick={onLogout} style={{
-        background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
-        borderRadius:10,color:"#ef4444",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer",
-      }}>Log out</button>
+      <button onClick={onLogout} className="press-fx" style={{
+        background:"rgba(239,68,68,0.09)",border:"1px solid rgba(239,68,68,0.25)",
+        borderRadius:11,color:"#f87171",fontSize:11,fontWeight:800,padding:"6px 11px",cursor:"pointer",
+      }}>Exit</button>
     </div>
   );
 }
@@ -535,41 +536,71 @@ function TopBar({username,avatar,avatarUrl,onSettings,onLogout}:{username:string
 const TABS=[{id:"home",label:"Home",emoji:"🏠"},{id:"play",label:"Play",emoji:"🎮"},{id:"shop",label:"Shop",emoji:"⚡"},{id:"ranks",label:"Ranks",emoji:"🏆"},{id:"settings",label:"Settings",emoji:"⚙️"}];
 
 function BottomBar({active,onTab}:{active:string;onTab:(t:string)=>void}){
-  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="settings"?"#888":"#c084fc";
+  const accentFor=(id:string)=>id==="play"?"#a855f7":id==="ranks"?"#f5c842":id==="shop"?"#22d67a":id==="settings"?"#9aa0b5":"#c084fc";
+  const side=[TABS[0],TABS[3],null,TABS[2],TABS[4]]; // home, ranks, [PLAY], shop, settings
   return(
     <div style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:100,
-      background:"rgba(6,0,15,0.92)",
-      borderTop:`1px solid ${G.border}`,
+      background:"linear-gradient(to top, rgba(4,0,12,0.98), rgba(8,2,20,0.92))",
+      borderTop:"1px solid rgba(168,85,247,0.18)",
       backdropFilter:G.blur,
-      display:"flex",
+      display:"flex",alignItems:"flex-end",
       paddingBottom:"env(safe-area-inset-bottom,0px)",
+      boxShadow:"0 -8px 32px rgba(0,0,0,0.5)",
     }}>
-      {TABS.map(tab=>{
+      {side.map((tab,idx)=>{
+        if(!tab){
+          // ── Center PLAY button ──
+          const isActive=active==="play";
+          return(
+            <div key="play" style={{flex:1,display:"flex",justifyContent:"center",position:"relative"}}>
+              <button onClick={()=>onTab("play")} className="press-fx" style={{
+                position:"relative",top:-18,width:62,height:62,borderRadius:"50%",
+                background:isActive
+                  ?"linear-gradient(135deg,#7c3aed,#a855f7,#c084fc)"
+                  :"linear-gradient(135deg,#4c1d95,#6d28d9,#8b5cf6)",
+                border:"2.5px solid rgba(192,132,252,0.6)",cursor:"pointer",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                boxShadow:isActive
+                  ?"0 0 30px rgba(168,85,247,0.8), 0 0 60px rgba(168,85,247,0.3), 0 8px 20px rgba(0,0,0,0.5)"
+                  :"0 0 18px rgba(168,85,247,0.4), 0 8px 20px rgba(0,0,0,0.5)",
+                transition:"box-shadow 0.3s, background 0.3s",
+              }}>
+                <span style={{fontSize:26,filter:"drop-shadow(0 0 8px rgba(255,255,255,0.5))",lineHeight:1}}>🎮</span>
+                {isActive&&<span style={{position:"absolute",inset:-7,borderRadius:"50%",border:"1.5px solid rgba(192,132,252,0.4)",animation:"glowPulse 2s ease-in-out infinite"}}/>}
+              </button>
+            </div>
+          );
+        }
         const ac=accentFor(tab.id);
         const isActive=active===tab.id;
         return(
           <button key={tab.id} onClick={()=>onTab(tab.id)} style={{
-            flex:1,background:"none",border:"none",padding:"10px 0 8px",
+            flex:1,background:"none",border:"none",padding:"11px 0 9px",
             display:"flex",flexDirection:"column",alignItems:"center",gap:3,
             cursor:"pointer",position:"relative",
           }}>
             {isActive&&(
               <div style={{
-                position:"absolute",top:0,left:"25%",right:"25%",height:2,
-                background:ac,borderRadius:"0 0 3px 3px",
-                boxShadow:`0 0 8px ${ac}`,
+                position:"absolute",top:0,left:"28%",right:"28%",height:2.5,
+                background:`linear-gradient(90deg,transparent,${ac},transparent)`,
+                borderRadius:"0 0 3px 3px",
+                boxShadow:`0 0 10px ${ac}, 0 2px 14px ${ac}66`,
               }}/>
             )}
             <span style={{
-              fontSize:20,filter:isActive?`drop-shadow(0 0 6px ${ac})`:"none",
-              transition:"filter 0.2s",
+              fontSize:21,lineHeight:1,
+              filter:isActive?`drop-shadow(0 0 7px ${ac})`:"grayscale(0.6) opacity(0.55)",
+              transform:isActive?"translateY(-1px)":"none",
+              transition:"filter 0.25s, transform 0.25s",
+              animation:isActive?"tabPop 0.35s ease":"none",
             }}>{tab.emoji}</span>
             <span style={{
-              fontSize:9,fontWeight:isActive?800:500,
-              color:isActive?ac:"#444",
-              textTransform:"uppercase",letterSpacing:"0.05em",
-              transition:"color 0.2s",
+              fontSize:8.5,fontWeight:isActive?900:600,
+              color:isActive?ac:"#3d3d55",
+              textTransform:"uppercase",letterSpacing:"0.08em",
+              transition:"color 0.25s",
+              textShadow:isActive?`0 0 12px ${ac}88`:"none",
             }}>{tab.label}</span>
           </button>
         );
@@ -647,40 +678,64 @@ function ModelStage({ char, specialActive, charPulse, onTap, firstPlay }:{
   char:typeof CHARACTERS[0]; specialActive:boolean; charPulse:boolean;
   onTap:(e:React.MouseEvent|React.TouchEvent)=>void; firstPlay:boolean;
 }){
-  const SIZE=250;
+  const SIZE=260;
+  // deterministic spark positions per character
+  const sparks=[
+    {left:"8%",bottom:"20%",size:5,delay:"0s",dur:"2.4s"},
+    {left:"85%",bottom:"30%",size:4,delay:"0.7s",dur:"2.8s"},
+    {left:"20%",bottom:"10%",size:3,delay:"1.3s",dur:"2.2s"},
+    {left:"70%",bottom:"12%",size:5,delay:"0.4s",dur:"3s"},
+    {left:"45%",bottom:"6%",size:3,delay:"1.8s",dur:"2.6s"},
+    {left:"92%",bottom:"50%",size:3,delay:"1s",dur:"2.4s"},
+  ];
   return(
     <div style={{position:"relative",width:SIZE,height:SIZE,margin:"0 auto",flexShrink:0}}>
-      {/* Ambient glow ring */}
-      <div style={{position:"absolute",inset:-20,borderRadius:"50%",background:`radial-gradient(ellipse at 50% 60%,rgba(${char.glow},${specialActive?0.5:0.2}) 0%,transparent 70%)`,pointerEvents:"none",transition:"background 0.6s"}}/>
-      {/* Orbit rings when special active */}
-      {specialActive&&<>
-        <div style={{position:"absolute",inset:-10,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.6)`,animation:"orbit1 3s linear infinite",pointerEvents:"none",boxShadow:`0 0 12px rgba(${char.glow},0.3)`}}/>
-        <div style={{position:"absolute",inset:-20,borderRadius:"50%",border:`1px solid rgba(${char.glow},0.25)`,animation:"orbit2 6s linear infinite reverse",pointerEvents:"none"}}/>
-      </>}
-      {/* Main tap circle */}
-      <div
-        onMouseDown={onTap} onTouchStart={onTap}
-        style={{
-          position:"absolute",inset:0,borderRadius:"50%",overflow:"hidden",
-          cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",
-          border:specialActive?`2px solid rgba(${char.glow},1)`:`2px solid rgba(${char.glow},0.4)`,
-          boxShadow:specialActive
-            ?`0 0 60px rgba(${char.glow},0.8),0 0 120px rgba(${char.glow},0.4),inset 0 0 40px rgba(${char.glow},0.15)`
-            :`0 0 30px rgba(${char.glow},0.3),inset 0 0 20px rgba(${char.glow},0.05)`,
-          transition:"box-shadow 0.4s,border 0.4s,transform 0.08s",
-          transform:charPulse?"scale(0.92)":"scale(1)",
-          background:`radial-gradient(ellipse at 50% 30%,rgba(${char.glow},0.1) 0%,rgba(6,0,15,0.8) 100%)`,
-          backdropFilter:"blur(2px)",
-        }}
-      >
-        <img src={char.image} alt={char.name} draggable={false}
-          style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",display:"block",pointerEvents:"none",
-            filter:specialActive?`brightness(1.2) saturate(1.4) drop-shadow(0 0 16px rgba(${char.glow},0.6))`:"none",transition:"filter 0.4s"}}
-          onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:110px;filter:drop-shadow(0 0 20px rgba(${char.glow},0.5))">${char.emoji}</div>`;}}
-        />
+      {/* Ambient glow base */}
+      <div style={{position:"absolute",inset:-30,borderRadius:"50%",background:`radial-gradient(ellipse at 50% 60%,rgba(${char.glow},${specialActive?0.55:0.22}) 0%,transparent 70%)`,pointerEvents:"none",transition:"background 0.6s",animation:"glowPulse 3s ease-in-out infinite"}}/>
+      {/* Floor reflection ellipse */}
+      <div style={{position:"absolute",bottom:-18,left:"12%",right:"12%",height:26,borderRadius:"50%",background:`radial-gradient(ellipse,rgba(${char.glow},0.3),transparent 70%)`,filter:"blur(6px)",pointerEvents:"none"}}/>
+      {/* Rising spark particles */}
+      {sparks.map((s,i)=>(
+        <span key={i} className="spark" style={{
+          left:s.left,bottom:s.bottom,width:s.size,height:s.size,
+          background:`rgb(${char.glow})`,boxShadow:`0 0 ${s.size*2}px rgb(${char.glow})`,
+          animationDelay:s.delay,animationDuration:s.dur,
+        }}/>
+      ))}
+      {/* Spinning orbit rings — always on, intensify during special */}
+      <div style={{position:"absolute",inset:-8,borderRadius:"50%",border:`1px solid rgba(${char.glow},${specialActive?0.7:0.18})`,borderTopColor:`rgba(${char.glow},${specialActive?1:0.5})`,animation:"ringSpin 4s linear infinite",pointerEvents:"none",transition:"border-color 0.4s"}}/>
+      <div style={{position:"absolute",inset:-18,borderRadius:"50%",border:`1px dashed rgba(${char.glow},${specialActive?0.45:0.1})`,animation:"ringSpinRev 9s linear infinite",pointerEvents:"none"}}/>
+      {specialActive&&<div style={{position:"absolute",inset:-28,borderRadius:"50%",border:`1.5px solid rgba(${char.glow},0.5)`,animation:"ringSpin 2s linear infinite",pointerEvents:"none",boxShadow:`0 0 24px rgba(${char.glow},0.4)`}}/>}
+      {/* Main tap circle with idle float + breathe */}
+      <div className={specialActive?"":"char-idle"} style={{position:"absolute",inset:0,pointerEvents:"none"}}>
+        <div
+          onMouseDown={onTap} onTouchStart={onTap}
+          className="char-breathe"
+          style={{
+            position:"absolute",inset:0,borderRadius:"50%",overflow:"hidden",
+            cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",pointerEvents:"auto",
+            border:specialActive?`2.5px solid rgba(${char.glow},1)`:`2px solid rgba(${char.glow},0.45)`,
+            boxShadow:specialActive
+              ?`0 0 70px rgba(${char.glow},0.9),0 0 140px rgba(${char.glow},0.45),inset 0 0 50px rgba(${char.glow},0.2)`
+              :`0 0 34px rgba(${char.glow},0.35),inset 0 0 24px rgba(${char.glow},0.07)`,
+            transition:"box-shadow 0.4s,border 0.4s,transform 0.07s",
+            transform:charPulse?"scale(0.93)":"scale(1)",
+            background:`radial-gradient(ellipse at 50% 30%,rgba(${char.glow},0.14) 0%,rgba(6,0,15,0.85) 100%)`,
+          }}
+        >
+          <img src={char.image} alt={char.name} draggable={false}
+            style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",display:"block",pointerEvents:"none",
+              filter:specialActive?`brightness(1.25) saturate(1.5) drop-shadow(0 0 18px rgba(${char.glow},0.7))`:"none",transition:"filter 0.4s"}}
+            onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:115px;filter:drop-shadow(0 0 24px rgba(${char.glow},0.6))">${char.emoji}</div>`;}}
+          />
+          {/* Inner shine sweep */}
+          <div style={{position:"absolute",inset:0,borderRadius:"50%",overflow:"hidden",pointerEvents:"none"}}>
+            <div style={{position:"absolute",top:0,bottom:0,width:"35%",background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)",animation:"shineSweep 5s ease-in-out infinite"}}/>
+          </div>
+        </div>
       </div>
       {firstPlay&&(
-        <div style={{position:"absolute",bottom:-32,left:"50%",transform:"translateX(-50%)",fontSize:11,color:"#7c4ab0",fontWeight:700,whiteSpace:"nowrap",animation:"floatHint 1.5s ease-in-out infinite"}}>
+        <div style={{position:"absolute",bottom:-40,left:"50%",transform:"translateX(-50%)",fontSize:12,color:`rgb(${char.glow})`,fontWeight:800,whiteSpace:"nowrap",animation:"floatHint 1.5s ease-in-out infinite",textShadow:`0 0 14px rgba(${char.glow},0.7)`,letterSpacing:"0.1em"}}>
           TAP TO EARN 👆
         </div>
       )}
@@ -939,164 +994,182 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 }){
   const cd=useCountdown();
   const char=CHARACTERS.find(c=>c.id===charId);
-  const [pulse,setPulse]=useState(false);
-  useEffect(()=>{const id=setInterval(()=>{setPulse(p=>!p);},2500);return()=>clearInterval(id);},[]);
+  const glow=char?char.glow:"168,85,247";
 
   return(
-    <div style={{minHeight:"100vh",background:G.bg,paddingTop:52,paddingBottom:96,overflowY:"auto"}}>
-      <div style={{position:"fixed",inset:0,background:`radial-gradient(ellipse at 50% -10%,rgba(${char?char.glow:"100,30,180"},0.25) 0%,transparent 55%)`,pointerEvents:"none",zIndex:0,transition:"background 1.5s"}}/>
+    <div style={{minHeight:"100vh",background:G.bg,paddingTop:52,paddingBottom:110,overflowY:"auto",position:"relative"}}>
+      <div className="arcade-grid"/>
+      <div style={{position:"fixed",inset:0,background:`radial-gradient(ellipse at 50% -10%,rgba(${glow},0.28) 0%,transparent 55%)`,pointerEvents:"none",zIndex:0,transition:"background 1.5s"}}/>
 
       <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"0 auto",padding:"0 16px"}}>
 
-        {/* Hero greeting */}
-        <div style={{textAlign:"center",padding:"28px 0 20px"}}>
-          <div style={{
-            width:96,height:96,borderRadius:"50%",margin:"0 auto 16px",
-            background:`radial-gradient(ellipse,rgba(${char?char.glow:"168,85,247"},0.2),transparent 70%)`,
-            border:`2px solid rgba(${char?char.glow:"168,85,247"},0.3)`,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:56,lineHeight:1,overflow:"hidden",
-            filter:`drop-shadow(0 0 20px rgba(${char?char.glow:"168,85,247"},0.5))`,
-            transform:pulse?"scale(1.07)":"scale(1)",transition:"transform 0.5s ease",
-            boxShadow:`0 0 40px rgba(${char?char.glow:"168,85,247"},0.2)`,
-          }}>
-            {avatarUrl
-              ?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>{}}/>
-              :<span>{avatar||"🐸"}</span>
-            }
+        {/* ── Hero ── */}
+        <div style={{textAlign:"center",padding:"26px 0 18px"}} className="anim-slideup">
+          <div style={{position:"relative",width:116,height:116,margin:"0 auto 14px"}}>
+            {/* Spinning ring */}
+            <div style={{position:"absolute",inset:-6,borderRadius:"50%",border:`1.5px solid rgba(${glow},0.25)`,borderTopColor:`rgba(${glow},0.9)`,animation:"ringSpin 5s linear infinite"}}/>
+            <div style={{position:"absolute",inset:-14,borderRadius:"50%",border:`1px dashed rgba(${glow},0.12)`,animation:"ringSpinRev 11s linear infinite"}}/>
+            {/* Avatar with float */}
+            <div className="char-idle" style={{position:"absolute",inset:0}}>
+              <div style={{
+                width:"100%",height:"100%",borderRadius:"50%",
+                background:`radial-gradient(ellipse,rgba(${glow},0.25),rgba(6,0,15,0.85) 75%)`,
+                border:`2.5px solid rgba(${glow},0.5)`,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:60,lineHeight:1,overflow:"hidden",
+                boxShadow:`0 0 50px rgba(${glow},0.35), inset 0 0 30px rgba(${glow},0.1)`,
+              }}>
+                {avatarUrl
+                  ?<img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>{}}/>
+                  :<span style={{filter:`drop-shadow(0 0 16px rgba(${glow},0.7))`}}>{avatar||"🐸"}</span>
+                }
+              </div>
+            </div>
           </div>
-          <div style={{color:"#4a2d68",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>Welcome back</div>
-          <h2 style={{color:"#fff",fontWeight:900,fontSize:26,marginBottom:10,letterSpacing:"-0.03em"}}>{username||"Degen"}</h2>
+          <div style={{color:`rgba(${glow},0.7)`,fontSize:10.5,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.22em",marginBottom:5,textShadow:`0 0 14px rgba(${glow},0.5)`}} className="neon-flicker">◆ Welcome back ◆</div>
+          <h2 style={{color:"#fff",fontWeight:900,fontSize:28,marginBottom:12,letterSpacing:"-0.03em"}}>{username||"Degen"}</h2>
 
           {/* Rank badge */}
-          <div style={{
-            display:"inline-flex",alignItems:"center",gap:8,
-            background:`linear-gradient(135deg,rgba(${char?char.glow:"168,85,247"},0.12),rgba(${char?char.glow:"168,85,247"},0.06))`,
-            border:`1px solid rgba(${char?char.glow:"168,85,247"},0.3)`,
-            borderRadius:24,padding:"8px 18px",
-            boxShadow:`0 0 20px rgba(${char?char.glow:"168,85,247"},0.1)`,
+          <div className="shine-card" style={{
+            display:"inline-flex",alignItems:"center",gap:9,
+            background:`linear-gradient(135deg,rgba(${glow},0.14),rgba(${glow},0.05))`,
+            border:`1.5px solid rgba(${glow},0.35)`,
+            borderRadius:26,padding:"9px 20px",
+            boxShadow:`0 0 26px rgba(${glow},0.15)`,
           }}>
-            <span style={{fontSize:18}}>{rank.emoji}</span>
-            <span style={{color:rank.color,fontWeight:900,fontSize:14}}>{rank.name}</span>
+            <span style={{fontSize:19,filter:`drop-shadow(0 0 8px ${rank.color})`}}>{rank.emoji}</span>
+            <span style={{color:rank.color,fontWeight:900,fontSize:15,textShadow:`0 0 14px ${rank.color}66`}}>{rank.name}</span>
             <span style={{
-              background:"rgba(255,255,255,0.08)",borderRadius:12,
-              color:"#888",fontSize:11,fontWeight:700,padding:"2px 8px",
+              background:"rgba(255,255,255,0.09)",borderRadius:13,
+              color:"#bbb",fontSize:11,fontWeight:800,padding:"3px 9px",
+              border:"1px solid rgba(255,255,255,0.08)",
             }}>Lv.{level}</span>
           </div>
         </div>
 
-        {/* XP bar */}
-        <div style={{...{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"16px"},marginBottom:12}}>
+        {/* ── XP bar ── */}
+        <div className="anim-slideup" style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"15px 16px",marginBottom:12,animationDelay:"0.06s"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <span style={{color:"#4a2d68",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>XP Progress</span>
-            {nextRank&&<span style={{color:nextRank.color,fontSize:10,fontWeight:700}}>{nextRank.emoji} Next: {nextRank.name}</span>}
+            <span style={{color:"#5a4a7a",fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em"}}>XP Progress</span>
+            {nextRank&&<span style={{color:nextRank.color,fontSize:10.5,fontWeight:800}}>{nextRank.emoji} Next: {nextRank.name}</span>}
           </div>
-          <div style={{height:8,background:"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden",marginBottom:6}}>
-            <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}66,${rank.color})`,borderRadius:4,transition:"width 0.8s ease",boxShadow:`0 0 12px ${rank.color}66`}}/>
+          <div style={{height:10,background:"rgba(255,255,255,0.05)",borderRadius:6,overflow:"hidden",marginBottom:7,border:"1px solid rgba(255,255,255,0.04)"}}>
+            <div style={{height:"100%",width:`${xpProgress.pct}%`,background:`linear-gradient(90deg,${rank.color}77,${rank.color})`,borderRadius:6,transition:"width 0.8s ease",boxShadow:`0 0 16px ${rank.color}88`,animation:"xpFill 1.2s cubic-bezier(0.16,1,0.3,1)"}}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
-            <span style={{color:"#2a1540",fontSize:10}}>{fmt(xpProgress.current)} XP</span>
-            <span style={{color:"#2a1540",fontSize:10}}>{fmt(xpProgress.needed)} XP needed</span>
+            <span style={{color:"#4d3d6b",fontSize:10,fontWeight:600}}>{fmt(xpProgress.current)} XP</span>
+            <span style={{color:"#4d3d6b",fontSize:10,fontWeight:600}}>{fmt(xpProgress.needed)} XP to level up</span>
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* ── Stats row ── */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
           {[
-            {emoji:"💰",label:"Earned",value:fmt(totalEarned),color:G.gold},
-            {emoji:"👆",label:"Total Taps",value:fmt(totalTaps),color:G.purple},
-            {emoji:"⏱",label:"Next Reset",value:cd,color:G.green},
-          ].map(s=>(
-            <div key={s.label} style={{
-              background:G.glass,border:`1px solid ${G.border}`,
-              borderRadius:18,padding:"16px 10px",textAlign:"center",
+            {emoji:"💰",label:"Earned",value:fmt(totalEarned),color:G.gold,glow:"245,200,66"},
+            {emoji:"👆",label:"Total Taps",value:fmt(totalTaps),color:"#c084fc",glow:"168,85,247"},
+            {emoji:"⏱",label:"Next Payout",value:cd,color:G.green,glow:"34,214,122"},
+          ].map((s,i)=>(
+            <div key={s.label} className="anim-slideup shine-card" style={{
+              background:`linear-gradient(160deg,rgba(${s.glow},0.07),rgba(${s.glow},0.015))`,
+              border:`1px solid rgba(${s.glow},0.18)`,
+              borderRadius:18,padding:"15px 8px",textAlign:"center",
               boxShadow:`inset 0 1px 0 rgba(255,255,255,0.05)`,
+              animationDelay:`${0.1+i*0.05}s`,
             }}>
-              <div style={{fontSize:24,marginBottom:6,filter:`drop-shadow(0 0 8px ${s.color}66)`}}>{s.emoji}</div>
-              <div style={{color:s.color,fontWeight:900,fontSize:14,fontVariantNumeric:"tabular-nums",marginBottom:2}}>{s.value}</div>
-              <div style={{color:"#2a1540",fontSize:9,textTransform:"uppercase",letterSpacing:"0.06em"}}>{s.label}</div>
+              <div style={{fontSize:23,marginBottom:6,filter:`drop-shadow(0 0 10px rgba(${s.glow},0.5))`}}>{s.emoji}</div>
+              <div style={{color:s.color,fontWeight:900,fontSize:13.5,fontVariantNumeric:"tabular-nums",marginBottom:3,textShadow:`0 0 14px rgba(${s.glow},0.4)`}}>{s.value}</div>
+              <div style={{color:"#4d3d6b",fontSize:8.5,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700}}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Active character card */}
+        {/* ── Active character card ── */}
         {char?(
-          <div style={{
-            background:`linear-gradient(135deg,rgba(${char.glow},0.08),rgba(${char.glow},0.03))`,
-            border:`1px solid rgba(${char.glow},0.25)`,
+          <div className="anim-slideup shine-card" style={{
+            background:`linear-gradient(135deg,rgba(${char.glow},0.1),rgba(${char.glow},0.03))`,
+            border:`1.5px solid rgba(${char.glow},0.3)`,
             borderRadius:20,padding:"16px",marginBottom:12,
-            boxShadow:`0 0 30px rgba(${char.glow},0.08)`,
+            boxShadow:`0 0 34px rgba(${char.glow},0.1)`,
+            animationDelay:"0.2s",
           }}>
             <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <div style={{
-                width:60,height:60,borderRadius:"50%",flexShrink:0,
-                background:`radial-gradient(ellipse,rgba(${char.glow},0.2),rgba(6,0,15,0.8))`,
-                border:`1px solid rgba(${char.glow},0.4)`,
-                display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,
-                boxShadow:`0 0 20px rgba(${char.glow},0.3)`,
-              }}>{char.emoji}</div>
+              <div className="char-breathe" style={{
+                width:64,height:64,borderRadius:"50%",flexShrink:0,overflow:"hidden",
+                background:`radial-gradient(ellipse,rgba(${char.glow},0.25),rgba(6,0,15,0.85))`,
+                border:`2px solid rgba(${char.glow},0.5)`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,
+                boxShadow:`0 0 24px rgba(${char.glow},0.35)`,
+              }}>
+                <img src={char.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top"}} onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<span style="font-size:36px">${char.emoji}</span>`;}}/>
+              </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{color:"#3a2255",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Active Legend</div>
-                <div style={{color:"#fff",fontWeight:900,fontSize:17,marginBottom:4,letterSpacing:"-0.01em"}}>{char.name}</div>
+                <div style={{color:`rgba(${char.glow},0.65)`,fontSize:9.5,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",marginBottom:3}}>Active Legend</div>
+                <div style={{color:"#fff",fontWeight:900,fontSize:18,marginBottom:5,letterSpacing:"-0.01em"}}>{char.name}</div>
                 <div style={{
-                  display:"inline-flex",gap:4,alignItems:"center",
-                  background:`rgba(${char.glow},0.1)`,
-                  border:`1px solid rgba(${char.glow},0.2)`,
-                  borderRadius:8,padding:"2px 8px",
+                  display:"inline-flex",gap:5,alignItems:"center",
+                  background:`rgba(${char.glow},0.12)`,
+                  border:`1px solid rgba(${char.glow},0.25)`,
+                  borderRadius:9,padding:"3px 9px",
                 }}>
                   <span style={{fontSize:10}}>⚡</span>
-                  <span style={{color:`rgb(${char.glow})`,fontSize:10,fontWeight:700}}>{char.ability}</span>
+                  <span style={{color:`rgb(${char.glow})`,fontSize:10.5,fontWeight:800}}>{char.ability}</span>
                 </div>
               </div>
-              <button onClick={onPlay} style={{
-                background:`rgba(${char.glow},0.12)`,
-                border:`1px solid rgba(${char.glow},0.3)`,
-                borderRadius:12,color:`rgb(${char.glow})`,
-                fontWeight:800,fontSize:11,padding:"9px 13px",cursor:"pointer",flexShrink:0,
+              <button onClick={onPlay} className="press-fx" style={{
+                background:`linear-gradient(135deg,rgba(${char.glow},0.18),rgba(${char.glow},0.08))`,
+                border:`1.5px solid rgba(${char.glow},0.4)`,
+                borderRadius:13,color:`rgb(${char.glow})`,
+                fontWeight:900,fontSize:11,padding:"10px 14px",cursor:"pointer",flexShrink:0,
+                boxShadow:`0 0 14px rgba(${char.glow},0.15)`,
               }}>Switch</button>
             </div>
           </div>
         ):(
-          <div style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"20px",textAlign:"center",marginBottom:12}}>
-            <div style={{color:"#3a2255",fontSize:13,marginBottom:10}}>No character selected</div>
-            <button onClick={onPlay} style={{background:G.purpleDim,border:`1px solid rgba(168,85,247,0.35)`,borderRadius:12,color:"#a855f7",fontWeight:800,fontSize:13,padding:"10px 20px",cursor:"pointer"}}>Pick Your Legend →</button>
+          <div className="anim-slideup" style={{background:G.glass,border:`1px solid ${G.border}`,borderRadius:20,padding:"22px",textAlign:"center",marginBottom:12,animationDelay:"0.2s"}}>
+            <div style={{fontSize:36,marginBottom:8,animation:"charFloat 3s ease-in-out infinite"}}>🎭</div>
+            <div style={{color:"#6b5a8a",fontSize:13,marginBottom:12,fontWeight:600}}>No legend selected yet</div>
+            <button onClick={onPlay} className="press-fx" style={{background:"linear-gradient(135deg,#6d28d9,#a855f7)",border:"none",borderRadius:13,color:"#fff",fontWeight:900,fontSize:13,padding:"11px 22px",cursor:"pointer",boxShadow:"0 0 24px rgba(168,85,247,0.35)"}}>Pick Your Legend →</button>
           </div>
         )}
 
-        {/* Big play CTA */}
-        <button onClick={onPlay} style={{
+        {/* ── Big play CTA ── */}
+        <button onClick={onPlay} className="press-fx anim-slideup" style={{
           width:"100%",
           background:"linear-gradient(135deg,#5b21b6,#7c3aed,#a855f7)",
-          color:"#fff",fontWeight:900,fontSize:18,border:"none",borderRadius:20,
-          padding:"20px",cursor:"pointer",letterSpacing:"-0.01em",
-          boxShadow:"0 0 60px rgba(168,85,247,0.5),0 12px 40px rgba(0,0,0,0.4)",
+          color:"#fff",fontWeight:900,fontSize:19,border:"1.5px solid rgba(192,132,252,0.45)",borderRadius:22,
+          padding:"21px",cursor:"pointer",letterSpacing:"-0.01em",
+          boxShadow:"0 0 60px rgba(168,85,247,0.5), 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
           position:"relative",overflow:"hidden",marginBottom:16,
+          animationDelay:"0.25s",
         }}>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.12),transparent 60%)",pointerEvents:"none"}}/>
-          <span style={{position:"relative",zIndex:1}}>🎮 Play Now</span>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.14),transparent 60%)",pointerEvents:"none"}}/>
+          <div style={{position:"absolute",top:0,bottom:0,width:"40%",background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)",animation:"shineSweep 3.2s ease-in-out infinite",pointerEvents:"none"}}/>
+          <span style={{position:"relative",zIndex:1,textShadow:"0 2px 12px rgba(0,0,0,0.4)"}}>🎮 PLAY NOW</span>
         </button>
 
-        {/* Who's Online strip */}
-        <div style={{background:"rgba(34,214,122,0.04)",border:"1px solid rgba(34,214,122,0.1)",borderRadius:16,padding:"12px 14px",marginBottom:16}}>
+        {/* ── Who's Online ── */}
+        <div className="anim-slideup" style={{background:"rgba(34,214,122,0.045)",border:"1px solid rgba(34,214,122,0.14)",borderRadius:16,padding:"12px 14px",marginBottom:16,animationDelay:"0.3s"}}>
           <OnlineStrip/>
         </div>
 
-        {/* Feature grid */}
+        {/* ── Feature grid ── */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {[
-            {emoji:"🔥",title:"Combo System",desc:"Tap fast to stack up to 20× coin multiplier"},
-            {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn taps while AFK"},
-            {emoji:"⚡",title:"40+ Upgrades",desc:"Power up every stat in the Shop"},
-            {emoji:"🏆",title:"Win USDC",desc:"Top 20 earn USDC every 7 days"},
-          ].map(f=>(
-            <div key={f.title} style={{
-              background:G.glass,border:`1px solid ${G.border}`,
+            {emoji:"🔥",title:"Combo System",desc:"Tap fast to stack up to 20× coin multiplier",glow:"249,115,22"},
+            {emoji:"🤖",title:"Auto-Tappers",desc:"Hire helpers to earn taps while AFK",glow:"59,130,246"},
+            {emoji:"⚡",title:"40+ Upgrades",desc:"Power up every stat in the Shop",glow:"245,200,66"},
+            {emoji:"🏆",title:"Win USDC",desc:"Top 20 earn USDC every 7 days",glow:"34,214,122"},
+          ].map((f,i)=>(
+            <div key={f.title} className="anim-slideup" style={{
+              background:`linear-gradient(160deg,rgba(${f.glow},0.06),rgba(${f.glow},0.012))`,
+              border:`1px solid rgba(${f.glow},0.15)`,
               borderRadius:16,padding:"16px 14px",
               boxShadow:"inset 0 1px 0 rgba(255,255,255,0.04)",
+              animationDelay:`${0.35+i*0.05}s`,
             }}>
-              <div style={{fontSize:26,marginBottom:8,filter:"drop-shadow(0 2px 8px rgba(168,85,247,0.3))"}}>{f.emoji}</div>
-              <div style={{color:"#ddd",fontWeight:800,fontSize:13,marginBottom:4}}>{f.title}</div>
-              <div style={{color:"#2a1540",fontSize:11,lineHeight:1.5}}>{f.desc}</div>
+              <div style={{fontSize:27,marginBottom:8,filter:`drop-shadow(0 0 10px rgba(${f.glow},0.45))`}}>{f.emoji}</div>
+              <div style={{color:"#eee",fontWeight:900,fontSize:13,marginBottom:4,letterSpacing:"-0.01em"}}>{f.title}</div>
+              <div style={{color:"#4d3d6b",fontSize:10.5,lineHeight:1.5}}>{f.desc}</div>
             </div>
           ))}
         </div>
@@ -1110,6 +1183,7 @@ function HomeTab({onPlay,username,avatar,avatarUrl,totalEarned,totalTaps,level,r
 function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarUrl,liveCharId}:{myPlayerId:string;liveTaps:number;liveEarned:number;liveUsername:string;liveAvatarUrl?:string;liveCharId:string}){
   const [leaders,setLeaders]=useState<LBEntry[]>([]);
   const [loading,setLoading]=useState(true);
+  const cd=useCountdown();
   useEffect(()=>{
     let active=true;
     const fetchLeaders=async()=>{
@@ -1126,38 +1200,126 @@ function LeaderboardTab({myPlayerId,liveTaps,liveEarned,liveUsername,liveAvatarU
     return()=>{active=false;clearInterval(iv);};
   },[]);
   const fmtTaps=(n:number)=>{if(!n)return"0";if(n>=1e9)return(n/1e9).toFixed(1)+"B";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"K";return Math.floor(n).toString();};
-  const rankBadge=(i:number)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
   const charEmoji=(c:string)=>({"pepe":"🐸","gigachad":"💪","trump":"🎩","troll":"🧌","bonk":"🐕"}[c]||"🐸");
-  // Inject current player's live stats if they exist in list
+  const charGlow=(c:string)=>(CHARACTERS.find(ch=>ch.id===c)||CHARACTERS[0]).glow;
   const displayLeaders=leaders.map(l=>l.wallet_address===myPlayerId?{...l,games_played:Math.max(l.games_played,liveTaps),total_score:Math.max(l.total_score,liveEarned),username:liveUsername||l.username}:l).sort((a,b)=>b.games_played-a.games_played);
-  return(
-    <div style={{flex:1,overflowY:"auto",paddingTop:16,paddingBottom:100}}>
-      <div style={{textAlign:"center",padding:"16px 16px 8px"}}>
-        <div style={{fontSize:32,marginBottom:4}}>🏆</div>
-        <div style={{color:"#f5c842",fontWeight:900,fontSize:20,letterSpacing:1}}>LEADERBOARD</div>
-        <div style={{color:"#888",fontSize:11,marginTop:4}}>Ranked by total taps • Updates live</div>
-      </div>
-      {loading&&<div style={{textAlign:"center",color:"#888",padding:40}}>Loading...</div>}
-      {!loading&&displayLeaders.length===0&&<div style={{textAlign:"center",color:"#888",padding:40}}>No players yet</div>}
-      {!loading&&displayLeaders.map((p,i)=>{
-        const isMe=p.wallet_address===myPlayerId;
-        return(
-          <div key={p.id} style={{margin:"6px 16px",background:isMe?"rgba(168,85,247,0.15)":"rgba(255,255,255,0.03)",border:isMe?"1px solid rgba(168,85,247,0.4)":"1px solid rgba(255,255,255,0.06)",borderRadius:14,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:36,textAlign:"center",fontSize:i<3?22:14,fontWeight:900,color:i===0?"#f5c842":i===1?"#c0c0c0":i===2?"#cd7f32":"#888"}}>{rankBadge(i)}</div>
-            <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(168,85,247,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:isMe?"2px solid #a855f7":"2px solid transparent"}}>
-              {p.avatar_url?<img src={p.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt=""/>:charEmoji(p.character)}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{color:isMe?"#c084fc":"#e0d4f0",fontWeight:800,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Degen"}{isMe&&" (you)"}</div>
-              <div style={{color:"#888",fontSize:11}}>{charEmoji(p.character)} {(CHARACTERS.find(c=>c.id===p.character)||CHARACTERS[0]).name}</div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{color:"#f5c842",fontWeight:900,fontSize:15}}>{fmtTaps(p.games_played)}</div>
-              <div style={{color:"#888",fontSize:10}}>taps</div>
-            </div>
+  const top3=displayLeaders.slice(0,3);
+  const rest=displayLeaders.slice(3);
+  const medalColor=["#f5c842","#d8dbe8","#d49058"];
+  const podiumOrder=[1,0,2]; // silver left, gold center, bronze right
+  const podiumHeight=[64,92,48];
+
+  const PodiumAvatar=({p,pos}:{p:LBEntry;pos:number})=>{
+    const isMe=p.wallet_address===myPlayerId;
+    const mc=medalColor[pos];
+    const sizeBig=pos===0;
+    const sz=sizeBig?76:60;
+    return(
+      <div className="anim-popin" style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,minWidth:0,animationDelay:`${pos*0.12}s`}}>
+        {pos===0&&<div style={{fontSize:26,marginBottom:-4,animation:"crownBob 2.4s ease-in-out infinite",filter:"drop-shadow(0 0 10px rgba(245,200,66,0.8))",zIndex:2}}>👑</div>}
+        <div style={{position:"relative",marginBottom:8}}>
+          <div style={{
+            width:sz,height:sz,borderRadius:"50%",overflow:"hidden",
+            border:`2.5px solid ${mc}`,
+            background:`radial-gradient(ellipse,rgba(${charGlow(p.character)},0.25),rgba(6,0,15,0.9))`,
+            display:"flex",alignItems:"center",justifyContent:"center",fontSize:sizeBig?38:28,
+            boxShadow:`0 0 ${sizeBig?28:16}px ${mc}66`,
+            animation:pos===0?"podiumGlow 2.8s ease-in-out infinite":"none",
+          }}>
+            {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:charEmoji(p.character)}
           </div>
-        );
-      })}
+          {isOnline(p.last_seen)&&<span className="live-dot" style={{position:"absolute",bottom:2,right:2,border:"2px solid #06000f",width:11,height:11}}/>}
+        </div>
+        <div style={{color:isMe?"#c084fc":"#fff",fontWeight:900,fontSize:sizeBig?14:12,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:isMe?"0 0 12px rgba(192,132,252,0.6)":"none"}}>{p.username||"Degen"}</div>
+        <div style={{color:mc,fontWeight:900,fontSize:sizeBig?16:13,fontVariantNumeric:"tabular-nums",textShadow:`0 0 14px ${mc}55`,marginBottom:8}}>{fmtTaps(p.games_played)}</div>
+        <div style={{
+          width:"82%",height:podiumHeight[pos],borderRadius:"10px 10px 0 0",
+          background:`linear-gradient(to top, rgba(${pos===0?"245,200,66":pos===1?"216,219,232":"212,144,88"},0.04), rgba(${pos===0?"245,200,66":pos===1?"216,219,232":"212,144,88"},0.16))`,
+          border:`1px solid ${mc}33`,borderBottom:"none",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          color:mc,fontSize:sizeBig?26:20,fontWeight:900,
+          textShadow:`0 0 16px ${mc}`,
+        }}>{pos+1}</div>
+      </div>
+    );
+  };
+
+  return(
+    <div style={{flex:1,overflowY:"auto",paddingTop:60,paddingBottom:110,minHeight:"100vh",background:G.bg,position:"relative"}}>
+      <div className="arcade-grid"/>
+      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -10%,rgba(245,200,66,0.12) 0%,transparent 55%)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"0 auto",padding:"0 16px"}}>
+        {/* Header */}
+        <div style={{textAlign:"center",padding:"14px 0 4px"}} className="anim-slideup">
+          <div style={{
+            display:"inline-block",fontSize:11,fontWeight:800,letterSpacing:"0.22em",
+            color:"#f5c842",textTransform:"uppercase",
+            textShadow:"0 0 18px rgba(245,200,66,0.7)",marginBottom:6,
+          }} className="neon-flicker">★ HALL OF LEGENDS ★</div>
+          <h2 style={{color:"#fff",fontWeight:900,fontSize:26,margin:"0 0 6px",letterSpacing:"-0.03em"}}>Leaderboard</h2>
+          <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(34,214,122,0.07)",border:"1px solid rgba(34,214,122,0.18)",borderRadius:20,padding:"5px 14px"}}>
+            <span className="live-dot"/>
+            <span style={{color:"#22d67a",fontSize:11,fontWeight:700}}>LIVE — updates every second</span>
+          </div>
+        </div>
+
+        {/* Prize banner */}
+        <div className="shine-card anim-slideup" style={{
+          margin:"14px 0",background:"linear-gradient(135deg,rgba(245,200,66,0.08),rgba(168,85,247,0.06))",
+          border:"1px solid rgba(245,200,66,0.22)",borderRadius:16,padding:"11px 16px",
+          display:"flex",alignItems:"center",gap:10,animationDelay:"0.05s",
+        }}>
+          <span style={{fontSize:22,animation:"coinSpin 3s ease-in-out infinite",display:"inline-block"}}>🏆</span>
+          <div style={{flex:1}}>
+            <div style={{color:"#f5c842",fontWeight:900,fontSize:12.5}}>Top 20 win USDC every week</div>
+            <div style={{color:"#6b5a8a",fontSize:10.5,marginTop:1}}>Next payout in <span style={{color:"#22d67a",fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{cd}</span></div>
+          </div>
+        </div>
+
+        {loading&&<div style={{textAlign:"center",color:"#6b5a8a",padding:50,fontSize:13}}>Summoning legends…</div>}
+        {!loading&&displayLeaders.length===0&&<div style={{textAlign:"center",color:"#6b5a8a",padding:50}}>No players yet — be the first!</div>}
+
+        {/* Podium */}
+        {!loading&&top3.length>0&&(
+          <div style={{display:"flex",alignItems:"flex-end",gap:6,padding:"10px 4px 0",marginBottom:4}}>
+            {podiumOrder.map(pos=>top3[pos]?<PodiumAvatar key={top3[pos].id} p={top3[pos]} pos={pos}/>:<div key={pos} style={{flex:1}}/>)}
+          </div>
+        )}
+        {/* Podium base line */}
+        {!loading&&top3.length>0&&<div style={{height:2,background:"linear-gradient(90deg,transparent,rgba(245,200,66,0.4),transparent)",marginBottom:16,boxShadow:"0 0 14px rgba(245,200,66,0.3)"}}/>}
+
+        {/* Rest of the list */}
+        {!loading&&rest.map((p,i)=>{
+          const isMe=p.wallet_address===myPlayerId;
+          const rank=i+4;
+          return(
+            <div key={p.id} className="anim-slideup" style={{
+              margin:"7px 0",
+              background:isMe?"linear-gradient(135deg,rgba(168,85,247,0.16),rgba(168,85,247,0.07))":"rgba(255,255,255,0.025)",
+              border:isMe?"1px solid rgba(168,85,247,0.45)":"1px solid rgba(255,255,255,0.05)",
+              borderRadius:16,padding:"11px 14px",display:"flex",alignItems:"center",gap:12,
+              boxShadow:isMe?"0 0 24px rgba(168,85,247,0.15)":"none",
+              animationDelay:`${Math.min(i*0.04,0.5)}s`,
+            }}>
+              <div style={{width:30,textAlign:"center",fontSize:13,fontWeight:900,color:isMe?"#c084fc":"#4d4d6b",fontVariantNumeric:"tabular-nums"}}>#{rank}</div>
+              <div style={{position:"relative",flexShrink:0}}>
+                <div style={{width:38,height:38,borderRadius:"50%",overflow:"hidden",background:`radial-gradient(ellipse,rgba(${charGlow(p.character)},0.22),rgba(6,0,15,0.9))`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:isMe?"2px solid #a855f7":`1.5px solid rgba(${charGlow(p.character)},0.3)`}}>
+                  {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:charEmoji(p.character)}
+                </div>
+                {isOnline(p.last_seen)&&<span className="live-dot" style={{position:"absolute",bottom:0,right:0,border:"2px solid #06000f",width:10,height:10}}/>}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:isMe?"#c084fc":"#e0d4f0",fontWeight:800,fontSize:13.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.username||"Degen"}{isMe&&" (you)"}</div>
+                <div style={{color:"#4d4d6b",fontSize:10.5}}>{charEmoji(p.character)} {(CHARACTERS.find(c=>c.id===p.character)||CHARACTERS[0]).name}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{color:"#f5c842",fontWeight:900,fontSize:14.5,fontVariantNumeric:"tabular-nums"}}>{fmtTaps(p.games_played)}</div>
+                <div style={{color:"#4d4d6b",fontSize:9.5,textTransform:"uppercase",letterSpacing:"0.06em"}}>taps</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1253,110 +1415,138 @@ function ShopTab({coins,charId,upgrades,onBuyUpgrade,playerLevel}:{
   onBuyUpgrade:(id:string)=>void;playerLevel:number;
 }){
   const [cat,setCat]=useState<string>("auto");
+  const [justBought,setJustBought]=useState<string|null>(null);
   const catItems=UPGRADES.filter(u=>u.category===cat);
   const catInfo=SHOP_CATEGORIES.find(c=>c.id===cat);
 
+  // Rarity tier from cost: common < 5K, rare < 100K, epic < 5M, legendary >= 5M
+  const rarity=(cost:number)=>cost>=5e6?{name:"LEGENDARY",color:"245,200,66",text:"#f5c842"}:cost>=1e5?{name:"EPIC",color:"168,85,247",text:"#c084fc"}:cost>=5e3?{name:"RARE",color:"59,130,246",text:"#60a5fa"}:{name:"COMMON",color:"148,163,184",text:"#94a3b8"};
+
+  const buy=(id:string)=>{onBuyUpgrade(id);setJustBought(id);setTimeout(()=>setJustBought(null),500);};
+
   return(
-    <div style={{minHeight:"100vh",background:G.bg,color:"#fff",paddingBottom:88}}>
-      {/* Header */}
-      <div style={{background:"rgba(6,0,15,0.92)",borderBottom:`1px solid ${G.border}`,padding:"12px 16px 0",position:"sticky",top:0,zIndex:10,backdropFilter:G.blur}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-          <h2 style={{fontWeight:900,fontSize:17,margin:0,letterSpacing:"-0.02em"}}>⚡ Shop</h2>
-          <div style={{marginLeft:"auto",
-            background:"linear-gradient(135deg,rgba(245,200,66,0.1),rgba(245,200,66,0.05))",
-            border:"1px solid rgba(245,200,66,0.25)",
-            borderRadius:12,padding:"6px 14px",
-            display:"flex",alignItems:"center",gap:6,
-          }}>
-            <span style={{fontSize:16}}>💰</span>
-            <span style={{fontSize:14,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums"}}>{fmt(coins)}</span>
+    <div style={{minHeight:"100vh",background:G.bg,color:"#fff",paddingBottom:110,position:"relative"}}>
+      <div className="arcade-grid"/>
+      <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% -10%,rgba(34,214,122,0.08) 0%,transparent 50%)",pointerEvents:"none"}}/>
+
+      {/* ── Marquee header — arcade storefront ── */}
+      <div style={{background:"rgba(4,0,12,0.94)",borderBottom:"1px solid rgba(34,214,122,0.15)",padding:"60px 0 0",position:"sticky",top:0,zIndex:10,backdropFilter:G.blur}}>
+        <div style={{maxWidth:480,margin:"0 auto",padding:"0 16px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+            <div>
+              <div className="neon-flicker" style={{fontSize:9.5,fontWeight:800,letterSpacing:"0.24em",color:"#22d67a",textTransform:"uppercase",textShadow:"0 0 16px rgba(34,214,122,0.8)"}}>◆ DEGEN ARCADE ◆</div>
+              <h2 style={{fontWeight:900,fontSize:22,margin:"2px 0 0",letterSpacing:"-0.03em"}}>Upgrade Store</h2>
+            </div>
+            <div className="shine-card" style={{marginLeft:"auto",
+              background:"linear-gradient(135deg,rgba(245,200,66,0.12),rgba(245,200,66,0.04))",
+              border:"1px solid rgba(245,200,66,0.3)",
+              borderRadius:14,padding:"8px 16px",
+              display:"flex",alignItems:"center",gap:7,
+              boxShadow:"0 0 20px rgba(245,200,66,0.1)",
+            }}>
+              <span style={{fontSize:18,animation:"coinSpin 3s ease-in-out infinite",display:"inline-block"}}>💰</span>
+              <div>
+                <div style={{fontSize:15,fontWeight:900,color:G.gold,fontVariantNumeric:"tabular-nums",lineHeight:1.1,textShadow:"0 0 14px rgba(245,200,66,0.4)"}}>{fmt(coins)}</div>
+                <div style={{fontSize:7.5,color:"#6b5a3a",textTransform:"uppercase",letterSpacing:"0.1em"}}>$DEGEN</div>
+              </div>
+            </div>
           </div>
-        </div>
-        {/* Category pills */}
-        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:12,WebkitOverflowScrolling:"touch" as any}}>
-          {SHOP_CATEGORIES.map(c=>{
-            const active=cat===c.id;
-            const count=UPGRADES.filter(u=>u.category===c.id&&(upgrades[u.id]||0)>0).length;
-            return(
-              <button key={c.id} onClick={()=>setCat(c.id)} style={{
-                flex:"0 0 auto",
-                background:active?"rgba(168,85,247,0.18)":G.glass,
-                border:`1px solid ${active?"rgba(168,85,247,0.5)":G.border}`,
-                color:active?"#c084fc":"#555",
-                borderRadius:20,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",
-                whiteSpace:"nowrap",
-                boxShadow:active?"0 0 12px rgba(168,85,247,0.2)":"none",
-                transition:"all 0.15s",
-                position:"relative",
-              }}>
-                {c.label} {c.short}
-                {count>0&&<span style={{
-                  position:"absolute",top:-4,right:-4,
-                  background:G.purple,color:"#fff",
-                  width:14,height:14,borderRadius:"50%",
-                  fontSize:8,fontWeight:900,
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                }}>{count}</span>}
-              </button>
-            );
-          })}
+          {/* Category pills */}
+          <div style={{display:"flex",gap:7,overflowX:"auto",padding:"10px 0 12px",WebkitOverflowScrolling:"touch" as any}}>
+            {SHOP_CATEGORIES.map(c=>{
+              const active=cat===c.id;
+              const count=UPGRADES.filter(u=>u.category===c.id&&(upgrades[u.id]||0)>0).length;
+              return(
+                <button key={c.id} onClick={()=>setCat(c.id)} className="press-fx" style={{
+                  flex:"0 0 auto",
+                  background:active?"linear-gradient(135deg,rgba(168,85,247,0.25),rgba(168,85,247,0.12))":"rgba(255,255,255,0.03)",
+                  border:`1.5px solid ${active?"rgba(192,132,252,0.65)":"rgba(255,255,255,0.07)"}`,
+                  color:active?"#d8b4fe":"#4d4d6b",
+                  borderRadius:22,padding:"8px 15px",fontSize:12,fontWeight:800,cursor:"pointer",
+                  whiteSpace:"nowrap",
+                  boxShadow:active?"0 0 18px rgba(168,85,247,0.3)":"none",
+                  transition:"all 0.2s",
+                  position:"relative",
+                  textShadow:active?"0 0 10px rgba(192,132,252,0.5)":"none",
+                }}>
+                  {c.label} {c.short}
+                  {count>0&&<span style={{
+                    position:"absolute",top:-5,right:-5,
+                    background:"linear-gradient(135deg,#a855f7,#7c3aed)",color:"#fff",
+                    minWidth:15,height:15,borderRadius:8,padding:"0 3px",
+                    fontSize:8.5,fontWeight:900,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    boxShadow:"0 0 8px rgba(168,85,247,0.6)",
+                    border:"1px solid rgba(255,255,255,0.2)",
+                  }}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {!charId?(
-        <div style={{padding:60,textAlign:"center"}}>
-          <div style={{fontSize:52,marginBottom:12}}>🛒</div>
-          <div style={{color:"#3a2255",fontSize:15,fontWeight:800}}>Start a game first</div>
-          <div style={{color:"#2a1540",fontSize:12,marginTop:4}}>Head to the Play tab to pick your character</div>
+        <div style={{padding:70,textAlign:"center",position:"relative",zIndex:1}}>
+          <div style={{fontSize:56,marginBottom:14,filter:"grayscale(0.5)",animation:"charFloat 3s ease-in-out infinite"}}>🛒</div>
+          <div style={{color:"#6b5a8a",fontSize:15,fontWeight:800}}>Start a game first</div>
+          <div style={{color:"#3d3d55",fontSize:12,marginTop:5}}>Head to the Play tab to pick your character</div>
         </div>
       ):(
-        <div style={{padding:"10px 12px"}}>
-          {/* Category description */}
-          {catInfo&&<div style={{color:"#3a2255",fontSize:11,padding:"4px 4px 10px"}}>{catInfo.desc}</div>}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            {catItems.map(u=>{
+        <div style={{maxWidth:480,margin:"0 auto",padding:"12px 14px",position:"relative",zIndex:1}}>
+          {catInfo&&<div style={{color:"#5a4a7a",fontSize:11.5,padding:"2px 4px 12px",fontWeight:600}}>{catInfo.desc}</div>}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+            {catItems.map((u,idx)=>{
               const lv=upgrades[u.id]||0,cost=getUpgCost(u,lv);
               const locked=(u.minLevel||0)>playerLevel;
               const can=!locked&&coins>=cost;
               const reqRank=u.minLevel?RANK_NAMES[u.minLevel]:"";
+              const r=rarity(u.baseCost);
+              const bought=justBought===u.id;
               return(
-                <button key={u.id} onClick={()=>!locked&&can&&onBuyUpgrade(u.id)} disabled={locked||!can}
+                <button key={u.id} onClick={()=>!locked&&can&&buy(u.id)} disabled={locked||!can}
+                  className={`anim-slideup ${can&&!locked?"press-fx":""} ${r.name==="LEGENDARY"&&can?"legendary-border":""}`}
                   style={{
-                    background:locked?"rgba(255,255,255,0.01)":can
-                      ?"linear-gradient(145deg,rgba(245,200,66,0.06),rgba(245,200,66,0.02))"
-                      :G.glass,
-                    border:`1px solid ${locked?"rgba(255,60,60,0.1)":can?"rgba(245,200,66,0.2)":G.border}`,
-                    borderRadius:18,padding:"14px 12px",
+                    background:locked?"rgba(255,255,255,0.012)":can
+                      ?`linear-gradient(150deg,rgba(${r.color},0.1),rgba(${r.color},0.025) 60%)`
+                      :"rgba(255,255,255,0.025)",
+                    border:`1.5px solid ${locked?"rgba(255,255,255,0.04)":can?`rgba(${r.color},0.4)`:"rgba(255,255,255,0.06)"}`,
+                    borderRadius:20,padding:"15px 13px",
                     cursor:can?"pointer":"not-allowed",
                     textAlign:"left",
-                    opacity:locked?0.4:can?1:0.55,
-                    transition:"all 0.15s",position:"relative",
-                    boxShadow:can?"0 0 20px rgba(245,200,66,0.04)":"none",
+                    opacity:locked?0.45:can?1:0.6,
+                    transition:"all 0.18s",position:"relative",
+                    boxShadow:bought?`0 0 40px rgba(${r.color},0.6)`:can?`0 0 22px rgba(${r.color},0.08), inset 0 1px 0 rgba(255,255,255,0.05)`:"none",
+                    transform:bought?"scale(1.04)":"none",
+                    animationDelay:`${Math.min(idx*0.04,0.4)}s`,
                   }}>
+                  {/* Rarity ribbon */}
+                  <div style={{position:"absolute",top:10,left:13,fontSize:7.5,fontWeight:900,letterSpacing:"0.16em",color:r.text,opacity:locked?0.4:0.85,textShadow:`0 0 8px rgba(${r.color},0.5)`}}>{r.name}</div>
                   {/* Level badge */}
                   {lv>0&&(
-                    <div style={{position:"absolute",top:8,right:8,background:"rgba(168,85,247,0.2)",border:"1px solid rgba(168,85,247,0.35)",borderRadius:8,padding:"2px 7px",fontSize:9,color:"#a855f7",fontWeight:800}}>
+                    <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,rgba(168,85,247,0.3),rgba(124,58,237,0.2))",border:"1px solid rgba(192,132,252,0.4)",borderRadius:9,padding:"2.5px 8px",fontSize:9,color:"#d8b4fe",fontWeight:900,boxShadow:"0 0 10px rgba(168,85,247,0.25)"}}>
                       Lv{lv}
                     </div>
                   )}
-                  <div style={{fontSize:28,marginBottom:8}}>{locked?"🔒":u.emoji}</div>
-                  <div style={{fontWeight:800,fontSize:12,color:"#fff",marginBottom:3,lineHeight:1.3,paddingRight:lv>0?28:0}}>{u.name}</div>
-                  {u.tapsPerSec&&<div style={{fontSize:9,color:"#22d67a",fontWeight:700,marginBottom:4}}>👆 +{u.tapsPerSec}/sec auto-taps</div>}
-                  <div style={{color:"#3a2255",fontSize:10,marginBottom:8,lineHeight:1.4}}>{u.desc}</div>
+                  <div style={{fontSize:32,margin:"14px 0 9px",filter:locked?"grayscale(1)":`drop-shadow(0 0 10px rgba(${r.color},0.4))`,lineHeight:1}}>{locked?"🔒":u.emoji}</div>
+                  <div style={{fontWeight:900,fontSize:12.5,color:"#fff",marginBottom:3,lineHeight:1.3,letterSpacing:"-0.01em"}}>{u.name}</div>
+                  {u.tapsPerSec&&<div style={{fontSize:9.5,color:"#22d67a",fontWeight:800,marginBottom:4,textShadow:"0 0 8px rgba(34,214,122,0.4)"}}>⚡ +{u.tapsPerSec}/sec auto</div>}
+                  <div style={{color:"#5a4a7a",fontSize:10,marginBottom:10,lineHeight:1.45,minHeight:28}}>{u.desc}</div>
                   {locked?(
                     <div style={{
-                      background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.15)",
-                      borderRadius:8,padding:"4px 8px",
-                      color:"#ef4444",fontSize:10,fontWeight:700,
-                    }}>🔒 Requires {reqRank} (Lv.{u.minLevel})</div>
+                      background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.18)",
+                      borderRadius:10,padding:"6px 9px",
+                      color:"#f87171",fontSize:9.5,fontWeight:800,
+                    }}>🔒 {reqRank} (Lv.{u.minLevel})</div>
                   ):(
                     <div style={{
-                      background:can?"rgba(245,200,66,0.08)":"rgba(255,255,255,0.03)",
-                      border:`1px solid ${can?"rgba(245,200,66,0.2)":G.border}`,
-                      borderRadius:8,padding:"4px 8px",display:"inline-flex",gap:4,alignItems:"center",
+                      background:can?`linear-gradient(135deg,rgba(${r.color},0.16),rgba(${r.color},0.07))`:"rgba(255,255,255,0.03)",
+                      border:`1px solid ${can?`rgba(${r.color},0.35)`:"rgba(255,255,255,0.06)"}`,
+                      borderRadius:10,padding:"6px 10px",display:"flex",gap:5,alignItems:"center",justifyContent:"center",
+                      boxShadow:can?`0 0 14px rgba(${r.color},0.12)`:"none",
                     }}>
                       <span style={{fontSize:12}}>💰</span>
-                      <span style={{color:can?G.gold:"#333",fontWeight:900,fontSize:12,fontVariantNumeric:"tabular-nums"}}>{fmt(cost)}</span>
+                      <span style={{color:can?r.text:"#3d3d55",fontWeight:900,fontSize:12.5,fontVariantNumeric:"tabular-nums"}}>{fmt(cost)}</span>
                     </div>
                   )}
                 </button>
@@ -1986,41 +2176,61 @@ export default function TapGame() {
         <>
           {/* ── CHARACTER SELECT ── */}
           {screen==="select"&&(
-            <div style={{minHeight:"100vh",background:G.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"52px 16px 100px",position:"relative",overflowY:"auto"}}>
-              <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 30%,rgba(100,30,180,0.2) 0%,transparent 65%)",pointerEvents:"none"}}/>
-              <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"28px 0 24px"}}>
+            <div style={{minHeight:"100vh",background:G.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"52px 16px 110px",position:"relative",overflowY:"auto"}}>
+              <div className="arcade-grid"/>
+              <div style={{position:"fixed",inset:0,background:"radial-gradient(ellipse at 50% 25%,rgba(100,30,180,0.25) 0%,transparent 65%)",pointerEvents:"none"}}/>
+              <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"24px 0 22px"}} className="anim-slideup">
                 <img src="/logo.png" alt="Degen Clicker" onError={e=>{(e.target as HTMLImageElement).style.display="none";}}
-                  style={{width:100,height:100,objectFit:"contain",marginBottom:8,filter:"drop-shadow(0 0 30px rgba(168,85,247,0.7))"}}/>
-                <h2 style={{color:"#fff",fontWeight:900,fontSize:20,margin:"0 0 4px",letterSpacing:"-0.02em"}}>Choose Your Legend</h2>
-                <p style={{color:"#3a2255",fontSize:12,margin:0}}>Each legend has unique abilities and passives</p>
+                  style={{width:96,height:96,objectFit:"contain",marginBottom:6,filter:"drop-shadow(0 0 34px rgba(168,85,247,0.8))",animation:"charFloat 3.6s ease-in-out infinite"}}/>
+                <div className="neon-flicker" style={{color:"rgba(192,132,252,0.75)",fontSize:10,fontWeight:800,letterSpacing:"0.26em",textTransform:"uppercase",marginBottom:5,textShadow:"0 0 16px rgba(168,85,247,0.7)"}}>◆ SELECT YOUR FIGHTER ◆</div>
+                <h2 style={{color:"#fff",fontWeight:900,fontSize:24,margin:"0 0 5px",letterSpacing:"-0.03em"}}>Choose Your Legend</h2>
+                <p style={{color:"#5a4a7a",fontSize:12,margin:0,fontWeight:600}}>Each legend has unique abilities and passives</p>
               </div>
-              {!dbLoaded&&<div style={{color:"#f5c842",fontSize:13,fontWeight:700,marginBottom:8,letterSpacing:"0.05em"}}>Loading your account…</div>}
-              <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
-                {CHARACTERS.map(c=>{
+              {!dbLoaded&&<div style={{color:"#f5c842",fontSize:13,fontWeight:800,marginBottom:10,letterSpacing:"0.06em",textShadow:"0 0 14px rgba(245,200,66,0.5)",position:"relative",zIndex:1}}>⏳ Loading your account…</div>}
+              <div style={{display:"flex",gap:13,flexWrap:"wrap",justifyContent:"center",maxWidth:480,position:"relative",zIndex:1}}>
+                {CHARACTERS.map((c,ci)=>{
                   const s=loadSave(user?.email||user?.id||playerId,c.id);
                   return(
                     <button key={c.id} onClick={()=>dbLoaded&&tryStart(c.id)} disabled={!dbLoaded}
+                      className="anim-popin press-fx"
                       style={{
-                        width:130,
-                        background:`linear-gradient(145deg,rgba(${c.glow},0.06),rgba(${c.glow},0.02))`,
-                        border:`1.5px solid rgba(${c.glow},0.2)`,
-                        borderRadius:22,cursor:"pointer",padding:"20px 10px 16px",
+                        width:138,
+                        background:`linear-gradient(160deg,rgba(${c.glow},0.09),rgba(${c.glow},0.02) 70%)`,
+                        border:`1.5px solid rgba(${c.glow},0.25)`,
+                        borderRadius:24,cursor:"pointer",padding:"0 10px 16px",
                         display:"flex",flexDirection:"column",alignItems:"center",gap:8,
-                        transition:"all 0.2s",
-                        boxShadow:`0 4px 20px rgba(0,0,0,0.3)`,
+                        transition:"border 0.25s, box-shadow 0.25s, transform 0.25s",
+                        boxShadow:`0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)`,
+                        position:"relative",overflow:"hidden",
+                        animationDelay:`${ci*0.08}s`,
                       }}
-                      onMouseEnter={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.8)`;el.style.background=`linear-gradient(145deg,rgba(${c.glow},0.14),rgba(${c.glow},0.06))`;el.style.transform="translateY(-6px)";el.style.boxShadow=`0 16px 40px rgba(${c.glow},0.3)`;}}
-                      onMouseLeave={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.2)`;el.style.background=`linear-gradient(145deg,rgba(${c.glow},0.06),rgba(${c.glow},0.02))`;el.style.transform="";el.style.boxShadow="0 4px 20px rgba(0,0,0,0.3)";}}>
-                      <div style={{fontSize:52,filter:`drop-shadow(0 0 16px rgba(${c.glow},0.6))`}}>{c.emoji}</div>
-                      <div style={{color:"#fff",fontWeight:900,fontSize:14,letterSpacing:"-0.01em"}}>{c.name}</div>
+                      onMouseEnter={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.85)`;el.style.transform="translateY(-7px) scale(1.02)";el.style.boxShadow=`0 18px 44px rgba(${c.glow},0.35), inset 0 1px 0 rgba(255,255,255,0.08)`;}}
+                      onMouseLeave={e=>{const el=e.currentTarget;el.style.borderColor=`rgba(${c.glow},0.25)`;el.style.transform="";el.style.boxShadow="0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)";}}>
+                      {/* Top glow strip */}
+                      <div style={{position:"absolute",top:0,left:"15%",right:"15%",height:2,background:`linear-gradient(90deg,transparent,rgba(${c.glow},0.8),transparent)`,boxShadow:`0 0 12px rgba(${c.glow},0.6)`}}/>
+                      {/* Character portrait — animated */}
+                      <div className="char-idle" style={{marginTop:16,animationDelay:`${ci*0.4}s`}}>
+                        <div style={{
+                          width:84,height:84,borderRadius:"50%",overflow:"hidden",
+                          border:`2px solid rgba(${c.glow},0.45)`,
+                          background:`radial-gradient(ellipse at 50% 30%,rgba(${c.glow},0.18),rgba(6,0,15,0.85))`,
+                          boxShadow:`0 0 26px rgba(${c.glow},0.3)`,
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                        }}>
+                          <img src={c.image} alt={c.name} draggable={false}
+                            style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top"}}
+                            onError={e=>{const el=e.target as HTMLImageElement;el.style.display="none";if(el.parentElement)el.parentElement.innerHTML=`<span style="font-size:46px;filter:drop-shadow(0 0 14px rgba(${c.glow},0.6))">${c.emoji}</span>`;}}/>
+                        </div>
+                      </div>
+                      <div style={{color:"#fff",fontWeight:900,fontSize:15,letterSpacing:"-0.01em",textShadow:`0 0 16px rgba(${c.glow},0.4)`}}>{c.name}</div>
                       <div style={{
-                        background:`rgba(${c.glow},0.12)`,border:`1px solid rgba(${c.glow},0.3)`,
-                        borderRadius:8,padding:"3px 9px",fontSize:9,color:`rgb(${c.glow})`,
-                        fontWeight:700,textAlign:"center",lineHeight:1.3,
-                      }}>{c.ability}</div>
-                      <div style={{fontSize:9,color:"#2a1540",lineHeight:1.4,textAlign:"center"}}>{c.abilityDesc}</div>
+                        background:`rgba(${c.glow},0.13)`,border:`1px solid rgba(${c.glow},0.32)`,
+                        borderRadius:9,padding:"4px 10px",fontSize:9.5,color:`rgb(${c.glow})`,
+                        fontWeight:800,textAlign:"center",lineHeight:1.3,
+                      }}>⚡ {c.ability}</div>
+                      <div style={{fontSize:9,color:"#4d3d6b",lineHeight:1.45,textAlign:"center",minHeight:26}}>{c.abilityDesc}</div>
                       {s.totalEarned>0&&(
-                        <div style={{fontSize:9,color:"#3a2255",background:G.glass,borderRadius:6,padding:"2px 6px"}}>💰 {fmt(s.totalEarned)} saved</div>
+                        <div style={{fontSize:9,color:"#f5c842",background:"rgba(245,200,66,0.07)",border:"1px solid rgba(245,200,66,0.18)",borderRadius:7,padding:"3px 8px",fontWeight:700}}>💰 {fmt(s.totalEarned)} saved</div>
                       )}
                     </button>
                   );
