@@ -138,7 +138,15 @@ const BLACKLIST: RegExp[] = [
   /https?:\/\/(?!degen-tower\.vercel\.app|t\.me\/(degenclicker|degenclickerupdates)|x\.com\/degenclickersol|solscan\.io)[^\s]{20,}/,  // long external links
 ];
 
-function isBlacklisted(text: string): boolean {
+// ── Admin / owner whitelist — never automodded ───────────────────────────────
+// Add Telegram usernames (lowercase, without @)
+const WHITELIST = new Set([
+  "para1laxxx",
+  "para1laxx",
+]);
+
+function isBlacklisted(text: string, username?: string): boolean {
+  if (username && WHITELIST.has(username.toLowerCase())) return false;
   const lower = text.toLowerCase();
   return BLACKLIST.some((re) => re.test(lower));
 }
@@ -345,7 +353,7 @@ export async function POST(req: NextRequest) {
     if (!text) return NextResponse.json({ ok: true });
 
     // ── Auto-mod: silently delete blacklisted messages in group chats ─────────
-    if (message.chat.type !== "private" && isBlacklisted(text)) {
+    if (message.chat.type !== "private" && isBlacklisted(text, message.from?.username)) {
       await deleteMsg(chat_id, message_id);
       return NextResponse.json({ ok: true });
     }
