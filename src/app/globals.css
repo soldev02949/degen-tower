@@ -320,3 +320,49 @@ body {
 
 /* Spark particles around character stage */
 .spark { position: absolute; border-radius: 50%; pointer-events: none; animation: sparkRise 2.6s ease-out infinite; }
+
+/* ── Mobile PWA improvements ──────────────────────────────────── */
+/* Prevent double-tap zoom on game buttons */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve tap target size on mobile */
+@media (max-width: 600px) {
+  button {
+    min-height: 40px;
+  }
+}
+
+/* Smooth momentum scroll */
+.scroll-y {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Safe area padding for notched devices */
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* Swipe gesture hint animation */
+@keyframes swipeHint {
+  0% { transform: translateX(0); opacity: 0.6; }
+  50% { transform: translateX(8px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 0.6; }
+}
+
+/* Combo milestone pulse */
+@keyframes comboMilestone {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.35); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Prestige glow */
+@keyframes prestigeGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(245,200,66,0.4); }
+  50%       { box-shadow: 0 0 60px rgba(245,200,66,0.9), 0 0 120px rgba(245,200,66,0.3); }
+}

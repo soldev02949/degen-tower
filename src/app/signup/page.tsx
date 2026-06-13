@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Zap, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import StarField from "@/components/StarField";
 import { supabase } from "@/lib/supabase";
+import { captureReferralCode, clearReferralCode } from "@/lib/referral";
 import { useAuth } from "@/lib/auth";
 
 export default function SignupPage() {
@@ -19,6 +20,7 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [refCode] = useState(() => typeof window !== "undefined" ? captureReferralCode() : null);
 
   useEffect(() => {
     if (!loading && user) router.replace("/game");
@@ -46,6 +48,15 @@ export default function SignupPage() {
           registerDeviceFingerprint(signUpData.user!.id, fp);
         }).catch(() => {});
       }
+      if (refCode) {
+        import("@/lib/referral").then(({ clearReferralCode }) => clearReferralCode());
+      }
+      // Notify Telegram group — fire-and-forget, never block the UI
+      fetch("/api/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email.split("@")[0] }),
+      }).catch(() => {});
       setSuccess(true);
     }
   }

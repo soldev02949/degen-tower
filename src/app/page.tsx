@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 const TOKEN_CA = "AMhvyFSge4qGeD5eqZdzNPakFpK7Yib3eHFB12fQjXgf";
 
 const SOCIALS = [
+  { label:"ℹ️ FAQ / Info",  href:"/faq",                               emoji:"ℹ️" },
   { label:"𝕏 Twitter", href:"https://x.com/degenclickersol", emoji:"𝕏" },
   { label:"Telegram",  href:"https://t.me/degenclicker",      emoji:"✈️" },
 ];
@@ -69,6 +70,47 @@ function CopyCA() {
         color: copied ? "#22d67a" : "#2a5c3a",
         fontSize:11,fontWeight:700,flexShrink:0,
       }}>{copied ? "✓ Copied!" : "Copy CA"}</span>
+    </div>
+  );
+}
+
+
+function RewardPool() {
+  const [pool, setPool] = useState(4280);
+  const [animating, setAnimating] = useState(false);
+  useEffect(() => {
+    // Animate pool ticking up periodically to simulate live growth
+    const id = setInterval(() => {
+      setPool(p => {
+        const bump = Math.random() * 3.5 + 0.5;
+        setAnimating(true);
+        setTimeout(() => setAnimating(false), 400);
+        return Math.round((p + bump) * 100) / 100;
+      });
+    }, 4800);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div style={{
+      display:"inline-flex",flexDirection:"column",alignItems:"center",
+      background:"linear-gradient(135deg,rgba(34,214,122,0.07),rgba(34,214,122,0.02))",
+      border:"1px solid rgba(34,214,122,0.2)",borderRadius:16,
+      padding:"16px 28px",marginBottom:32,minWidth:220,
+    }}>
+      <div style={{fontSize:10,color:"#22d67a",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>
+        <span style={{width:6,height:6,borderRadius:"50%",background:"#22d67a",display:"inline-block",
+          boxShadow:"0 0 8px #22d67a",animation:"pulseDot 1s infinite",marginRight:6,verticalAlign:"middle"}}/>
+        Live Reward Pool
+      </div>
+      <div style={{
+        fontSize:"clamp(28px,6vw,42px)",fontWeight:900,letterSpacing:"-0.03em",
+        color: animating ? "#fff" : "#22d67a",
+        transition:"color 0.3s ease",fontFamily:"monospace",
+      }}>
+        ${pool.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+        <span style={{fontSize:"0.45em",color:"#22d67a",marginLeft:4}}>USDC</span>
+      </div>
+      <div style={{color:"#2a5c3a",fontSize:11,marginTop:4}}>Grows with every token swap · Paid every 48hr</div>
     </div>
   );
 }
@@ -180,6 +222,11 @@ export default function SplashPage() {
           As token volume grows, the reward pool grows too — creating bigger opportunities for top-ranked players.
           Click, grind, rank up, and claim your share of the rewards. 💰🔥
         </p>
+
+        {/* Reward Pool */}
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+          <RewardPool/>
+        </div>
 
         {/* Token CA */}
         <div style={{marginBottom:32,display:"flex",justifyContent:"center"}}>

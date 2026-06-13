@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { SoundProvider } from "@/lib/sound";
+import AIChat from "@/components/AIChat";
 
 export const metadata: Metadata = {
   title: "Degen Clicker — Tap. Earn. Climb.",
@@ -85,7 +87,8 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <SoundProvider><AuthProvider>{children}</AuthProvider></SoundProvider>
+        <AIChat />
       </body>
     </html>
   );
